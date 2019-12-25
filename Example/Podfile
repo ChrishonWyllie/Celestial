@@ -1,0 +1,11 @@
+use_frameworks!
+
+target 'Celestial_Example' do
+  pod 'Celestial', :path => '../'
+
+  target 'Celestial_Tests' do
+    inherit! :search_paths
+
+    
+  end
+end
