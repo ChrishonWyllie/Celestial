@@ -27,7 +27,7 @@ public class URLImageView: UIImageView {
     
     // MARK: - Initializers
     
-    init(delegate: URLImageViewDelegate?, cachePolicy: URLImageViewCachePolicy = .allow, defaultImage: UIImage? = nil) {
+    public init(delegate: URLImageViewDelegate?, cachePolicy: URLImageViewCachePolicy = .allow, defaultImage: UIImage? = nil) {
         super.init(frame: .zero)
         self.cachePolicy = cachePolicy
         self.delegate = delegate
