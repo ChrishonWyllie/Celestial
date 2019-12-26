@@ -40,9 +40,9 @@
 		607FACEA1AFB9204008FA782 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		607FACEB1AFB9204008FA782 /* Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests.swift; sourceTree = "<group>"; };
 		632F758C22176CE8217A8D07 /* Pods-Celestial_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Celestial_Tests.debug.xcconfig"; path = "Target Support Files/Pods-Celestial_Tests/Pods-Celestial_Tests.debug.xcconfig"; sourceTree = "<group>"; };
-		734ECB4F0DD4850852FD1A6C /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; name = README.md; path = ../README.md; sourceTree = "<group>"; };
-		9669D0683F191E9D2C94A6D1 /* Celestial.podspec */ = {isa = PBXFileReference; includeInIndex = 1; name = Celestial.podspec; path = ../Celestial.podspec; sourceTree = "<group>"; };
-		B3E6E7B5052B1F4C9F02D42D /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
+		734ECB4F0DD4850852FD1A6C /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
+		9669D0683F191E9D2C94A6D1 /* Celestial.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = Celestial.podspec; path = ../Celestial.podspec; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		B3E6E7B5052B1F4C9F02D42D /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
 		C89F48E60228333369581F11 /* Pods-Celestial_Example.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Celestial_Example.debug.xcconfig"; path = "Target Support Files/Pods-Celestial_Example/Pods-Celestial_Example.debug.xcconfig"; sourceTree = "<group>"; };
 		C9ECDD8E2C22E5C6BA9B43C2 /* Pods-Celestial_Tests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Celestial_Tests.release.xcconfig"; path = "Target Support Files/Pods-Celestial_Tests/Pods-Celestial_Tests.release.xcconfig"; sourceTree = "<group>"; };
 		E54A025F3280FA10B68274E6 /* Pods_Celestial_Tests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Celestial_Tests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -156,7 +156,6 @@
 				632F758C22176CE8217A8D07 /* Pods-Celestial_Tests.debug.xcconfig */,
 				C9ECDD8E2C22E5C6BA9B43C2 /* Pods-Celestial_Tests.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -227,6 +226,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);

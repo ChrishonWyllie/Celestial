@@ -1,0 +1,6 @@
+framework module Celestial {
+  umbrella header "Celestial-umbrella.h"
+
+  export *
+  module * { export * }
+}

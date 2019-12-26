@@ -1,0 +1,6 @@
+framework module Pods_Celestial_Example {
+  umbrella header "Pods-Celestial_Example-umbrella.h"
+
+  export *
+  module * { export * }
+}

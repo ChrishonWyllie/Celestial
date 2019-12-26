@@ -9,7 +9,7 @@
 Pod::Spec.new do |s|
   s.name             = 'Celestial'
   s.version          = '0.1.0'
-  s.summary          = 'A short description of Celestial.'
+  s.summary          = 'A Caching service for multimedia'
 
 # This description is used to generate tags and improve search results.
 #   * Think: What does it do? Why did you write it? What is the focus?
@@ -18,7 +18,7 @@ Pod::Spec.new do |s|
 #   * Finally, don't worry about the indent, CocoaPods strips it!
 
   s.description      = <<-DESC
-TODO: Add long description of the pod here.
+Celestial was written to help manage loading media from external URLs and displaying them in UITableViews and UICollectionViews. The point is to avoid redundant API calls.
                        DESC
 
   s.homepage         = 'https://github.com/ChrishonWyllie/Celestial'
@@ -27,8 +27,9 @@ TODO: Add long description of the pod here.
   s.author           = { 'ChrishonWyllie' => 'chrishon595@yahoo.com' }
   s.source           = { :git => 'https://github.com/ChrishonWyllie/Celestial.git', :tag => s.version.to_s }
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
-
-  s.ios.deployment_target = '8.0'
+  s.swift_versions   = ['4.0', '4.1', '4.2', '5.0', '5.1']
+  
+  s.ios.deployment_target = '12.0'
 
   s.source_files = 'Celestial/Classes/**/*'
   
@@ -37,6 +38,6 @@ TODO: Add long description of the pod here.
   # }
 
   # s.public_header_files = 'Pod/Classes/**/*.h'
-  # s.frameworks = 'UIKit', 'MapKit'
+   s.frameworks = 'UIKit', 'MapKit'
   # s.dependency 'AFNetworking', '~> 2.3'
 end
