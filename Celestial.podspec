@@ -31,7 +31,7 @@ Celestial was written to help manage loading media from external URLs and displa
   
   s.ios.deployment_target = '12.0'
 
-  s.source_files = 'Celestial/Classes/**/*'
+  s.source_files = 'Classes/**/*'
   
   # s.resource_bundles = {
   #   'Celestial' => ['Celestial/Assets/*.png']
