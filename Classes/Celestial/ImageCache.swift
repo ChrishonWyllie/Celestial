@@ -58,55 +58,55 @@ internal final class ImageCache: NSObject {
 
 
 
-
-
 // MARK: - ImageCacheProtocol
 
-extension ImageCache: ImageCacheProtocol {
+extension ImageCache: CacheProtocol {
+
+    typealias T = UIImage
     
-    func image(for urlString: String) -> UIImage? {
-        
+    func item(for urlString: String) -> UIImage? {
+
         lock.lock(); defer { lock.unlock() }
         // the best case scenario -> there is a decoded image
         if let decodedImage = decodedImageCache.object(forKey: urlString as AnyObject) as? UIImage {
             return decodedImage
         }
-        
+
         // search for image data
         if let image = imageCache.object(forKey: urlString as AnyObject) as? UIImage {
             let decodedImage = image.decodedImage()
             decodedImageCache.setObject(image as AnyObject, forKey: urlString as AnyObject, cost: decodedImage.diskSize)
             return decodedImage
         }
-        
+
         return nil
     }
-    
-    func store(_ image: UIImage?, with urlString: String) {
-        guard let image = image else { return removeImage(at: urlString) }
+
+    func store(_ item: UIImage?, with urlString: String) {
+        guard let image = item else { return removeItem(at: urlString) }
         let decodedImage = image.decodedImage()
 
         lock.lock(); defer { lock.unlock() }
-        
+
         imageCache.setObject(decodedImage, forKey: urlString as AnyObject)
         decodedImageCache.setObject(image as AnyObject, forKey: urlString as AnyObject, cost: decodedImage.diskSize)
     }
-    
-    func removeImage(at urlString: String) {
+
+    func removeItem(at urlString: String) {
         lock.lock(); defer { lock.unlock() }
         imageCache.removeObject(forKey: urlString as AnyObject)
         decodedImageCache.removeObject(forKey: urlString as AnyObject)
     }
-    
-    func clearAllImages() {
+
+    func clearAllItems() {
         lock.lock(); defer { lock.unlock() }
         imageCache.removeAllObjects()
         decodedImageCache.removeAllObjects()
     }
-    
+
     subscript(urlString: String) -> UIImage? {
         get {
-            return image(for: urlString)
+            return item(for: urlString)
         }
         set {
             return store(newValue, with: urlString)
