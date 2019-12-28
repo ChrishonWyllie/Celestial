@@ -139,6 +139,7 @@
 		66270B8323B42A8000A34A17 /* Classes */ = {
 			isa = PBXGroup;
 			children = (
+				66F3AC4223B7A23200C4505D /* VideoCachingItem */,
 				66270B9223B438CE00A34A17 /* Extensions */,
 				66270B8823B435BA00A34A17 /* Protocols+Declarations */,
 				66270B8723B4355700A34A17 /* Celestial */,
@@ -180,6 +181,13 @@
 				66270B9723B43B6200A34A17 /* URLImageView.swift */,
 			);
 			path = URLImageView;
+			sourceTree = "<group>";
+		};
+		66F3AC4223B7A23200C4505D /* VideoCachingItem */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = VideoCachingItem;
 			sourceTree = "<group>";
 		};
 		8CAA666752BA6E84530D0CB68C7361E8 /* Support Files */ = {
