@@ -46,6 +46,14 @@ internal protocol CacheProtocol: class {
     // Removes all images/videos from the cache
     func clearAllItems()
     
+    // Set the total number of items that can be saved.
+    // Note this is not an explicit limit. See Apple documentation
+    func setCacheItemLimit(_ value: Int)
+    
+    // Set the total cost of items that can be saved.
+    // Note this is not an explicit limit. See Apple documentation
+    func setCacheCostLimit(_ value: Int)
+    
     // Accesses the value associated with the given key for reading and writing
     subscript(_ urlString: String) -> T? { get set}
 }

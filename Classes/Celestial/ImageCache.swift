@@ -14,7 +14,7 @@ internal final class ImageCache: NSObject {
     public static let shared = ImageCache()
     
     // 1st level cache, that contains encoded images
-    private lazy var imageCache: NSCache<AnyObject, AnyObject> = {
+    private lazy var encodedImageCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
         cache.countLimit = config.countLimit
         return cache
@@ -73,7 +73,7 @@ extension ImageCache: CacheProtocol {
         }
 
         // search for image data
-        if let image = imageCache.object(forKey: urlString as AnyObject) as? UIImage {
+        if let image = encodedImageCache.object(forKey: urlString as AnyObject) as? UIImage {
             let decodedImage = image.decodedImage()
             decodedImageCache.setObject(image as AnyObject, forKey: urlString as AnyObject, cost: decodedImage.diskSize)
             return decodedImage
@@ -88,19 +88,27 @@ extension ImageCache: CacheProtocol {
 
         lock.lock(); defer { lock.unlock() }
 
-        imageCache.setObject(decodedImage, forKey: urlString as AnyObject)
+        encodedImageCache.setObject(decodedImage, forKey: urlString as AnyObject)
         decodedImageCache.setObject(image as AnyObject, forKey: urlString as AnyObject, cost: decodedImage.diskSize)
     }
 
     func removeItem(at urlString: String) {
         lock.lock(); defer { lock.unlock() }
-        imageCache.removeObject(forKey: urlString as AnyObject)
+        encodedImageCache.removeObject(forKey: urlString as AnyObject)
         decodedImageCache.removeObject(forKey: urlString as AnyObject)
+    }
+    
+    func setCacheItemLimit(_ value: Int) {
+        encodedImageCache.countLimit = value
+    }
+    
+    func setCacheCostLimit(_ value: Int) {
+        decodedImageCache.totalCostLimit = value
     }
 
     func clearAllItems() {
         lock.lock(); defer { lock.unlock() }
-        imageCache.removeAllObjects()
+        encodedImageCache.removeAllObjects()
         decodedImageCache.removeAllObjects()
     }
 
