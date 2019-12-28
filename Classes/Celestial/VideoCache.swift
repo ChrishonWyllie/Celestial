@@ -70,17 +70,12 @@ extension VideoCache: CacheProtocol {
 
         // search for compressed data and decompress it.
         if let encodedData = encodedItemsCache.object(forKey: urlString as AnyObject) as? Data {
-            if #available(iOS 13.0, *) {
-                do {
-                    let decodedData = try (encodedData as NSData).decompressed(using: NSData.CompressionAlgorithm.lzfse)
-                    decodedItemsCache.setObject(decodedData as AnyObject, forKey: urlString as AnyObject, cost: decodedData.count)
-                    return decodedData as Data
-                } catch let error {
-                    print("Error getting decompressed Data from cache: \(error.localizedDescription)")
-                    return nil
-                }
-            } else {
-                // Fallback on earlier versions
+            do {
+                let decodedData = try (encodedData as NSData).decompressed(using: NSData.CompressionAlgorithm.lzfse)
+                decodedItemsCache.setObject(decodedData as AnyObject, forKey: urlString as AnyObject, cost: decodedData.count)
+                return decodedData as Data
+            } catch let error {
+                print("Error getting decompressed Data from cache: \(error.localizedDescription)")
                 return nil
             }
         }
@@ -91,24 +86,19 @@ extension VideoCache: CacheProtocol {
     func store(_ item: Data?, with urlString: String) {
         guard let decompressedData = item else { return removeItem(at: urlString) }
         print("storing decompressed data with size: \(decompressedData.count). Size in mb: \((decompressedData as Data).sizeInMB)")
-//        if #available(iOS 13.0, *) {
-            do {
-                let compressedData = try (decompressedData as NSData).compressed(using: NSData.CompressionAlgorithm.lzfse)
-                lock.lock(); defer { lock.unlock() }
-                
-                print("memory limit: \(config.memoryLimit)")
-                print("storing compressed data with size: \(compressedData.count). Size in mb: \((compressedData as Data).sizeInMB)")
-                
-                
-                encodedItemsCache.setObject(compressedData, forKey: urlString as AnyObject)
-                decodedItemsCache.setObject(decompressedData as AnyObject, forKey: urlString as AnyObject, cost: decompressedData.count)
-            } catch let error {
-                print("Error storing compressed Data from cache: \(error.localizedDescription)")
-            }
-//        } else {
-            // Fallback on earlier versions
+        do {
+            let compressedData = try (decompressedData as NSData).compressed(using: NSData.CompressionAlgorithm.lzfse)
+            lock.lock(); defer { lock.unlock() }
             
-//        }
+            print("memory limit: \(config.memoryLimit)")
+            print("storing compressed data with size: \(compressedData.count). Size in mb: \((compressedData as Data).sizeInMB)")
+            
+            
+            encodedItemsCache.setObject(compressedData, forKey: urlString as AnyObject)
+            decodedItemsCache.setObject(decompressedData as AnyObject, forKey: urlString as AnyObject, cost: decompressedData.count)
+        } catch let error {
+            print("Error storing compressed Data from cache: \(error.localizedDescription)")
+        }
     }
 
     func removeItem(at urlString: String) {

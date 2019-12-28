@@ -29,7 +29,7 @@ Celestial was written to help manage loading media from external URLs and displa
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
   s.swift_versions   = ['4.0', '4.1', '4.2', '5.0', '5.1']
   
-  s.ios.deployment_target = '12.0'
+  s.ios.deployment_target = '13.0'
 
   s.source_files = 'Classes/**/*'
   
@@ -38,6 +38,6 @@ Celestial was written to help manage loading media from external URLs and displa
   # }
 
   # s.public_header_files = 'Pod/Classes/**/*.h'
-   s.frameworks = 'UIKit', 'MapKit'
+   s.frameworks = 'UIKit'
   # s.dependency 'AFNetworking', '~> 2.3'
 end
