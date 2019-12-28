@@ -36,6 +36,7 @@ internal extension UIImage {
 
 
 
+
 // MARK: - UIImageView
 
 public extension UIImageView {
@@ -51,4 +52,17 @@ public extension UIImageView {
 
 internal extension Int {
     static let OneMegabyte = 1024 * 1024
+    static let OneGigabyte = OneMegabyte * 1000
+}
+
+
+
+
+
+internal extension Data {
+    
+    var sizeInMB: Float {
+        return Float(self.count) / Float(Int.OneMegabyte)
+    }
+    
 }

@@ -30,11 +30,35 @@ public final class Celestial: NSObject {
 
 extension Celestial: CelestialCacheProtocol {
     
+    // Video
+    
+    public func video(for urlString: String) -> Data? {
+        return VideoCache.shared.item(for: urlString)
+    }
+
+    public func store(video: Data?, with urlString: String) {
+        VideoCache.shared.store(video, with: urlString)
+    }
+    
+    public func removeVideo(at urlString: String) {
+        VideoCache.shared.removeItem(at: urlString)
+    }
+    
+    public func clearAllVideos() {
+        VideoCache.shared.clearAllItems()
+    }
+    
+
+    
+    
+    
+    // Image
+    
     public func image(for urlString: String) -> UIImage? {
         return ImageCache.shared.item(for: urlString)
     }
     
-    public func store(_ image: UIImage?, with urlString: String) {
+    public func store(image: UIImage?, with urlString: String) {
         ImageCache.shared.store(image, with: urlString)
     }
     
@@ -46,13 +70,14 @@ extension Celestial: CelestialCacheProtocol {
         ImageCache.shared.clearAllItems()
     }
     
-    public subscript(urlString: String) -> UIImage? {
-        get {
-            return ImageCache.shared[urlString]
-        }
-        set {
-            return ImageCache.shared[urlString] = newValue
-        }
-    }
     
+    
+    
+    
+    
+    
+    public func reset() {
+        VideoCache.shared.clearAllItems()
+        ImageCache.shared.clearAllItems()
+    }
 }
