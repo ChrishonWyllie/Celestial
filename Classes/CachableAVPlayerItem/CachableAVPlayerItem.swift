@@ -8,38 +8,7 @@
 import Foundation
 import AVFoundation
 
-fileprivate extension URL {
-    
-    func withScheme(_ scheme: String) -> URL? {
-        var components = URLComponents(url: self, resolvingAgainstBaseURL: false)
-        components?.scheme = scheme
-        return components?.url
-    }
-    
-}
-
-@objc public protocol CachableAVPlayerItemDelegate {
-    
-    /// Is called when the media file is fully downloaded.
-    @objc optional func playerItem(_ playerItem: CachableAVPlayerItem, didFinishDownloadingData data: Data)
-    
-    /// Is called every time a new portion of data is received.
-    @objc optional func playerItem(_ playerItem: CachableAVPlayerItem, didDownloadBytesSoFar bytesDownloaded: Int, outOf bytesExpected: Int)
-    
-    /// Is called after initial prebuffering is finished, means
-    /// we are ready to play.
-    @objc optional func playerItemReadyToPlay(_ playerItem: CachableAVPlayerItem)
-    
-    /// Is called when the data being downloaded did not arrive in time to
-    /// continue playback.
-    @objc optional func playerItemPlaybackStalled(_ playerItem: CachableAVPlayerItem)
-    
-    /// Is called on downloading error.
-    @objc optional func playerItem(_ playerItem: CachableAVPlayerItem, downloadingFailedWith error: Error)
-    
-}
-
-class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
+internal class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
     
     var playingFromData = false
     var mimeType: String? // is required when playing from Data
@@ -207,6 +176,7 @@ public class CachableAVPlayerItem: AVPlayerItem {
     public private(set) var url: URL
     fileprivate let initialScheme: String?
     fileprivate var customFileExtension: String?
+    public private(set) var cachePolicy: MultimediaCachePolicy = .allow
     
     public private(set) weak var delegate: CachableAVPlayerItemDelegate?
     
@@ -219,13 +189,13 @@ public class CachableAVPlayerItem: AVPlayerItem {
     private let cachingPlayerItemScheme = "cachingPlayerItemScheme"
     
     /// Is used for playing remote files.
-    convenience public init(url: URL, delegate: CachableAVPlayerItemDelegate?) {
-        self.init(url: url, customFileExtension: nil, delegate: delegate)
+    convenience public init(url: URL, delegate: CachableAVPlayerItemDelegate?, cachePolicy: MultimediaCachePolicy = .allow) {
+        self.init(url: url, customFileExtension: nil, delegate: delegate, cachePolicy: cachePolicy)
     }
     
     /// Override/append custom file extension to URL path.
     /// This is required for the player to work correctly with the intended file type.
-    public init(url: URL, customFileExtension: String?, delegate: CachableAVPlayerItemDelegate?) {
+    public init(url: URL, customFileExtension: String?, delegate: CachableAVPlayerItemDelegate?, cachePolicy: MultimediaCachePolicy = .allow) {
         
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
             let scheme = components.scheme,
@@ -235,6 +205,7 @@ public class CachableAVPlayerItem: AVPlayerItem {
         
         self.url = url
         self.delegate = delegate
+        self.cachePolicy = cachePolicy
         self.initialScheme = scheme
         
         if let ext = customFileExtension {
