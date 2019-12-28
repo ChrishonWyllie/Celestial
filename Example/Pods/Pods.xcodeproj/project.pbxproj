@@ -23,6 +23,8 @@
 		66270B9923B43B6200A34A17 /* URLImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66270B9723B43B6200A34A17 /* URLImageView.swift */; };
 		66270B9B23B4437600A34A17 /* MiscellaneousDeclarations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66270B9A23B4437600A34A17 /* MiscellaneousDeclarations.swift */; };
 		66270B9C23B4437600A34A17 /* MiscellaneousDeclarations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66270B9A23B4437600A34A17 /* MiscellaneousDeclarations.swift */; };
+		66F3AC4423B7A2E500C4505D /* CachableAVPlayerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F3AC4323B7A2E500C4505D /* CachableAVPlayerItem.swift */; };
+		66F3AC4523B7A2E500C4505D /* CachableAVPlayerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F3AC4323B7A2E500C4505D /* CachableAVPlayerItem.swift */; };
 		6E2E68FF27C6E1EBAD1EAAAA70DF14DF /* Celestial-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 7F659EEE00E9525CA0543E85138D7BC7 /* Celestial-dummy.m */; };
 		737EE78BCE9268EA99795996FA25B38C /* Pods-Celestial_Example-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 53D096D082AE2E0432CD5D60B872D7EE /* Pods-Celestial_Example-dummy.m */; };
 		8F8324D8940669DE80A73AEBD0B2AB29 /* Pods-Celestial_Tests-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 31E3F3026AF0B8AF69E7FBF16A9A2364 /* Pods-Celestial_Tests-dummy.m */; };
@@ -68,6 +70,7 @@
 		66270B9323B438DD00A34A17 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		66270B9723B43B6200A34A17 /* URLImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLImageView.swift; sourceTree = "<group>"; };
 		66270B9A23B4437600A34A17 /* MiscellaneousDeclarations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiscellaneousDeclarations.swift; sourceTree = "<group>"; };
+		66F3AC4323B7A2E500C4505D /* CachableAVPlayerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachableAVPlayerItem.swift; sourceTree = "<group>"; };
 		68BD6AB4BBE8DE3A626834606FB29915 /* Pods-Celestial_Tests-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-Celestial_Tests-acknowledgements.markdown"; sourceTree = "<group>"; };
 		71CDF28B8377D47B4E08FD7BBBB62692 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		7A5FE9EA71C337538561976B41003A13 /* Celestial.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = Celestial.xcconfig; sourceTree = "<group>"; };
@@ -139,11 +142,11 @@
 		66270B8323B42A8000A34A17 /* Classes */ = {
 			isa = PBXGroup;
 			children = (
-				66F3AC4223B7A23200C4505D /* VideoCachingItem */,
 				66270B9223B438CE00A34A17 /* Extensions */,
 				66270B8823B435BA00A34A17 /* Protocols+Declarations */,
 				66270B8723B4355700A34A17 /* Celestial */,
 				66270B9623B43B3D00A34A17 /* URLImageView */,
+				66F3AC4223B7A23200C4505D /* CachableAVPlayerItem */,
 			);
 			path = Classes;
 			sourceTree = "<group>";
@@ -183,11 +186,12 @@
 			path = URLImageView;
 			sourceTree = "<group>";
 		};
-		66F3AC4223B7A23200C4505D /* VideoCachingItem */ = {
+		66F3AC4223B7A23200C4505D /* CachableAVPlayerItem */ = {
 			isa = PBXGroup;
 			children = (
+				66F3AC4323B7A2E500C4505D /* CachableAVPlayerItem.swift */,
 			);
-			path = VideoCachingItem;
+			path = CachableAVPlayerItem;
 			sourceTree = "<group>";
 		};
 		8CAA666752BA6E84530D0CB68C7361E8 /* Support Files */ = {
@@ -450,6 +454,7 @@
 				66270B8623B4354F00A34A17 /* Celestial.swift in Sources */,
 				66270B9523B438DD00A34A17 /* Extensions.swift in Sources */,
 				66270B8B23B435DA00A34A17 /* MultimediaCacheProtocols.swift in Sources */,
+				66F3AC4523B7A2E500C4505D /* CachableAVPlayerItem.swift in Sources */,
 				66270B9123B437C600A34A17 /* VideoCache.swift in Sources */,
 				66270B8E23B4372800A34A17 /* ImageCache.swift in Sources */,
 				737EE78BCE9268EA99795996FA25B38C /* Pods-Celestial_Example-dummy.m in Sources */,
@@ -473,6 +478,7 @@
 				66270B8523B4354F00A34A17 /* Celestial.swift in Sources */,
 				66270B9423B438DD00A34A17 /* Extensions.swift in Sources */,
 				66270B8A23B435DA00A34A17 /* MultimediaCacheProtocols.swift in Sources */,
+				66F3AC4423B7A2E500C4505D /* CachableAVPlayerItem.swift in Sources */,
 				66270B9023B437C600A34A17 /* VideoCache.swift in Sources */,
 				66270B8D23B4372800A34A17 /* ImageCache.swift in Sources */,
 				6E2E68FF27C6E1EBAD1EAAAA70DF14DF /* Celestial-dummy.m in Sources */,
