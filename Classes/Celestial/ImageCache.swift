@@ -28,15 +28,16 @@ internal final class ImageCache: NSObject {
     }()
     
     private let lock = NSLock()
-    private let config: Config
+    private let config: CacheControlConfiguration
 
-    struct Config {
+    struct CacheControlConfiguration {
         let countLimit: Int
         let memoryLimit: Int
         
+        static let defaultCountLimit: Int = 100 // 100 images
         static let defaultMemoryLimit: Int = Int.OneMegabyte * 100 // 100 MB
         
-        static let defaultConfig = Config(countLimit: 100, memoryLimit: Config.defaultMemoryLimit)
+        static let defaultConfig = CacheControlConfiguration(countLimit: CacheControlConfiguration.defaultCountLimit, memoryLimit: CacheControlConfiguration.defaultMemoryLimit)
     }
 
     
@@ -44,12 +45,12 @@ internal final class ImageCache: NSObject {
     
     // MARK: - Initializers
     
-    private init(config: Config = Config.defaultConfig) {
+    private init(config: CacheControlConfiguration = CacheControlConfiguration.defaultConfig) {
         self.config = config
     }
     
     private override init() {
-        self.config = Config.defaultConfig
+        self.config = CacheControlConfiguration.defaultConfig
     }
     
 }
