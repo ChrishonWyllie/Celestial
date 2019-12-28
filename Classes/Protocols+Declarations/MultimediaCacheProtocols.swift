@@ -7,6 +7,16 @@
 
 import UIKit.UIImage
 
+// MARK: - MultimediaCachePolicy
+
+public enum MultimediaCachePolicy {
+    case allow
+    case notAllowed
+}
+
+
+// MARK: - CelestialCacheProtocol
+
 internal protocol CelestialCacheProtocol: class {
     
     // Video
@@ -39,6 +49,31 @@ internal protocol CelestialCacheProtocol: class {
     func reset()
 }
 
+
+
+
+
+
+
+
+
+
+
+// MARK: - CacheManagerProtocol
+
+internal protocol CacheManagerProtocol: class {
+    
+    var encodedItemsCache: NSCache<AnyObject, AnyObject> { get }
+    var decodedItemsCache: NSCache<AnyObject, AnyObject> { get }
+    var lock: NSLock { get }
+    var config: CacheControlConfiguration { get }
+    
+}
+
+
+
+// MARK: - CacheControlConfiguration
+
 internal struct CacheControlConfiguration {
     let countLimit: Int
     let memoryLimit: Int
@@ -49,14 +84,10 @@ internal struct CacheControlConfiguration {
     static let defaultConfig = CacheControlConfiguration(countLimit: CacheControlConfiguration.defaultCountLimit, memoryLimit: CacheControlConfiguration.defaultMemoryLimit)
 }
 
-internal protocol CacheManagerProtocol: class {
-    
-    var encodedItemsCache: NSCache<AnyObject, AnyObject> { get }
-    var decodedItemsCache: NSCache<AnyObject, AnyObject> { get }
-    var lock: NSLock { get }
-    var config: CacheControlConfiguration { get }
-    
-}
+
+
+
+// MARK: - CacheProtocol
 
 /// Generic protocol that both VideoCache and ImageCache must implement.
 internal protocol CacheProtocol: class {

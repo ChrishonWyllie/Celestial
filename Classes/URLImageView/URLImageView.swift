@@ -13,7 +13,7 @@ public class URLImageView: UIImageView {
     
     private weak var delegate: URLImageViewDelegate?
     
-    public private(set) var cachePolicy: URLImageViewCachePolicy = .allow
+    public private(set) var cachePolicy: MultimediaCachePolicy = .allow
     
     public private(set) var urlString: String?
     
@@ -27,7 +27,7 @@ public class URLImageView: UIImageView {
     
     // MARK: - Initializers
     
-    public init(delegate: URLImageViewDelegate?, cachePolicy: URLImageViewCachePolicy = .allow, defaultImage: UIImage? = nil) {
+    public init(delegate: URLImageViewDelegate?, cachePolicy: MultimediaCachePolicy = .allow, defaultImage: UIImage? = nil) {
         super.init(frame: .zero)
         self.cachePolicy = cachePolicy
         self.delegate = delegate

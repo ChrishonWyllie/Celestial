@@ -59,10 +59,29 @@ internal extension Int {
 
 
 
+// MARK: - Data
+
 internal extension Data {
     
     var sizeInMB: Float {
         return Float(self.count) / Float(Int.OneMegabyte)
+    }
+    
+}
+
+
+
+
+
+
+// MARK: - URL
+
+internal extension URL {
+    
+    func withScheme(_ scheme: String) -> URL? {
+        var components = URLComponents(url: self, resolvingAgainstBaseURL: false)
+        components?.scheme = scheme
+        return components?.url
     }
     
 }
