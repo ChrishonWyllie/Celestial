@@ -102,8 +102,8 @@ extension ImageCache: CacheProtocol {
         encodedImageCache.countLimit = value
     }
     
-    func setCacheCostLimit(_ value: Int) {
-        decodedImageCache.totalCostLimit = value
+    func setCacheCostLimit(numMegabytes: Int) {
+        decodedImageCache.totalCostLimit = numMegabytes * Int.OneMegabyte
     }
 
     func clearAllItems() {
