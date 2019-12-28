@@ -118,7 +118,7 @@ extension URLImageView: URLSessionDownloadDelegate {
                 guard let urlString = self.urlString else { return }
                 
                 if cachePolicy == .allow {
-                    Celestial.shared.store(downloadedImage, with: urlString)
+                    Celestial.shared.store(image: downloadedImage, with: urlString)
                 }
                 
                 delegate?.urlImageView(self, downloadCompletedAt: urlString)
