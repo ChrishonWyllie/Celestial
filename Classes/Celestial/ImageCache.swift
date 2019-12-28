@@ -14,7 +14,7 @@ internal final class ImageCache: NSObject {
     public static let shared = ImageCache()
     
     // 1st level cache, that contains encoded images
-    private lazy var imageCache: NSCache<AnyObject, AnyObject> = {
+    private lazy var encodedImageCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
         cache.countLimit = config.countLimit
         return cache
@@ -28,15 +28,16 @@ internal final class ImageCache: NSObject {
     }()
     
     private let lock = NSLock()
-    private let config: Config
+    private let config: CacheControlConfiguration
 
-    struct Config {
+    struct CacheControlConfiguration {
         let countLimit: Int
         let memoryLimit: Int
         
+        static let defaultCountLimit: Int = 100 // 100 images
         static let defaultMemoryLimit: Int = Int.OneMegabyte * 100 // 100 MB
         
-        static let defaultConfig = Config(countLimit: 100, memoryLimit: Config.defaultMemoryLimit)
+        static let defaultConfig = CacheControlConfiguration(countLimit: CacheControlConfiguration.defaultCountLimit, memoryLimit: CacheControlConfiguration.defaultMemoryLimit)
     }
 
     
@@ -44,12 +45,12 @@ internal final class ImageCache: NSObject {
     
     // MARK: - Initializers
     
-    private init(config: Config = Config.defaultConfig) {
+    private init(config: CacheControlConfiguration = CacheControlConfiguration.defaultConfig) {
         self.config = config
     }
     
     private override init() {
-        self.config = Config.defaultConfig
+        self.config = CacheControlConfiguration.defaultConfig
     }
     
 }
@@ -57,55 +58,63 @@ internal final class ImageCache: NSObject {
 
 
 
-
-
 // MARK: - ImageCacheProtocol
 
-extension ImageCache: ImageCacheProtocol {
+extension ImageCache: CacheProtocol {
+
+    typealias T = UIImage
     
-    func image(for urlString: String) -> UIImage? {
-        
+    func item(for urlString: String) -> UIImage? {
+
         lock.lock(); defer { lock.unlock() }
         // the best case scenario -> there is a decoded image
         if let decodedImage = decodedImageCache.object(forKey: urlString as AnyObject) as? UIImage {
             return decodedImage
         }
-        
+
         // search for image data
-        if let image = imageCache.object(forKey: urlString as AnyObject) as? UIImage {
+        if let image = encodedImageCache.object(forKey: urlString as AnyObject) as? UIImage {
             let decodedImage = image.decodedImage()
             decodedImageCache.setObject(image as AnyObject, forKey: urlString as AnyObject, cost: decodedImage.diskSize)
             return decodedImage
         }
-        
+
         return nil
     }
-    
-    func store(_ image: UIImage?, with urlString: String) {
-        guard let image = image else { return removeImage(at: urlString) }
+
+    func store(_ item: UIImage?, with urlString: String) {
+        guard let image = item else { return removeItem(at: urlString) }
         let decodedImage = image.decodedImage()
 
         lock.lock(); defer { lock.unlock() }
-        
-        imageCache.setObject(decodedImage, forKey: urlString as AnyObject)
+
+        encodedImageCache.setObject(decodedImage, forKey: urlString as AnyObject)
         decodedImageCache.setObject(image as AnyObject, forKey: urlString as AnyObject, cost: decodedImage.diskSize)
     }
-    
-    func removeImage(at urlString: String) {
+
+    func removeItem(at urlString: String) {
         lock.lock(); defer { lock.unlock() }
-        imageCache.removeObject(forKey: urlString as AnyObject)
+        encodedImageCache.removeObject(forKey: urlString as AnyObject)
         decodedImageCache.removeObject(forKey: urlString as AnyObject)
     }
     
-    func clearAllImages() {
-        lock.lock(); defer { lock.unlock() }
-        imageCache.removeAllObjects()
-        decodedImageCache.removeAllObjects()
+    func setCacheItemLimit(_ value: Int) {
+        encodedImageCache.countLimit = value
     }
     
+    func setCacheCostLimit(numMegabytes: Int) {
+        decodedImageCache.totalCostLimit = numMegabytes * Int.OneMegabyte
+    }
+
+    func clearAllItems() {
+        lock.lock(); defer { lock.unlock() }
+        encodedImageCache.removeAllObjects()
+        decodedImageCache.removeAllObjects()
+    }
+
     subscript(urlString: String) -> UIImage? {
         get {
-            return image(for: urlString)
+            return item(for: urlString)
         }
         set {
             return store(newValue, with: urlString)

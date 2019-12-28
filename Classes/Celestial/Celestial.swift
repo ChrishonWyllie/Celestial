@@ -28,10 +28,10 @@ public final class Celestial: NSObject {
 
 // MARK: -  ImageCacheProtocol
 
-extension Celestial: ImageCacheProtocol {
+extension Celestial: CelestialCacheProtocol {
     
     public func image(for urlString: String) -> UIImage? {
-        return ImageCache.shared.image(for: urlString)
+        return ImageCache.shared.item(for: urlString)
     }
     
     public func store(_ image: UIImage?, with urlString: String) {
@@ -39,11 +39,11 @@ extension Celestial: ImageCacheProtocol {
     }
     
     public func removeImage(at urlString: String) {
-        ImageCache.shared.removeImage(at: urlString)
+        ImageCache.shared.removeItem(at: urlString)
     }
     
     public func clearAllImages() {
-        ImageCache.shared.clearAllImages()
+        ImageCache.shared.clearAllItems()
     }
     
     public subscript(urlString: String) -> UIImage? {
