@@ -54,10 +54,18 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         mediaData?.append(data)
         processPendingRequests()
-        owner?.delegate?.playerItem?(owner!, didDownloadBytesSoFar: mediaData!.count, outOf: Int(dataTask.countOfBytesExpectedToReceive))
+        
+        guard let cachableAVPlayerItem = owner, let mediaData = mediaData else {
+            return
+        }
+        
+        owner?.delegate?.playerItem?(cachableAVPlayerItem,
+                                     didDownloadBytesSoFar: mediaData.count,
+                                     outOf: Int(dataTask.countOfBytesExpectedToReceive))
     }
     
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        
         completionHandler(Foundation.URLSession.ResponseDisposition.allow)
         mediaData = Data()
         self.response = response
@@ -66,12 +74,17 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
     
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        
+        guard let cachableAVPlayerItem = owner, let mediaData = mediaData else {
+            return
+        }
+        
         if let errorUnwrapped = error {
-            owner?.delegate?.playerItem?(owner!, downloadingFailedWith: errorUnwrapped)
+            owner?.delegate?.playerItem?(cachableAVPlayerItem, downloadingFailedWith: errorUnwrapped)
             return
         }
         processPendingRequests()
-        owner?.delegate?.playerItem?(owner!, didFinishDownloadingData: mediaData!)
+        owner?.delegate?.playerItem?(cachableAVPlayerItem, didFinishDownloadingData: mediaData)
     }
     
 }
@@ -134,10 +147,14 @@ extension ResourceLoaderDelegate {
     
     private func fillInContentInformationRequest(_ contentInformationRequest: AVAssetResourceLoadingContentInformationRequest?) {
         
+        guard let mediaData = mediaData else {
+            return
+        }
+        
         // if we play from Data we make no url requests, therefore we have no responses, so we need to fill in contentInformationRequest manually
         if isPlayingFromData {
             contentInformationRequest?.contentType = self.mimeType
-            contentInformationRequest?.contentLength = Int64(mediaData!.count)
+            contentInformationRequest?.contentLength = Int64(mediaData.count)
             contentInformationRequest?.isByteRangeAccessSupported = true
             return
         }
