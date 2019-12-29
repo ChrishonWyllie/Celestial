@@ -172,21 +172,26 @@ extension ResourceLoaderDelegate {
 
 public class CachableAVPlayerItem: AVPlayerItem {
     
-    fileprivate let resourceLoaderDelegate = ResourceLoaderDelegate()
-    public private(set) var url: URL
-    fileprivate let initialScheme: String?
-    fileprivate var customFileExtension: String?
-    public private(set) var cachePolicy: MultimediaCachePolicy = .allow
+    // MARK: - Variables
     
+    public private(set) var url: URL
+    public private(set) var cachePolicy: MultimediaCachePolicy = .allow
     public private(set) weak var delegate: CachableAVPlayerItemDelegate?
     
-    open func download() {
-        if resourceLoaderDelegate.session == nil {
-            resourceLoaderDelegate.startDataRequest(with: url)
-        }
-    }
-    
+    private let resourceLoaderDelegate = ResourceLoaderDelegate()
+    private let initialScheme: String?
+    private var customFileExtension: String?
     private let cachingPlayerItemScheme = "cachingPlayerItemScheme"
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    // MARK: - Initializers
     
     /// Is used for playing remote files.
     convenience public init(url: URL, delegate: CachableAVPlayerItemDelegate?, cachePolicy: MultimediaCachePolicy = .allow) {
@@ -251,20 +256,6 @@ public class CachableAVPlayerItem: AVPlayerItem {
         
     }
     
-    // MARK: KVO
-    
-    override open func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
-        delegate?.playerItemReadyToPlay?(self)
-    }
-    
-    // MARK: Notification hanlers
-    
-    @objc func playbackStalledHandler() {
-        delegate?.playerItemPlaybackStalled?(self)
-    }
-
-    // MARK: -
-    
     override init(asset: AVAsset, automaticallyLoadedAssetKeys: [String]?) {
         fatalError("not implemented")
     }
@@ -275,4 +266,34 @@ public class CachableAVPlayerItem: AVPlayerItem {
         resourceLoaderDelegate.session?.invalidateAndCancel()
     }
     
+    
+    
+    
+    
+    
+    
+    // MARK: - Functions
+    
+    open func download() {
+        if resourceLoaderDelegate.session == nil {
+            resourceLoaderDelegate.startDataRequest(with: url)
+        }
+    }
+    
+    
+    
+    
+    
+    // MARK: KVO
+    
+    override open func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+        delegate?.playerItemReadyToPlay?(self)
+    }
+    
+    // MARK: Notification handlers
+    
+    @objc private func playbackStalledHandler() {
+        delegate?.playerItemPlaybackStalled?(self)
+    }
+
 }
