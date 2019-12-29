@@ -9,13 +9,15 @@ import AVFoundation
 
 internal class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
     
-    var playingFromData = false
-    var mimeType: String? // is required when playing from Data
-    var session: URLSession?
-    var mediaData: Data?
-    var response: URLResponse?
-    var pendingRequests = Set<AVAssetResourceLoadingRequest>()
-    weak var owner: CachableAVPlayerItem?
+   
+    public private(set) var session: URLSession?
+    public private(set) var isPlayingFromData = false
+    private var mimeType: String? // is required when playing from Data
+    private var mediaData: Data?
+    private var response: URLResponse?
+    private var pendingRequests = Set<AVAssetResourceLoadingRequest>()
+    
+    private weak var owner: CachableAVPlayerItem?
     
     
     
@@ -24,6 +26,17 @@ internal class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
         configuration.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
         session?.dataTask(with: url).resume()
+    }
+    
+    
+    public func setCachableAVPlayerItem(to: CachableAVPlayerItem) {
+        self.owner = to
+    }
+    
+    public func setMediaData(_ data: Data, mimeType: String) {
+        self.mediaData = data
+        self.isPlayingFromData = true
+        self.mimeType = mimeType
     }
     
     deinit {
@@ -70,7 +83,7 @@ extension ResourceLoaderDelegate: AVAssetResourceLoaderDelegate {
     
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
         
-        if playingFromData {
+        if isPlayingFromData {
             
             // Nothing to load.
             
@@ -122,7 +135,7 @@ extension ResourceLoaderDelegate {
     private func fillInContentInformationRequest(_ contentInformationRequest: AVAssetResourceLoadingContentInformationRequest?) {
         
         // if we play from Data we make no url requests, therefore we have no responses, so we need to fill in contentInformationRequest manually
-        if playingFromData {
+        if isPlayingFromData {
             contentInformationRequest?.contentType = self.mimeType
             contentInformationRequest?.contentLength = Int64(mediaData!.count)
             contentInformationRequest?.isByteRangeAccessSupported = true

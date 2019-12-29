@@ -61,7 +61,7 @@ public class CachableAVPlayerItem: AVPlayerItem {
         asset.resourceLoader.setDelegate(resourceLoaderDelegate, queue: DispatchQueue.main)
         super.init(asset: asset, automaticallyLoadedAssetKeys: nil)
         
-        resourceLoaderDelegate.owner = self
+        resourceLoaderDelegate.setCachableAVPlayerItem(to: self)
         
         addObserver(self, forKeyPath: "status", options: NSKeyValueObservingOptions.new, context: nil)
         
@@ -79,14 +79,13 @@ public class CachableAVPlayerItem: AVPlayerItem {
         self.url = fakeUrl
         self.initialScheme = nil
         
-        resourceLoaderDelegate.mediaData = data
-        resourceLoaderDelegate.playingFromData = true
-        resourceLoaderDelegate.mimeType = mimeType
+        resourceLoaderDelegate.setMediaData(data, mimeType: mimeType)
         
         let asset = AVURLAsset(url: fakeUrl)
         asset.resourceLoader.setDelegate(resourceLoaderDelegate, queue: DispatchQueue.main)
         super.init(asset: asset, automaticallyLoadedAssetKeys: nil)
-        resourceLoaderDelegate.owner = self
+        
+        resourceLoaderDelegate.setCachableAVPlayerItem(to: self)
         
         addObserver(self, forKeyPath: "status", options: NSKeyValueObservingOptions.new, context: nil)
         
