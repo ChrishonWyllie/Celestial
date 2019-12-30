@@ -1,8 +1,8 @@
 {
   "name": "Celestial",
-  "version": "0.1.0",
-  "summary": "A short description of Celestial.",
-  "description": "TODO: Add long description of the pod here.",
+  "version": "0.1.11",
+  "summary": "A Caching service for multimedia",
+  "description": "Celestial was written to help manage loading media from external URLs and displaying them in UITableViews and UICollectionViews. The point is to avoid redundant API calls.",
   "homepage": "https://github.com/ChrishonWyllie/Celestial",
   "license": {
     "type": "MIT",
@@ -13,10 +13,19 @@
   },
   "source": {
     "git": "https://github.com/ChrishonWyllie/Celestial.git",
-    "tag": "0.1.0"
+    "tag": "0.1.11"
   },
+  "swift_versions": [
+    "4.0",
+    "4.1",
+    "4.2",
+    "5.0",
+    "5.1"
+  ],
   "platforms": {
-    "ios": "8.0"
+    "ios": "13.0"
   },
-  "source_files": "Celestial/Classes/**/*"
+  "source_files": "Classes/**/*",
+  "frameworks": "UIKit",
+  "swift_version": "5.1"
 }

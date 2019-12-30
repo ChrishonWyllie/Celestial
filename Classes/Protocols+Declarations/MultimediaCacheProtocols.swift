@@ -7,27 +7,87 @@
 
 import UIKit.UIImage
 
+// MARK: - MultimediaCachePolicy
+
+public enum MultimediaCachePolicy {
+    case allow
+    case notAllowed
+}
+
+
+// MARK: - CelestialCacheProtocol
+
 internal protocol CelestialCacheProtocol: class {
+    
+    // Video
+    
+    // Returns the video associated with a given url string
+    func video(for urlString: String) -> OriginalVideoData?
+    // Inserts the video of the specified url string in the cache
+    func store(video: OriginalVideoData?, with urlString: String)
+    // Removes the video of the specified url string in the cache
+    func removeVideo(at urlString: String)
+    // Removes all videos from the cache
+    func clearAllVideos()
+    
+    
+    
+    
+    // Image
     
     // Returns the image associated with a given url string
     func image(for urlString: String) -> UIImage?
     // Inserts the image of the specified url string in the cache
-    func store(_ image: UIImage?, with urlString: String)
+    func store(image: UIImage?, with urlString: String)
     // Removes the image of the specified url string in the cache
     func removeImage(at urlString: String)
     // Removes all images from the cache
     func clearAllImages()
-    // Accesses the value associated with the given key for reading and writing
-    subscript(_ urlString: String) -> UIImage? { get set }
     
     
     
-    // Video caching TBD
+    func reset()
 }
 
 
 
 
+
+
+
+
+
+
+
+// MARK: - CacheManagerProtocol
+
+internal protocol CacheManagerProtocol: class {
+    
+    var encodedItemsCache: NSCache<AnyObject, AnyObject> { get }
+    var decodedItemsCache: NSCache<AnyObject, AnyObject> { get }
+    var lock: NSLock { get }
+    var config: CacheControlConfiguration { get }
+    
+}
+
+
+
+// MARK: - CacheControlConfiguration
+
+internal struct CacheControlConfiguration {
+    let countLimit: Int
+    let memoryLimit: Int
+    
+    static let defaultCountLimit: Int = 100 // 100 images
+    static let defaultMemoryLimit: Int = Int.OneMegabyte * 100 // 100 MB
+    
+    static let defaultConfig = CacheControlConfiguration(countLimit: CacheControlConfiguration.defaultCountLimit, memoryLimit: CacheControlConfiguration.defaultMemoryLimit)
+}
+
+
+
+
+// MARK: - CacheProtocol
 
 /// Generic protocol that both VideoCache and ImageCache must implement.
 internal protocol CacheProtocol: class {

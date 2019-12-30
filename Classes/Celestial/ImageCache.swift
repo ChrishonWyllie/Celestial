@@ -7,38 +7,31 @@
 
 import UIKit
 
-internal final class ImageCache: NSObject {
+internal final class ImageCache: NSObject, CacheManagerProtocol {
 
     // MARK: - Variables
     
     public static let shared = ImageCache()
     
     // 1st level cache, that contains encoded images
-    private lazy var encodedImageCache: NSCache<AnyObject, AnyObject> = {
+    private(set) lazy var encodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
         cache.countLimit = config.countLimit
         return cache
     }()
     
     // 2nd level cache, that contains decoded images
-    private lazy var decodedImageCache: NSCache<AnyObject, AnyObject> = {
+    private(set) lazy var decodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
         cache.totalCostLimit = config.memoryLimit
         return cache
     }()
     
-    private let lock = NSLock()
-    private let config: CacheControlConfiguration
+    private(set) var lock: NSLock = NSLock()
+    
+    private(set) var config: CacheControlConfiguration
 
-    struct CacheControlConfiguration {
-        let countLimit: Int
-        let memoryLimit: Int
-        
-        static let defaultCountLimit: Int = 100 // 100 images
-        static let defaultMemoryLimit: Int = Int.OneMegabyte * 100 // 100 MB
-        
-        static let defaultConfig = CacheControlConfiguration(countLimit: CacheControlConfiguration.defaultCountLimit, memoryLimit: CacheControlConfiguration.defaultMemoryLimit)
-    }
+    
 
     
     
@@ -68,14 +61,14 @@ extension ImageCache: CacheProtocol {
 
         lock.lock(); defer { lock.unlock() }
         // the best case scenario -> there is a decoded image
-        if let decodedImage = decodedImageCache.object(forKey: urlString as AnyObject) as? UIImage {
+        if let decodedImage = decodedItemsCache.object(forKey: urlString as AnyObject) as? UIImage {
             return decodedImage
         }
 
         // search for image data
-        if let image = encodedImageCache.object(forKey: urlString as AnyObject) as? UIImage {
+        if let image = encodedItemsCache.object(forKey: urlString as AnyObject) as? UIImage {
             let decodedImage = image.decodedImage()
-            decodedImageCache.setObject(image as AnyObject, forKey: urlString as AnyObject, cost: decodedImage.diskSize)
+            decodedItemsCache.setObject(image as AnyObject, forKey: urlString as AnyObject, cost: decodedImage.diskSize)
             return decodedImage
         }
 
@@ -88,28 +81,28 @@ extension ImageCache: CacheProtocol {
 
         lock.lock(); defer { lock.unlock() }
 
-        encodedImageCache.setObject(decodedImage, forKey: urlString as AnyObject)
-        decodedImageCache.setObject(image as AnyObject, forKey: urlString as AnyObject, cost: decodedImage.diskSize)
+        encodedItemsCache.setObject(decodedImage, forKey: urlString as AnyObject)
+        decodedItemsCache.setObject(image as AnyObject, forKey: urlString as AnyObject, cost: decodedImage.diskSize)
     }
 
     func removeItem(at urlString: String) {
         lock.lock(); defer { lock.unlock() }
-        encodedImageCache.removeObject(forKey: urlString as AnyObject)
-        decodedImageCache.removeObject(forKey: urlString as AnyObject)
+        encodedItemsCache.removeObject(forKey: urlString as AnyObject)
+        decodedItemsCache.removeObject(forKey: urlString as AnyObject)
     }
     
     func setCacheItemLimit(_ value: Int) {
-        encodedImageCache.countLimit = value
+        encodedItemsCache.countLimit = value
     }
     
     func setCacheCostLimit(numMegabytes: Int) {
-        decodedImageCache.totalCostLimit = numMegabytes * Int.OneMegabyte
+        decodedItemsCache.totalCostLimit = numMegabytes * Int.OneMegabyte
     }
 
     func clearAllItems() {
         lock.lock(); defer { lock.unlock() }
-        encodedImageCache.removeAllObjects()
-        decodedImageCache.removeAllObjects()
+        encodedItemsCache.removeAllObjects()
+        decodedItemsCache.removeAllObjects()
     }
 
     subscript(urlString: String) -> UIImage? {
