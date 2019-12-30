@@ -9,6 +9,7 @@ import AVFoundation
 
 internal class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
     
+    // MARK: - Variables
    
     public private(set) var session: URLSession?
     public private(set) var isPlayingFromData = false
@@ -20,6 +21,11 @@ internal class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
     private weak var owner: CachableAVPlayerItem?
     
     
+    
+    
+    
+    
+    // MARK: - Public Functions
     
     public func startDataRequest(with url: URL) {
         let configuration = URLSessionConfiguration.default
@@ -84,6 +90,11 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
             return
         }
         processPendingRequests()
+        
+        if owner?.cachePolicy == .allow, let urlString = owner?.url.absoluteString {
+            Celestial.shared.store(video: mediaData, with: urlString)
+        }
+        
         owner?.delegate?.playerItem?(cachableAVPlayerItem, didFinishDownloadingData: mediaData)
     }
     

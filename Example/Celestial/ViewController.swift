@@ -114,7 +114,7 @@ extension ViewController {
 
 
 
-        Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { (timer) in
+        Timer.scheduledTimer(withTimeInterval: 7.0, repeats: true) { (timer) in
             DispatchQueue.main.async {
                 self.player.pause()
                 playerLayer.removeFromSuperlayer()
@@ -172,7 +172,6 @@ extension ViewController: CachableAVPlayerItemDelegate {
 
     func playerItem(_ playerItem: CachableAVPlayerItem, didFinishDownloadingData data: Data) {
         print("File is downloaded and ready for storing")
-        Celestial.shared.store(video: data, with: playerItem.url.absoluteString)
         print("asset duration after downloading: \(CMTimeGetSeconds(playerItem.asset.duration))")
     }
 
