@@ -27,6 +27,11 @@ public class URLImageView: UIImageView {
     
     // MARK: - Initializers
     
+    public convenience init(urlString: String, delegate: URLImageViewDelegate?, cachePolicy: MultimediaCachePolicy = .allow, defaultImage: UIImage? = nil) {
+        self.init(delegate: delegate, cachePolicy: cachePolicy, defaultImage: defaultImage)
+        self.loadImageFrom(urlString: urlString)
+    }
+    
     public init(delegate: URLImageViewDelegate?, cachePolicy: MultimediaCachePolicy = .allow, defaultImage: UIImage? = nil) {
         super.init(frame: .zero)
         self.cachePolicy = cachePolicy
