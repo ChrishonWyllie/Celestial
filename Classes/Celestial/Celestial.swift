@@ -32,11 +32,11 @@ extension Celestial: CelestialCacheProtocol {
     
     // Video
     
-    public func video(for urlString: String) -> Data? {
+    public func video(for urlString: String) -> OriginalVideoData? {
         return VideoCache.shared.item(for: urlString)
     }
 
-    public func store(video: Data?, with urlString: String) {
+    public func store(video: OriginalVideoData?, with urlString: String) {
         VideoCache.shared.store(video, with: urlString)
     }
     

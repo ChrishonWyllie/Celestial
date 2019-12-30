@@ -25,6 +25,8 @@
 		66270B9C23B4437600A34A17 /* MiscellaneousDeclarations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66270B9A23B4437600A34A17 /* MiscellaneousDeclarations.swift */; };
 		663A31BD23B826ED0004AA37 /* ResourceLoaderDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A31BC23B826ED0004AA37 /* ResourceLoaderDelegate.swift */; };
 		663A31BE23B826ED0004AA37 /* ResourceLoaderDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A31BC23B826ED0004AA37 /* ResourceLoaderDelegate.swift */; };
+		663A31C023B995E50004AA37 /* OriginalVideoDataStruct.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A31BF23B995E40004AA37 /* OriginalVideoDataStruct.swift */; };
+		663A31C123B995E50004AA37 /* OriginalVideoDataStruct.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A31BF23B995E40004AA37 /* OriginalVideoDataStruct.swift */; };
 		66F3AC4423B7A2E500C4505D /* CachableAVPlayerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F3AC4323B7A2E500C4505D /* CachableAVPlayerItem.swift */; };
 		66F3AC4523B7A2E500C4505D /* CachableAVPlayerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F3AC4323B7A2E500C4505D /* CachableAVPlayerItem.swift */; };
 		6E2E68FF27C6E1EBAD1EAAAA70DF14DF /* Celestial-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 7F659EEE00E9525CA0543E85138D7BC7 /* Celestial-dummy.m */; };
@@ -73,6 +75,7 @@
 		66270B9723B43B6200A34A17 /* URLImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLImageView.swift; sourceTree = "<group>"; };
 		66270B9A23B4437600A34A17 /* MiscellaneousDeclarations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiscellaneousDeclarations.swift; sourceTree = "<group>"; };
 		663A31BC23B826ED0004AA37 /* ResourceLoaderDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceLoaderDelegate.swift; sourceTree = "<group>"; };
+		663A31BF23B995E40004AA37 /* OriginalVideoDataStruct.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalVideoDataStruct.swift; sourceTree = "<group>"; };
 		66F3AC4323B7A2E500C4505D /* CachableAVPlayerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachableAVPlayerItem.swift; sourceTree = "<group>"; };
 		68BD6AB4BBE8DE3A626834606FB29915 /* Pods-Celestial_Tests-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-Celestial_Tests-acknowledgements.markdown"; sourceTree = "<group>"; };
 		71CDF28B8377D47B4E08FD7BBBB62692 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
@@ -194,6 +197,7 @@
 			children = (
 				66F3AC4323B7A2E500C4505D /* CachableAVPlayerItem.swift */,
 				663A31BC23B826ED0004AA37 /* ResourceLoaderDelegate.swift */,
+				663A31BF23B995E40004AA37 /* OriginalVideoDataStruct.swift */,
 			);
 			path = CachableAVPlayerItem;
 			sourceTree = "<group>";
@@ -458,6 +462,7 @@
 				663A31BE23B826ED0004AA37 /* ResourceLoaderDelegate.swift in Sources */,
 				66270B8623B4354F00A34A17 /* Celestial.swift in Sources */,
 				66270B9523B438DD00A34A17 /* Extensions.swift in Sources */,
+				663A31C123B995E50004AA37 /* OriginalVideoDataStruct.swift in Sources */,
 				66270B8B23B435DA00A34A17 /* MultimediaCacheProtocols.swift in Sources */,
 				66F3AC4523B7A2E500C4505D /* CachableAVPlayerItem.swift in Sources */,
 				66270B9123B437C600A34A17 /* VideoCache.swift in Sources */,
@@ -483,6 +488,7 @@
 				663A31BD23B826ED0004AA37 /* ResourceLoaderDelegate.swift in Sources */,
 				66270B8523B4354F00A34A17 /* Celestial.swift in Sources */,
 				66270B9423B438DD00A34A17 /* Extensions.swift in Sources */,
+				663A31C023B995E50004AA37 /* OriginalVideoDataStruct.swift in Sources */,
 				66270B8A23B435DA00A34A17 /* MultimediaCacheProtocols.swift in Sources */,
 				66F3AC4423B7A2E500C4505D /* CachableAVPlayerItem.swift in Sources */,
 				66270B9023B437C600A34A17 /* VideoCache.swift in Sources */,

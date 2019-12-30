@@ -58,22 +58,25 @@ internal final class VideoCache: NSObject, CacheManagerProtocol {
 
 extension VideoCache: CacheProtocol {
 
-    typealias T = Data
+    typealias T = OriginalVideoData
     
-    func item(for urlString: String) -> Data? {
+    func item(for urlString: String) -> OriginalVideoData? {
 
         lock.lock(); defer { lock.unlock() }
         // the best case scenario -> there is already decompressed decoded data in the cache
-        if let cachedDecodedData = decodedItemsCache.object(forKey: urlString as AnyObject) as? NSData {
-            return cachedDecodedData as Data
+        if let cachedDecompressedOriginalVideoData = decodedItemsCache.object(forKey: urlString as AnyObject) as? OriginalVideoData {
+            return cachedDecompressedOriginalVideoData
         }
 
         // search for compressed data and decompress it.
-        if let encodedData = encodedItemsCache.object(forKey: urlString as AnyObject) as? Data {
+        if let cachedCompressedOriginalVideoData = encodedItemsCache.object(forKey: urlString as AnyObject) as? OriginalVideoData {
             do {
-                let decodedData = try (encodedData as NSData).decompressed(using: NSData.CompressionAlgorithm.lzfse)
-                decodedItemsCache.setObject(decodedData as AnyObject, forKey: urlString as AnyObject, cost: decodedData.count)
-                return decodedData as Data
+                let decompressedVideoData = try (cachedCompressedOriginalVideoData.videoData as NSData).decompressed(using: NSData.CompressionAlgorithm.lzfse)
+                let decompressedOriginalVideoData = OriginalVideoData(videoData: decompressedVideoData as Data,
+                                                                      originalURLMimeType: cachedCompressedOriginalVideoData.originalURLMimeType,
+                                                                      originalURLFileExtension: cachedCompressedOriginalVideoData.originalURLFileExtension)
+                decodedItemsCache.setObject(decompressedOriginalVideoData as AnyObject, forKey: urlString as AnyObject, cost: decompressedOriginalVideoData.videoData.count)
+                return decompressedOriginalVideoData as OriginalVideoData
             } catch let error {
                 print("Error getting decompressed Data from cache: \(error.localizedDescription)")
                 return nil
@@ -83,19 +86,22 @@ extension VideoCache: CacheProtocol {
         return nil
     }
 
-    func store(_ item: Data?, with urlString: String) {
-        guard let decompressedData = item else { return removeItem(at: urlString) }
-        print("storing decompressed data with size: \(decompressedData.count). Size in mb: \((decompressedData as Data).sizeInMB)")
+    func store(_ item: OriginalVideoData?, with urlString: String) {
+        guard let decompressedOriginalVideoData = item else { return removeItem(at: urlString) }
+
         do {
-            let compressedData = try (decompressedData as NSData).compressed(using: NSData.CompressionAlgorithm.lzfse)
+            let compressedData = try (decompressedOriginalVideoData.videoData as NSData).compressed(using: NSData.CompressionAlgorithm.lzfse)
+            let compressedOriginalVideoData = OriginalVideoData(videoData: compressedData as Data,
+                                                                originalURLMimeType: decompressedOriginalVideoData.originalURLMimeType,
+                                                                originalURLFileExtension: decompressedOriginalVideoData.originalURLFileExtension)
             lock.lock(); defer { lock.unlock() }
             
             print("memory limit: \(config.memoryLimit)")
             print("storing compressed data with size: \(compressedData.count). Size in mb: \((compressedData as Data).sizeInMB)")
             
             
-            encodedItemsCache.setObject(compressedData, forKey: urlString as AnyObject)
-            decodedItemsCache.setObject(decompressedData as AnyObject, forKey: urlString as AnyObject, cost: decompressedData.count)
+            encodedItemsCache.setObject(compressedOriginalVideoData as AnyObject, forKey: urlString as AnyObject)
+            decodedItemsCache.setObject(decompressedOriginalVideoData as AnyObject, forKey: urlString as AnyObject, cost: decompressedOriginalVideoData.videoData.count)
         } catch let error {
             print("Error storing compressed Data from cache: \(error.localizedDescription)")
         }
@@ -121,7 +127,7 @@ extension VideoCache: CacheProtocol {
         decodedItemsCache.removeAllObjects()
     }
 
-    subscript(urlString: String) -> Data? {
+    subscript(urlString: String) -> OriginalVideoData? {
         get {
             return item(for: urlString)
         }
