@@ -23,7 +23,8 @@ class ViewController: UIViewController {
     // MARK: - UI Elements
 
     private lazy var imageView: URLImageView = {
-        let img = URLImageView(delegate: self)
+        let urlString = "https://picsum.photos/400/800/?random"
+        let img = URLImageView(urlString: urlString, delegate: self)
         img.translatesAutoresizingMaskIntoConstraints = false
         img.contentMode = .scaleAspectFill
         img.layer.cornerRadius = 10
@@ -74,9 +75,9 @@ class ViewController: UIViewController {
 extension ViewController {
      
      private func setupUI() {
-//        setupURLImageView()
+        setupURLImageView()
 //        setupImageCachingCollectionView()
-        setupCachableAVPlayerItem()
+//        setupCachableAVPlayerItem()
     }
 
     private func setupURLImageView() {
@@ -86,10 +87,6 @@ extension ViewController {
          imageView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
          imageView.heightAnchor.constraint(equalToConstant: 200).isActive = true
          imageView.widthAnchor.constraint(equalToConstant: 200).isActive = true
-         
-         
-         let urlString = "https://picsum.photos/400/800/?random"
-         imageView.loadImageFrom(urlString: urlString)
      }
 
     private func setupImageCachingCollectionView() {
