@@ -21,13 +21,13 @@ internal protocol CelestialCacheProtocol: class {
     
     // Video
     
-    // Returns the image associated with a given url string
-    func video(for urlString: String) -> Data?
-    // Inserts the image of the specified url string in the cache
-    func store(video: Data?, with urlString: String)
-    // Removes the image of the specified url string in the cache
+    // Returns the video associated with a given url string
+    func video(for urlString: String) -> OriginalVideoData?
+    // Inserts the video of the specified url string in the cache
+    func store(video: OriginalVideoData?, with urlString: String)
+    // Removes the video of the specified url string in the cache
     func removeVideo(at urlString: String)
-    // Removes all images from the cache
+    // Removes all videos from the cache
     func clearAllVideos()
     
     

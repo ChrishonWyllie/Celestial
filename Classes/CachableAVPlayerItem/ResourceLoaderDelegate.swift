@@ -91,8 +91,11 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
         }
         processPendingRequests()
         
-        if owner?.cachePolicy == .allow, let urlString = owner?.url.absoluteString {
-            Celestial.shared.store(video: mediaData, with: urlString)
+        if owner?.cachePolicy == .allow, let url = owner?.url {
+            let originalVideoData = OriginalVideoData(videoData: mediaData,
+                                                      originalURLMimeType: url.mimeType(),
+                                                      originalURLFileExtension: url.pathExtension)
+            Celestial.shared.store(video: originalVideoData, with: url.absoluteString)
         }
         
         owner?.delegate?.playerItem?(cachableAVPlayerItem, didFinishDownloadingData: mediaData)
