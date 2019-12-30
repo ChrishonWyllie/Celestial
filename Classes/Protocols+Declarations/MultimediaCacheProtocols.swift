@@ -30,6 +30,9 @@ internal protocol CelestialCacheProtocol: class {
     // Removes all videos from the cache
     func clearAllVideos()
     
+    func setCacheItemLimit(videoCache: Int?, imageCache: Int?)
+    
+    func setCacheCostLimit(videoCache: Int?, imageCache: Int?)
     
     
     

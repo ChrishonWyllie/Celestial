@@ -51,6 +51,29 @@ extension Celestial: CelestialCacheProtocol {
 
     
     
+    func setCacheItemLimit(videoCache: Int?, imageCache: Int?) {
+        if let videoCacheLimit = videoCache {
+            VideoCache.shared.setCacheItemLimit(videoCacheLimit)
+        }
+        if let imageCacheLimit = imageCache {
+            ImageCache.shared.setCacheItemLimit(imageCacheLimit)
+        }
+    }
+    
+    func setCacheCostLimit(videoCache: Int?, imageCache: Int?) {
+        if let videoCacheLimit = videoCache {
+            VideoCache.shared.setCacheCostLimit(numMegabytes: videoCacheLimit)
+        }
+        if let imageCacheLimit = imageCache {
+            ImageCache.shared.setCacheCostLimit(numMegabytes: imageCacheLimit)
+        }
+    }
+    
+    
+    
+    
+    
+    
     
     // Image
     
