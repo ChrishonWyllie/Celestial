@@ -97,12 +97,11 @@ extension ViewController {
     }
 
     private func setupCachableAVPlayerItem() {
-//        let urlString = "http://www.hochmuth.com/mp3/Tchaikovsky_Nocturne__orch.mp3"
-        let urlString = "https://firebasestorage.googleapis.com/v0/b/rockside-67ac9.appspot.com/o/storyVideos%2F0141E566-C6D4-418E-9627-935D1305A5AD.mov?alt=media&token=193cc49d-c454-48e7-809f-7b1a68e026d7"
-//        let urlString = "https://firebasestorage.googleapis.com/v0/b/rockside-67ac9.appspot.com/o/storyVideos%2FECF11E68-D572-4C70-ADCF-6D63B1F2DE1F.mov?alt=media&token=085fd513-1426-438c-881c-6174a00928f1"
+        let urlString = "http://www.hochmuth.com/mp3/Tchaikovsky_Nocturne__orch.mp3"
         guard let url = URL(string: urlString) else {
             return
         }
+        
         let playerItem = CachableAVPlayerItem(url: url, delegate: self)
         player = AVPlayer(playerItem: playerItem)
         player.automaticallyWaitsToMinimizeStalling = false
@@ -120,8 +119,11 @@ extension ViewController {
                 playerLayer.removeFromSuperlayer()
                 self.player = nil
 
-                if let videoData = Celestial.shared.video(for: urlString) {
-                    let playerItem2 = CachableAVPlayerItem(data: videoData, mimeType: "video/quicktime", fileExtension: "mov")
+                if let _ = Celestial.shared.video(for: urlString) {
+                    
+                    // At this point, the video will already be cached
+                    let playerItem2 = CachableAVPlayerItem(url: url, delegate: self)
+                    
                     self.player = AVPlayer(playerItem: playerItem2)
                     self.player.automaticallyWaitsToMinimizeStalling = false
                     let playerLayer = AVPlayerLayer(player: self.player)
