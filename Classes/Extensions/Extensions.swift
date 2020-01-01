@@ -22,7 +22,7 @@ internal extension UIImage {
         return UIImage(cgImage: decodedImage)
     }
     
-    // Rough estimation of how much memory image uses in bytes
+    /// A rough estimation of how much memory this UIImage uses in bytes
     var diskSize: Int {
         guard let cgImage = cgImage else { return 0 }
         return cgImage.bytesPerRow * cgImage.height
@@ -38,21 +38,17 @@ internal extension UIImage {
 
 
 
-// MARK: - UIImageView
-
-public extension UIImageView {
-    
-}
-
-
-
 
 
 
 // MARK: - Int
 
-internal extension Int {
+public extension Int {
+    
+    /// Number of bytes in one megabyte. Used to set the cost limit of the decoded items NSCache.
     static let OneMegabyte = 1024 * 1024
+    
+    /// Number of bytes in one gigabyte. Used to set the cost limit of the decoded items NSCache.
     static let OneGigabyte = OneMegabyte * 1000
 }
 
@@ -64,6 +60,7 @@ internal extension Int {
 
 internal extension Data {
     
+    /// Quick reference for calculating the number of megabytes that a video uses.
     var sizeInMB: Float {
         return Float(self.count) / Float(Int.OneMegabyte)
     }
@@ -85,6 +82,8 @@ internal extension URL {
         return components?.url
     }
     
+    /// Gets the proper mime type of a URL based on its file extension.
+    /// Useful for storing and recreating videos from NSData with the proper mime type.
     func mimeType() -> String {
         let pathExtension = self.pathExtension
         if let uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, pathExtension as NSString, nil)?.takeRetainedValue() {
@@ -92,8 +91,10 @@ internal extension URL {
                 return mimetype as String
             }
         }
-        return "application/octet-stream"
+        return "application/octet-stream" // default value
     }
+    
+    /// Returns a boolean value for if the file at the specified URL is an image
     var containsImage: Bool {
         let mimeType = self.mimeType()
         guard let uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType as CFString, nil)?.takeRetainedValue() else {
@@ -101,6 +102,8 @@ internal extension URL {
         }
         return UTTypeConformsTo(uti, kUTTypeImage)
     }
+    
+    /// Returns a boolean value for if the file at the specified URL is an audio file
     var containsAudio: Bool {
         let mimeType = self.mimeType()
         guard let uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType as CFString, nil)?.takeRetainedValue() else {
@@ -108,6 +111,8 @@ internal extension URL {
         }
         return UTTypeConformsTo(uti, kUTTypeAudio)
     }
+    
+    /// Returns a boolean value for if the file at the specified URL is a video
     var containsVideo: Bool {
         let mimeType = self.mimeType()
         guard  let uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType as CFString, nil)?.takeRetainedValue() else {

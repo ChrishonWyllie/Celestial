@@ -8,6 +8,8 @@
 import Foundation
 
 /// A  "container" for storing the videos into the cache.
+/// When caching the Data associated with a video file, recreating the video at a later date requires
+/// the original mime type and file extension. Therefore, this information is stored along with the Data itself.
 public struct OriginalVideoData {
     /// The data represented by the video file that was downloaded using an external URL
     public let videoData: Data

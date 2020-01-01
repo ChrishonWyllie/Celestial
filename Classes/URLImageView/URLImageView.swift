@@ -7,6 +7,9 @@
 
 import UIKit
 
+/// Subclass of UIImageView which can download and display an image from an external URL,
+/// then cache it for future use if desired.
+/// This is used together with the Celestial cache to prevent needless downloading of the same images.
 open class URLImageView: UIImageView {
     
     // MARK: - Variables
@@ -27,6 +30,13 @@ open class URLImageView: UIImageView {
     
     // MARK: - Initializers
     
+    /// - Parameter urlString: The URL.absoluteString of the image you would like to download and display (NOTE: You may download this image sometime after instantiation by using:
+    /// ````
+    ///     loadImageFrom(urlString: String)
+    /// ````
+    /// - Parameter delegate: `URLImageViewDelegate` for useful delegation functions such as knowing when download has completed, or its current progress.
+    /// - Parameter cachePolicy: `MultimediaCachePolicy` for determining whether the image should be cached upon completion of its download.
+    /// - Parameter defaultImage: `UIImage` a default image that will be used if download fails.
     public convenience init(urlString: String, delegate: URLImageViewDelegate?, cachePolicy: MultimediaCachePolicy = .allow, defaultImage: UIImage? = nil) {
         self.init(delegate: delegate, cachePolicy: cachePolicy, defaultImage: defaultImage)
         self.loadImageFrom(urlString: urlString)
@@ -52,6 +62,7 @@ open class URLImageView: UIImageView {
     
     // MARK: - Functions
     
+    /// Downloads an image from an external URL string
     public func loadImageFrom(urlString: String) {
         
         // Store a reference to the urlString, so that we can save in Cache when download completes
@@ -98,12 +109,12 @@ extension URLImageView: URLSessionDownloadDelegate {
         let totalSize = ByteCountFormatter.string(fromByteCount: totalBytesExpectedToWrite, countStyle: .file)
         let humanReadablePercentage = String(format: "%.1f%% of %@", percentage * 100, totalSize)
         
-        delegate?.urlImageView(self, downloadProgress: percentage, humanReadableProgress: humanReadablePercentage)
+        delegate?.urlImageView?(self, downloadProgress: percentage, humanReadableProgress: humanReadablePercentage)
     }
     
     public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        fallbackOnDefaultImageIfExists()
         guard let error = error else { return }
+        fallbackOnDefaultImageIfExists()
         delegate?.urlImageView(self, downloadFailedWith: error)
     }
     
@@ -120,13 +131,13 @@ extension URLImageView: URLSessionDownloadDelegate {
                     self.image = downloadedImage
                 }
                 
+                delegate?.urlImageView(self, didFinishDownloading: downloadedImage)
+                
                 guard let urlString = self.urlString else { return }
                 
                 if cachePolicy == .allow {
                     Celestial.shared.store(image: downloadedImage, with: urlString)
                 }
-                
-                delegate?.urlImageView(self, downloadCompletedAt: urlString)
                 
             }
         } catch let dataError {

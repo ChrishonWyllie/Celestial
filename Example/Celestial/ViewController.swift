@@ -147,8 +147,8 @@ extension ViewController {
 
 extension ViewController: URLImageViewDelegate {
     
-    func urlImageView(_ view: URLImageView, downloadCompletedAt urlString: String) {
-        print("download completed with url string: \(urlString)")
+    func urlImageView(_ view: URLImageView, didFinishDownloading image: UIImage) {
+        print("download completed with url string: \(String(describing: view.urlString))")
         print("image has been cached?: \(view.cachePolicy == .allow)")
     }
     
@@ -175,15 +175,20 @@ extension ViewController: URLImageViewDelegate {
 
 extension ViewController: CachableAVPlayerItemDelegate {
 
-    func playerItem(_ playerItem: CachableAVPlayerItem, didFinishDownloadingData data: Data) {
+    func playerItem(_ playerItem: CachableAVPlayerItem, didFinishDownloading data: Data) {
         print("File is downloaded and ready for storing")
         print("asset duration after downloading: \(CMTimeGetSeconds(playerItem.asset.duration))")
         print("video has been cached?: \(playerItem.cachePolicy == .allow)")
     }
-
-    func playerItem(_ playerItem: CachableAVPlayerItem, didDownloadBytesSoFar bytesDownloaded: Int, outOf bytesExpected: Int) {
-//        let downloadProgress = Float(bytesDownloaded) / Float(bytesExpected)
-//        print("download progress: \(downloadProgress * 100)%")
+    
+    func playerItem(_ playerItem: CachableAVPlayerItem, downloadFailedWith error: Error) {
+        print("Error downloading video: \(error.localizedDescription)")
+    }
+    
+    
+    func playerItem(_ playerItem: CachableAVPlayerItem, downloadProgress progress: CGFloat, humanReadableProgress: String) {
+        print("download progress: \(progress)")
+        print("human readable download progress: \(humanReadableProgress)")
     }
 
     func playerItemReadyToPlay(_ playerItem: CachableAVPlayerItem) {
@@ -192,10 +197,6 @@ extension ViewController: CachableAVPlayerItemDelegate {
 
     func playerItemPlaybackStalled(_ playerItem: CachableAVPlayerItem) {
         print("Not enough data for playback. Probably because of the poor network. Wait a bit and try to play later.")
-    }
-
-    func playerItem(_ playerItem: CachableAVPlayerItem, downloadingFailedWith error: Error) {
-        print("Error downloading video: \(error.localizedDescription)")
     }
 
 }

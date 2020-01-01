@@ -8,6 +8,9 @@
 import Foundation
 import AVFoundation
 
+/// Subclass of AVPlayerItem which can download and display a video from an external URL,
+/// then cache it for future use if desired.
+/// This is used together with the Celestial cache to prevent needless downloading of the same videos.
 open class CachableAVPlayerItem: AVPlayerItem {
     
     // MARK: - Variables
@@ -31,7 +34,11 @@ open class CachableAVPlayerItem: AVPlayerItem {
     
     // MARK: - Initializers
     
-    /// Is used for playing remote files.
+    /// Convenience initializer used for playing remote files.
+    /// NOTE: Your should use this as primary method of initialization.
+    /// - Parameter url: The URL of the video you would like to download and play
+    /// - Parameter delegate: `CachableAVPlayerItemDelegate` for useful delegation functions such as knowing when download has completed, or its current progress.
+    /// - Parameter cachePolicy: `MultimediaCachePolicy` for determining whether the video should be cached upon completion of its download.
     convenience public init(url: URL, delegate: CachableAVPlayerItemDelegate?, cachePolicy: MultimediaCachePolicy = .allow) {
         self.init(url: url, customFileExtension: nil, delegate: delegate, cachePolicy: cachePolicy)
     }
