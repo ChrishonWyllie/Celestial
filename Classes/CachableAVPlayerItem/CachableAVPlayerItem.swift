@@ -8,7 +8,7 @@
 import Foundation
 import AVFoundation
 
-public class CachableAVPlayerItem: AVPlayerItem {
+open class CachableAVPlayerItem: AVPlayerItem {
     
     // MARK: - Variables
     

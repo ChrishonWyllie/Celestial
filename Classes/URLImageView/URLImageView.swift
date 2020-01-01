@@ -7,7 +7,7 @@
 
 import UIKit
 
-public class URLImageView: UIImageView {
+open class URLImageView: UIImageView {
     
     // MARK: - Variables
     
