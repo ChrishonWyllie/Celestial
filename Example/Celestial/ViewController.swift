@@ -89,7 +89,7 @@ extension ViewController {
      }
 
     private func setupImageCachingCollectionView() {
-        //        Celestial.shared.store(<#T##image: UIImage?##UIImage?#>, with: <#T##String#>)
+        // TBD
     }
 
     private func setupCachableAVPlayerItem() {
@@ -108,7 +108,14 @@ extension ViewController {
         player.play()
 
 
-
+        // Recreate the video after a determined amount of time
+        // NOTE: this time interval may be too short or too long depending on the video at the urlString
+        // Expected behavior:
+        // The video will have been cached already, thus causing the recreated video
+        // to begin immediately using the cached Data, instead of making another URL request to the server.
+        // The `playerItem(_ playerItem: CachableAVPlayerItem, didFinishDownloadingData data: Data)` delegate
+        // function below should only be called ONCE (due to being already cached)
+        
         Timer.scheduledTimer(withTimeInterval: 7.0, repeats: true) { (timer) in
             DispatchQueue.main.async {
                 self.player.pause()
@@ -171,10 +178,10 @@ extension ViewController: CachableAVPlayerItemDelegate {
     func playerItem(_ playerItem: CachableAVPlayerItem, didFinishDownloadingData data: Data) {
         print("File is downloaded and ready for storing")
         print("asset duration after downloading: \(CMTimeGetSeconds(playerItem.asset.duration))")
+        print("video has been cached?: \(playerItem.cachePolicy == .allow)")
     }
 
     func playerItem(_ playerItem: CachableAVPlayerItem, didDownloadBytesSoFar bytesDownloaded: Int, outOf bytesExpected: Int) {
-//        print("\(bytesDownloaded)/\(bytesExpected)")
 //        let downloadProgress = Float(bytesDownloaded) / Float(bytesExpected)
 //        print("download progress: \(downloadProgress * 100)%")
     }
@@ -188,7 +195,7 @@ extension ViewController: CachableAVPlayerItemDelegate {
     }
 
     func playerItem(_ playerItem: CachableAVPlayerItem, downloadingFailedWith error: Error) {
-        print(error)
+        print("Error downloading video: \(error.localizedDescription)")
     }
 
 }
