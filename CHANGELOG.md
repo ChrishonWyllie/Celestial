@@ -1,4 +1,15 @@
 
+## [Version 0.4.0](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.4.0)  
+
+### New
+    * Created this CHANGELOG file
+
+### Improvements
+N/A
+
+### Bug fixes
+N/A
+
 ## [Version 0.3.1](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.3.1)  
 
 ### New
