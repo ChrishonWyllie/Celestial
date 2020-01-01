@@ -65,9 +65,15 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
             return
         }
         
+        let totalBytesExpectedToWrite = dataTask.countOfBytesExpectedToReceive
+        let percentage = CGFloat(mediaData.count) / CGFloat(totalBytesExpectedToWrite)
+        let totalSize = ByteCountFormatter.string(fromByteCount: totalBytesExpectedToWrite, countStyle: .file)
+        let humanReadablePercentage = String(format: "%.1f%% of %@", percentage * 100, totalSize)
+        
         owner?.delegate?.playerItem?(cachableAVPlayerItem,
-                                     didDownloadBytesSoFar: mediaData.count,
-                                     outOf: Int(dataTask.countOfBytesExpectedToReceive))
+                                     downloadProgress: percentage,
+                                     humanReadableProgress: humanReadablePercentage)
+        
     }
     
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
@@ -86,7 +92,7 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
         }
         
         if let errorUnwrapped = error {
-            owner?.delegate?.playerItem?(cachableAVPlayerItem, downloadingFailedWith: errorUnwrapped)
+            owner?.delegate?.playerItem(cachableAVPlayerItem, downloadFailedWith: errorUnwrapped)
             return
         }
         processPendingRequests()
@@ -98,7 +104,7 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
             Celestial.shared.store(video: originalVideoData, with: url.absoluteString)
         }
         
-        owner?.delegate?.playerItem?(cachableAVPlayerItem, didFinishDownloadingData: mediaData)
+        owner?.delegate?.playerItem(cachableAVPlayerItem, didFinishDownloading: mediaData)
     }
     
 }

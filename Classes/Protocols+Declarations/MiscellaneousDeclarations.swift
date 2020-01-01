@@ -6,23 +6,28 @@
 //
 
 import Foundation
-
-
-
-
-
-
-
-
-
-
+import UIKit.UIImage
 
 // MARK: - URLImageView
 
-public protocol URLImageViewDelegate: class {
-    func urlImageView(_ view: URLImageView, downloadCompletedAt urlString: String)
+@objc public protocol URLImageViewDelegate: class {
+    
+    /// This is called when the image is fully downloaded.
+    /// At this point, the data can be cached.
+    func urlImageView(_ view: URLImageView, didFinishDownloading image: UIImage)
+    
+    /// This is called when an error occurred while downloading the image
+    /// Inspect the `error` argument for a more detailed description.
     func urlImageView(_ view: URLImageView, downloadFailedWith error: Error)
-    func urlImageView(_ view: URLImageView, downloadProgress progress: CGFloat, humanReadableProgress: String)
+    
+    
+    
+    
+    // Optional delegate functions
+    
+    /// This is called every time a new portion of data is received.
+    /// This can be used to update your UI with the appropriate values to let users know the progress of the download
+    @objc optional func urlImageView(_ view: URLImageView, downloadProgress progress: CGFloat, humanReadableProgress: String)
 }
 
 
@@ -37,21 +42,31 @@ public protocol URLImageViewDelegate: class {
 
 @objc public protocol CachableAVPlayerItemDelegate {
     
-    /// Is called when the media file is fully downloaded.
-    @objc optional func playerItem(_ playerItem: CachableAVPlayerItem, didFinishDownloadingData data: Data)
+    /// This is called when the video file is fully downloaded.
+    /// At this point, the data can be cached using the OriginalVideoData struct
+    func playerItem(_ playerItem: CachableAVPlayerItem, didFinishDownloading data: Data)
     
-    /// Is called every time a new portion of data is received.
-    @objc optional func playerItem(_ playerItem: CachableAVPlayerItem, didDownloadBytesSoFar bytesDownloaded: Int, outOf bytesExpected: Int)
+    /// This is called when an error occurred while downloading the video
+    /// Inspect the `error` argument for a more detailed description.
+    func playerItem(_ playerItem: CachableAVPlayerItem, downloadFailedWith error: Error)
     
-    /// Is called after initial prebuffering is finished, means
-    /// we are ready to play.
+    
+    
+    
+    // Optional delegate functions
+    
+    
+    /// This is called every time a new portion of data is received.
+    /// This can be used to update your UI with the appropriate values to let users know the progress of the download
+    @objc optional func playerItem(_ playerItem: CachableAVPlayerItem, downloadProgress progress: CGFloat, humanReadableProgress: String)
+    
+    /// This is called after initial prebuffering is finished,
+    /// In other words, the video is ready to begin playback.
     @objc optional func playerItemReadyToPlay(_ playerItem: CachableAVPlayerItem)
     
-    /// Is called when the data being downloaded did not arrive in time to
+    /// This is called when the data being downloaded did not arrive in time to
     /// continue playback.
+    /// Perhaps  at this point, a loading animation would be recommented to show to users
     @objc optional func playerItemPlaybackStalled(_ playerItem: CachableAVPlayerItem)
-    
-    /// Is called on downloading error.
-    @objc optional func playerItem(_ playerItem: CachableAVPlayerItem, downloadingFailedWith error: Error)
     
 }
