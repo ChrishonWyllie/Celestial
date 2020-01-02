@@ -5,6 +5,8 @@
 [![License](https://img.shields.io/cocoapods/l/Celestial.svg?style=flat)](https://cocoapods.org/pods/Celestial)
 [![Platform](https://img.shields.io/cocoapods/p/Celestial.svg?style=flat)](https://cocoapods.org/pods/Celestial)
 
+`Celestial` is an in-app cache manager that allows you to easily cache both videos and images. You can use built-in subclasses that make this process easier or manually use the caching system.
+
 <br />
 <br />
 <div id="images">
@@ -15,9 +17,9 @@
 
 ## Usage
 
-### Video
+### Cache videos automatically
 
-For caching videos, use the `CachableAVPlayerItem` , which has three arguments in its primary initializer:
+For caching videos, use the `CachableAVPlayerItem` which is a subclass of the default `AVPlayerItem` . It has three arguments in its primary (recommended) initializer:
 - url: The `URL` of the video that you want to download, play and possibly cache for later.
 - delegate: The `CachableAVPlayerItemDelegate` offers 5 delegate functions shown below.
 - cachePolicy: The `MultimediaCachePolicy` is an <b>optional</b> argument that is set to `.allow` by default. This handles the behavior of whether the video file will be automatically cached once download completes.
@@ -55,6 +57,9 @@ extension ViewController: CachableAVPlayerItemDelegate {
     }
     
     
+    
+    // Optional
+    
     func playerItem(_ playerItem: CachableAVPlayerItem, downloadProgress progress: CGFloat, humanReadableProgress: String) {
         // Update UI with download progress if necessary
     }
@@ -80,9 +85,9 @@ extension ViewController: CachableAVPlayerItemDelegate {
 
 
 
-### Image
+### Cache images automatically
 
-For caching images, the `URLImageView` has two initalizers. One for immediately downloading an image from a URL, and another for manually downloading at a specified time. This is more ideal for UICollectionView and UITableView cell use.
+For caching images, use the `URLImageView` which is a subclass of the default `UIImageView` and has two initalizers. One for immediately downloading an image from a URL, and another for manually downloading at a specified time. (The second one is more ideal for UICollectionView and UITableView cell use. More on that later)
 The first initializer accepts a `urlString: String` which is the absoluteString of the URL at which the image file is located.
 Both initializers share three arguments:
 - delegate: The `URLImageViewDelegate` offers 3 delegate functions shown below.
@@ -90,9 +95,11 @@ Both initializers share three arguments:
 - defaultImage: This `UIImage` is an <b>optional</b> argument which will set the image to an image of your choosing if an error occurs.
 ```swift
 let urlString = <your URL string>
-// NOTE: The delegate is optional
+// NOTE: The delegate is optional and can be set to nil
 let imageView = URLImageView(urlString: urlString, delegate: self, cachePolicy: .allow, defaultImage: nil)
 
+
+...
 
 extension ViewController: URLImageViewDelegate {
     
@@ -103,6 +110,9 @@ extension ViewController: URLImageViewDelegate {
     func urlImageView(_ view: URLImageView, downloadFailedWith error: Error) {
         // Investigate download error
     }
+    
+    
+    // Optional 
     
     func urlImageView(_ view: URLImageView, downloadProgress progress: CGFloat, humanReadableProgress: String) {
         // Update UI with download progress if necessary
