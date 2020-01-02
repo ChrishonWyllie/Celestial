@@ -16,7 +16,7 @@
 </div>
 
 ##### Table of Contents  
-[Usage](#usage)  
+[Usage](#usage)
 <br />
 [Cache Videos](#cache_videos)
 <br />
@@ -42,7 +42,7 @@ let urlString = <Your URL string>
 guard let url = URL(string: urlString) else {
     return
 }
-// NOTE: The delegate is optional
+
 let playerItem = CachableAVPlayerItem(url: url, 
                                       delegate: self, 
                                       cachePolicy: .allow) // Remember, this is an default parameter. You can exclude this one if you want caching to be set to .allow.
@@ -109,14 +109,13 @@ The first initializer accepts a `urlString: String` which is the absoluteString 
 Both initializers share three arguments:
 - delegate: The `URLImageViewDelegate` offers 3 delegate functions shown below.
 - cachePolicy: The `MultimediaCachePolicy` is an <b>optional</b> argument that is set to `.allow` by default. This handles the behavior of whether the video file will be automatically cached once download completes.
-- defaultImage: This `UIImage` is an <b>optional</b> argument which will set the image to an image of your choosing if an error occurs.
+- defaultImage: This `UIImage` is an <b>default</b> argument which will set the image to an image of your choosing if an error occurs.
 ```swift
 let urlString = <your URL string>
-// NOTE: The delegate is optional and can be set to nil
 let imageView = URLImageView(urlString: urlString, 
                             delegate: self, 
                             cachePolicy: .allow, // Remember, this is an default parameter. You can exclude this one if you want caching to be set to .allow.
-                            defaultImage: nil)
+                            defaultImage: nil)   // Remember, this is an default parameter. You can exclude this one unless you want an image to be displayed in case of an unexpected download error.
 
 
 ...
