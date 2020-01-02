@@ -21,6 +21,8 @@
 [Cache Videos](#cache_videos)
 <br />
 [Cache Images](#cache_images)
+<br />
+[Cache Images in cells](#cache_images_in_cells)
 
 <a name="usage"/>
 
@@ -136,6 +138,52 @@ extension ViewController: URLImageViewDelegate {
     func urlImageView(_ view: URLImageView, downloadProgress progress: CGFloat, humanReadableProgress: String) {
         // Update UI with download progress if necessary
     }
+}
+```
+
+
+<br />
+<br />
+<br />
+
+<a name="cache_images_in_cells" />
+
+## Cache images in cells...
+
+Caching images in UICollectionViewCells and UITableViewCells is slightly different. In such cases, the `URLImageView` needs to be initialized first and the urlString will likely be provided some time later as the cell is dequeued.
+
+```swift
+
+struct CellModel {
+    let urlString: String
+}
+
+class ImageCell: UICollectionViewCell {
+
+    // Initialize the URLImageView within the cell as a variable.
+    // NOTE: The second initializer is used which does NOT have the urlString argument.
+    private lazy var imageView: URLImageView = {
+        let img = URLImageView(delegate: nil)
+        img.translatesAutoresizingMaskIntoConstraints = false
+        return img
+    }()
+    
+    
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        addSubview(imageView)
+        
+        // Handle layout...
+    }
+    
+    // This function is called during the cell dequeue process and will load the image
+    // using the `CellModel` struct. However, this would be replaced with your method.
+    public func configureCell(someCellModel: CellModel) {
+        imageView.loadImageFrom(urlString: someCellModel.urlString)
+    }
+
 }
 ```
 
