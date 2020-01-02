@@ -14,13 +14,89 @@
 ## Usage
 
 ```swift
-let urlString = <YourURL string>
+
+// Video
+
+let urlString = <Your URL string>
 guard let url = URL(string: urlString) else {
     return
 }
-let playerItem = CachableAVPlayerItem(url: url)
+// NOTE: The delegate is optional
+let playerItem = CachableAVPlayerItem(url: url, delegate: self, cachePolicy: .allow)
+
+// Initialize and play your video as usual...
+let player = AVPlayer(playerItem: playerItem)
+player.automaticallyWaitsToMinimizeStalling = false
+let playerLayer = AVPlayerLayer(player: player)
+
+playerLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
+playerLayer.frame = UIScreen.main.bounds
+self.view.layer.addSublayer(playerLayer)
+player.play()
+
 ...
+
+extension ViewController: CachableAVPlayerItemDelegate {
+
+    func playerItem(_ playerItem: CachableAVPlayerItem, didFinishDownloading data: Data) {
+        // Video has finished downloading and will be cached if cachePolicy is set to .allow
+    }
+    
+    func playerItem(_ playerItem: CachableAVPlayerItem, downloadFailedWith error: Error) {
+        // Investigate download error 
+    }
+    
+    
+    func playerItem(_ playerItem: CachableAVPlayerItem, downloadProgress progress: CGFloat, humanReadableProgress: String) {
+        // Update UI with download progress if necessary
+    }
+
+    func playerItemReadyToPlay(_ playerItem: CachableAVPlayerItem) {
+        // Video is ready to begin playing
+    }
+
+    func playerItemPlaybackStalled(_ playerItem: CachableAVPlayerItem) {
+        // Video playback has stalled. Update UI if necessary
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+// Image
+
+let urlString = <your URL string>
+// NOTE: The delegate is optional
+let imageView = URLImageView(urlString: urlString, delegate: self)
+
+
+extension ViewController: URLImageViewDelegate {
+    
+    func urlImageView(_ view: URLImageView, didFinishDownloading image: UIImage) {
+         // Image has finished downloading and will be cached if cachePolicy is set to .allow
+    }
+    
+    func urlImageView(_ view: URLImageView, downloadFailedWith error: Error) {
+        // Investigate download error
+    }
+    
+    func urlImageView(_ view: URLImageView, downloadProgress progress: CGFloat, humanReadableProgress: String) {
+        // Update UI with download progress if necessary
+    }
+}
 ```
+
+
+
 
 ## Example
 
