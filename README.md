@@ -15,8 +15,15 @@
     </p>
 </div>
 
+##### Table of Contents  
+[Usage](#usage)  
+[Cache Videos](#cache_videos)
+[Cache Images](#cache_images)
+
+<a name="usage"/>
 ## Usage
 
+<a name="cache_videos" />
 ### Cache videos automatically
 
 For caching videos, use the `CachableAVPlayerItem` which is a subclass of the default `AVPlayerItem` . It has three arguments in its primary (recommended) initializer:
@@ -84,7 +91,7 @@ extension ViewController: CachableAVPlayerItemDelegate {
 
 
 
-
+<a name="cache_images" />
 ### Cache images automatically
 
 For caching images, use the `URLImageView` which is a subclass of the default `UIImageView` and has two initalizers. One for immediately downloading an image from a URL, and another for manually downloading at a specified time. (The second one is more ideal for UICollectionView and UITableView cell use. More on that later)
