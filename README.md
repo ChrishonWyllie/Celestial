@@ -11,11 +11,24 @@
 <img style="display: inline; margin: 0 5px;" src="Github Images/Celestial-icon.png" width=300 height=300 />
 </div>
 
+## Usage
+
+```swift
+let urlString = <YourURL string>
+guard let url = URL(string: urlString) else {
+    return
+}
+let playerItem = CachableAVPlayerItem(url: url)
+...
+```
+
 ## Example
 
 To run the example project, clone the repo, and run `pod install` from the Example directory first.
 
 ## Requirements
+
+Requires iOS 13.0
 
 ## Installation
 
