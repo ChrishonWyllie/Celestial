@@ -17,7 +17,9 @@
 
 ##### Table of Contents  
 [Usage](#usage)  
+<br />
 [Cache Videos](#cache_videos)
+<br />
 [Cache Images](#cache_images)
 
 <a name="usage"/>
@@ -87,7 +89,9 @@ extension ViewController: CachableAVPlayerItemDelegate {
 
 
 
-
+<br />
+<br />
+<br />
 
 
 
