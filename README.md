@@ -8,7 +8,9 @@
 <br />
 <br />
 <div id="images">
-<img style="display: inline; margin: 0 5px;" src="Github Images/Celestial-icon.png" width=300 height=300 />
+    <p align="center">
+        <img style="display: inline; margin: 0 5px;" src="Github Images/Celestial-icon.png" width=300 height=300 />
+    </p>
 </div>
 
 ## Usage
