@@ -21,10 +21,12 @@
 [Cache Images](#cache_images)
 
 <a name="usage"/>
+
 ## Usage
 
 <a name="cache_videos" />
-### Cache videos automatically
+
+## Cache videos automatically
 
 For caching videos, use the `CachableAVPlayerItem` which is a subclass of the default `AVPlayerItem` . It has three arguments in its primary (recommended) initializer:
 - url: The `URL` of the video that you want to download, play and possibly cache for later.
@@ -92,7 +94,8 @@ extension ViewController: CachableAVPlayerItemDelegate {
 
 
 <a name="cache_images" />
-### Cache images automatically
+
+## Cache images automatically
 
 For caching images, use the `URLImageView` which is a subclass of the default `UIImageView` and has two initalizers. One for immediately downloading an image from a URL, and another for manually downloading at a specified time. (The second one is more ideal for UICollectionView and UITableView cell use. More on that later)
 The first initializer accepts a `urlString: String` which is the absoluteString of the URL at which the image file is located.
