@@ -13,6 +13,12 @@
 
 ## Usage
 
+### Video
+
+For caching videos, use the `CachableAVPlayerItem` , which has three arguments in its primary initializer:
+- url: The `URL` of the video that you want to download, play and possibly cache for later.
+- delegate: The `CachableAVPlayerItemDelegate` offers 5 delegate functions shown below.
+- cachePolicy: The `MultimediaCachePolicy` is an <b>optional</b> argument that is set to `.allow` by default. This handles the behavior of whether the video file will be automatically cached once download completes.
 ```swift
 
 // Video
@@ -60,6 +66,7 @@ extension ViewController: CachableAVPlayerItemDelegate {
     }
 
 }
+```
 
 
 
@@ -71,12 +78,18 @@ extension ViewController: CachableAVPlayerItemDelegate {
 
 
 
+### Image
 
-// Image
-
+For caching images, the `URLImageView` has two initalizers. One for immediately downloading an image from a URL, and another for manually downloading at a specified time. This is more ideal for UICollectionView and UITableView cell use.
+The first initializer accepts a `urlString: String` which is the absoluteString of the URL at which the image file is located.
+Both initializers share three arguments:
+- delegate: The `URLImageViewDelegate` offers 3 delegate functions shown below.
+- cachePolicy: The `MultimediaCachePolicy` is an <b>optional</b> argument that is set to `.allow` by default. This handles the behavior of whether the video file will be automatically cached once download completes.
+- defaultImage: This `UIImage` is an <b>optional</b> argument which will set the image to an image of your choosing if an error occurs.
+```swift
 let urlString = <your URL string>
 // NOTE: The delegate is optional
-let imageView = URLImageView(urlString: urlString, delegate: self)
+let imageView = URLImageView(urlString: urlString, delegate: self, cachePolicy: .allow, defaultImage: nil)
 
 
 extension ViewController: URLImageViewDelegate {
