@@ -38,7 +38,11 @@ For caching videos, use the `CachableAVPlayerItem` which is a subclass of the de
 - cachePolicy: The `MultimediaCachePolicy` is an <b>optional</b> argument that is set to `.allow` by default. This handles the behavior of whether the video file will be automatically cached once download completes.
 ```swift
 
-// Video
+import Celestial
+
+...
+
+
 
 let urlString = <Your URL string>
 guard let url = URL(string: urlString) else {
@@ -59,7 +63,9 @@ playerLayer.frame = UIScreen.main.bounds
 self.view.layer.addSublayer(playerLayer)
 player.play()
 
+
 ...
+
 
 extension ViewController: CachableAVPlayerItemDelegate {
 
@@ -113,6 +119,11 @@ Both initializers share three arguments:
 - cachePolicy: The `MultimediaCachePolicy` is an <b>optional</b> argument that is set to `.allow` by default. This handles the behavior of whether the video file will be automatically cached once download completes.
 - defaultImage: This `UIImage` is an <b>default</b> argument which will set the image to an image of your choosing if an error occurs.
 ```swift
+import Celestial
+
+...
+
+
 let urlString = <your URL string>
 let imageView = URLImageView(urlString: urlString, 
                             delegate: self, 
@@ -121,6 +132,7 @@ let imageView = URLImageView(urlString: urlString,
 
 
 ...
+
 
 extension ViewController: URLImageViewDelegate {
     
@@ -163,7 +175,7 @@ class ImageCell: UICollectionViewCell {
     // Initialize the URLImageView within the cell as a variable.
     // NOTE: The second initializer is used which does NOT have the urlString argument.
     private lazy var imageView: URLImageView = {
-        let img = URLImageView(delegate: nil)
+        let img = URLImageView(delegate: nil, cachePolicy: .allow, defaultImage: nil)
         img.translatesAutoresizingMaskIntoConstraints = false
         return img
     }()
