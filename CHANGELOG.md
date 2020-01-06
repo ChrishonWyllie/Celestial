@@ -1,3 +1,15 @@
+## [Version 0.5.6](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.5.6)  
+
+### New
+* Implemented new URLImageView function for observing progress, completion and errors all from within the same function using closures instead of delegation.
+* Implemented DownloadTaskHandler struct to assist with closure-related download function
+* Updated example code to showcase new function
+
+### Improvements
+N/A
+
+### Bug fixes
+N/A
 
 ## [Version 0.5.0](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.5.0)  
 
