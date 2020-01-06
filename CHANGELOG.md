@@ -1,4 +1,19 @@
 
+## [Version 0.5.0](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.5.0)  
+
+### New
+* Added initial usage descriptions to the README. Examples include how to initialize/use:
+-  CachableAVPlayerItem for caching and playing videos
+- URLimageView for caching and displaying images
+- Loading cachable images in UICollectionView / UITableView cells
+- Additionally, code examples show the use delegation functions
+
+### Improvements
+N/A
+
+### Bug fixes
+N/A
+
 ## [Version 0.4.0](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.4.0)  
 
 ### New
