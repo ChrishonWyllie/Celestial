@@ -65,8 +65,7 @@ open class URLImageView: UIImageView {
     /// Downloads an image from an external URL string
     public func loadImageFrom(urlString: String) {
         
-        // Store a reference to the urlString, so that we can save in Cache when download completes
-        self.urlString = urlString
+        self.image = nil
         
         //check cache for image first
         if let cachedImage = Celestial.shared.image(for: urlString) {
@@ -76,20 +75,58 @@ open class URLImageView: UIImageView {
         
         // Otherwise, fire off a new download
         
+        performDownload(at: urlString)
+        
+    }
+    
+    private var downloadTaskHandler: DownloadTaskHandler<UIImage>?
+    
+    public func loadImageFrom(urlString: String, progressHandler: (DownloadTaskProgressHandler?), completion: (() -> ())?, errorHandler: (DownloadTaskErrorHandler?)) {
+        
+        if let cachedImage = Celestial.shared.image(for: urlString) {
+            self.image = cachedImage
+            completion?()
+            return
+        } else {
+            
+            // Otherwise, fire off a new download
+            
+            // First, set up the download task handler
+            
+            downloadTaskHandler = DownloadTaskHandler<UIImage>()
+            downloadTaskHandler?.completionHandler = { (downloadedImage) in
+                DispatchQueue.main.async {
+                    self.image = downloadedImage
+                    completion?()
+                }
+            }
+            downloadTaskHandler?.progressHandler = { (downloadProgress) in
+                progressHandler?(downloadProgress)
+            }
+            downloadTaskHandler?.errorHandler = { (error) in
+                errorHandler?(error)
+            }
+            
+            // Then, perform the download
+            
+            performDownload(at: urlString)
+        }
+    }
+    
+    private func performDownload(at urlString: String) {
+        
+        // Store a reference to the urlString, so that we can save in Cache when download completes
+        self.urlString = urlString
+        
         let configuration = URLSessionConfiguration.default
-        // Setting the delegate queue to nil causes the session to create a
-        // serial operation queue to perform all calls to delegate methods and completion handlers.
         let urlSession = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
         
         guard let url = URL(string: urlString) else {
-            print("MediaCache- Error getting url form urlString")
             return
         }
         
         let downloadTask = urlSession.downloadTask(with: url)
-        
         downloadTask.resume()
-        
     }
 }
 
@@ -110,12 +147,20 @@ extension URLImageView: URLSessionDownloadDelegate {
         let humanReadablePercentage = String(format: "%.1f%% of %@", percentage * 100, totalSize)
         
         delegate?.urlImageView?(self, downloadProgress: percentage, humanReadableProgress: humanReadablePercentage)
+        
+        // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
+        // In which case, this property will be non-nil
+        downloadTaskHandler?.progressHandler?(percentage)
     }
     
     public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard let error = error else { return }
         fallbackOnDefaultImageIfExists()
         delegate?.urlImageView(self, downloadFailedWith: error)
+        
+        // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
+        // In which case, this property will be non-nil
+        downloadTaskHandler?.errorHandler?(error)
     }
     
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
@@ -127,22 +172,32 @@ extension URLImageView: URLSessionDownloadDelegate {
             let data = try Data(contentsOf: location)
             if let downloadedImage = UIImage(data: data) {
                 
-                DispatchQueue.main.async {
-                    self.image = downloadedImage
-                }
-                
-                delegate?.urlImageView(self, didFinishDownloading: downloadedImage)
-                
                 guard let urlString = self.urlString else { return }
                 
                 if cachePolicy == .allow {
                     Celestial.shared.store(image: downloadedImage, with: urlString)
                 }
                 
+                if downloadTaskHandler != nil {
+                    // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
+                    // In which case, this property will be non-nil
+                    downloadTaskHandler?.completionHandler?(downloadedImage)
+                } else {
+                    DispatchQueue.main.async {
+                        self.image = downloadedImage
+                    }
+                    
+                    delegate?.urlImageView(self, didFinishDownloading: downloadedImage)
+                }
+                
             }
         } catch let dataError {
             fallbackOnDefaultImageIfExists()
             delegate?.urlImageView(self, downloadFailedWith: dataError)
+            
+            // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
+            // In which case, this property will be non-nil
+            downloadTaskHandler?.errorHandler?(dataError)
         }
     }
     

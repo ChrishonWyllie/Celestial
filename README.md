@@ -23,6 +23,8 @@
 [Cache Images](#cache_images)
 <br />
 [Cache Images in cells](#cache_images_in_cells)
+<br />
+[Observe image download without delegation](#urlimageview_download_task_handlers)
 
 <a name="usage"/>
 
@@ -191,7 +193,40 @@ class ImageCell: UICollectionViewCell {
 ```
 
 
+<br />
+<br />
+<br />
 
+<a name="urlimageview_download_task_handlers" />
+
+## Observe image download without delegation
+
+You may prefer to observe three delegation properties: `download completion`, `download progress` and `errors` without using the delegation route (perhaps to keep the swift source file as short as possible).
+In such cases, URLImageView provides another function for downloading and caching images from URLs:
+
+```swift
+    public func loadImageFrom(urlString: String, progressHandler: (DownloadTaskProgressHandler?), completion: (() -> ())?, errorHandler: (DownloadTaskErrorHandler?))
+```
+
+which is called like so...
+
+```swift
+
+let imageView = URLImageView(delegate: nil, cachePolicy: .allow, defaultImage: nil)
+
+...
+
+let urlString = <Your URL string>
+
+imageView.loadImageFrom(urlString: urlString, progressHandler: { (progress) in
+    print("current downlod progress: \(progress)")
+}, completion: {
+    print("Image has finished loading")
+}) { (error) in
+print("Error loading image: \(error)")
+}
+
+```
 
 ## Example
 
