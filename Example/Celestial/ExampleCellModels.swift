@@ -7,3 +7,35 @@
 //
 
 import Foundation
+
+
+protocol ExampleCellModel {
+    var urlString: String { get }
+}
+
+
+
+
+
+struct VideoCellModel: ExampleCellModel {
+    private(set) var urlString: String
+    // Other Video-specific properties TBD
+    
+    init(urlString: String) {
+        self.urlString = urlString
+    }
+}
+
+
+
+
+
+struct ImageCellModel: ExampleCellModel {
+    private(set) var urlString: String
+    // Other Image-specific properties TBD
+    
+    init(urlString: String) {
+        self.urlString = urlString
+    }
+}
+

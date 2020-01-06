@@ -27,6 +27,9 @@
 		663A31BE23B826ED0004AA37 /* ResourceLoaderDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A31BC23B826ED0004AA37 /* ResourceLoaderDelegate.swift */; };
 		663A31C023B995E50004AA37 /* OriginalVideoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A31BF23B995E40004AA37 /* OriginalVideoData.swift */; };
 		663A31C123B995E50004AA37 /* OriginalVideoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A31BF23B995E40004AA37 /* OriginalVideoData.swift */; };
+		668F70B523C2C7C30055FA0D /* DownloadTaskHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668F70B423C2C7C30055FA0D /* DownloadTaskHandler.swift */; };
+		668F70B623C2C7C30055FA0D /* DownloadTaskHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668F70B423C2C7C30055FA0D /* DownloadTaskHandler.swift */; };
+		668F70B723C2C7C30055FA0D /* DownloadTaskHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668F70B423C2C7C30055FA0D /* DownloadTaskHandler.swift */; };
 		66F3AC4423B7A2E500C4505D /* CachableAVPlayerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F3AC4323B7A2E500C4505D /* CachableAVPlayerItem.swift */; };
 		66F3AC4523B7A2E500C4505D /* CachableAVPlayerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F3AC4323B7A2E500C4505D /* CachableAVPlayerItem.swift */; };
 		6E2E68FF27C6E1EBAD1EAAAA70DF14DF /* Celestial-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 7F659EEE00E9525CA0543E85138D7BC7 /* Celestial-dummy.m */; };
@@ -76,6 +79,7 @@
 		66270B9A23B4437600A34A17 /* MiscellaneousDeclarations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiscellaneousDeclarations.swift; sourceTree = "<group>"; };
 		663A31BC23B826ED0004AA37 /* ResourceLoaderDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceLoaderDelegate.swift; sourceTree = "<group>"; };
 		663A31BF23B995E40004AA37 /* OriginalVideoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalVideoData.swift; sourceTree = "<group>"; };
+		668F70B423C2C7C30055FA0D /* DownloadTaskHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadTaskHandler.swift; sourceTree = "<group>"; };
 		66F3AC4323B7A2E500C4505D /* CachableAVPlayerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachableAVPlayerItem.swift; sourceTree = "<group>"; };
 		68BD6AB4BBE8DE3A626834606FB29915 /* Pods-Celestial_Tests-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-Celestial_Tests-acknowledgements.markdown"; sourceTree = "<group>"; };
 		71CDF28B8377D47B4E08FD7BBBB62692 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
@@ -163,6 +167,7 @@
 				66270B8423B4354F00A34A17 /* Celestial.swift */,
 				66270B8C23B4372800A34A17 /* ImageCache.swift */,
 				66270B8F23B437C600A34A17 /* VideoCache.swift */,
+				668F70B423C2C7C30055FA0D /* DownloadTaskHandler.swift */,
 			);
 			path = Celestial;
 			sourceTree = "<group>";
@@ -401,6 +406,9 @@
 				LastSwiftUpdateCheck = 1100;
 				LastUpgradeCheck = 1100;
 				TargetAttributes = {
+					A049F3293A416657AC1547EF79B36D32 = {
+						LastSwiftMigration = 1130;
+					};
 					A5DEC55B036043B3545F54C1AFA8EAEC = {
 						LastSwiftMigration = 1130;
 					};
@@ -459,6 +467,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				66270B9923B43B6200A34A17 /* URLImageView.swift in Sources */,
+				668F70B623C2C7C30055FA0D /* DownloadTaskHandler.swift in Sources */,
 				663A31BE23B826ED0004AA37 /* ResourceLoaderDelegate.swift in Sources */,
 				66270B8623B4354F00A34A17 /* Celestial.swift in Sources */,
 				66270B9523B438DD00A34A17 /* Extensions.swift in Sources */,
@@ -477,6 +486,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8F8324D8940669DE80A73AEBD0B2AB29 /* Pods-Celestial_Tests-dummy.m in Sources */,
+				668F70B723C2C7C30055FA0D /* DownloadTaskHandler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -485,6 +495,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				66270B9823B43B6200A34A17 /* URLImageView.swift in Sources */,
+				668F70B523C2C7C30055FA0D /* DownloadTaskHandler.swift in Sources */,
 				663A31BD23B826ED0004AA37 /* ResourceLoaderDelegate.swift in Sources */,
 				66270B8523B4354F00A34A17 /* Celestial.swift in Sources */,
 				66270B9423B438DD00A34A17 /* Extensions.swift in Sources */,
@@ -521,6 +532,7 @@
 			baseConfigurationReference = 46CCC785871C588689284E5FDFB20E4B /* Pods-Celestial_Tests.debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -543,6 +555,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -815,6 +829,7 @@
 			baseConfigurationReference = EE57E4E0BFCB93569A9254B00A13A18D /* Pods-Celestial_Tests.release.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -837,6 +852,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 				VERSIONING_SYSTEM = "apple-generic";

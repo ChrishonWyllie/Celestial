@@ -10,6 +10,24 @@ import UIKit
 import Celestial
 import AVFoundation
 
+fileprivate struct URLSessionObject {
+    let author: String
+    let downloadURL: String
+    let height: NSNumber
+    let id: NSNumber
+    let url: String
+    let width: NSNumber
+    
+    init(object: [String: AnyObject]) {
+        author = object["author"] as? String ?? ""
+        downloadURL = object["download_url"] as? String ?? ""
+        height = object["height"] as? NSNumber ?? 0
+        id = object["id"] as? NSNumber ?? 0
+        url = object["url"] as? String ?? ""
+        width = object["width"] as? NSNumber ?? 0
+    }
+}
+
 class ViewController: UIViewController {
      
     // MARK: - Variables
@@ -33,7 +51,23 @@ class ViewController: UIViewController {
         return img
     }()
 
-
+    private let cellReuseIdentifier = "cell reuse identifier"
+    private var imageCellModels: [ImageCellModel] = []
+    
+    private lazy var collectionView: UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.minimumLineSpacing = 8
+        layout.minimumInteritemSpacing = 8
+        layout.scrollDirection = .vertical
+        
+        let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        cv.translatesAutoresizingMaskIntoConstraints = false
+        cv.backgroundColor = .white
+        cv.delegate = self
+        cv.dataSource = self
+        return cv
+    }()
+    
 
 
 
@@ -74,9 +108,10 @@ class ViewController: UIViewController {
 extension ViewController {
      
      private func setupUI() {
-        setupURLImageView()
-//        setupImageCachingCollectionView()
+//        setupURLImageView()
+        setupImageCachingCollectionView()
 //        setupCachableAVPlayerItem()
+        setupVideoCachingCollectionView()
     }
 
     private func setupURLImageView() {
@@ -87,10 +122,57 @@ extension ViewController {
          imageView.heightAnchor.constraint(equalToConstant: 200).isActive = true
          imageView.widthAnchor.constraint(equalToConstant: 200).isActive = true
      }
+    
+    
 
     private func setupImageCachingCollectionView() {
-        // TBD
+        view.addSubview(collectionView)
+        
+        collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
+        collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
+        collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
+        collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
+        
+        collectionView.register(ImageCell.self, forCellWithReuseIdentifier: cellReuseIdentifier)
+        
+        getRandomImages()
+        
     }
+    
+    private func getRandomImages() {
+        
+//        TestURLs.urlStrings.forEach { (urlString) in imageCellModels.append(ImageCellModel(urlString: urlString)) }
+//        collectionView.reloadData()
+        
+        guard let url = URL(string: "https://picsum.photos/v2/list?limit=15") else {
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { (data, response, error) in
+            guard let data = data else { return }
+            do {
+                guard let jsonDataArray = try JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.allowFragments) as? [[String: AnyObject]] else {
+                    return
+                }
+                jsonDataArray.forEach { (jsonObject) in
+                    let urlSessionObject = URLSessionObject(object: jsonObject)
+                    
+                    DispatchQueue.main.async {
+                        self.collectionView.performBatchUpdates({
+                            self.imageCellModels.append(ImageCellModel(urlString: urlSessionObject.downloadURL))
+                            let lastIndexPath = IndexPath(item: self.imageCellModels.count - 1, section: 0)
+                            self.collectionView.insertItems(at: [lastIndexPath])
+                        }, completion: nil)
+                    }
+                }
+                
+            } catch let error {
+                print("error converting data to json: \(error)")
+            }
+            
+        }.resume()
+    }
+    
 
     private func setupCachableAVPlayerItem() {
         let urlString = "http://www.hochmuth.com/mp3/Tchaikovsky_Nocturne__orch.mp3"
@@ -139,7 +221,62 @@ extension ViewController {
         }
     }
 
- }
+    private func setupVideoCachingCollectionView() {
+        // TBD
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - UICollectionView delegate and datasource
+
+extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+    
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
+        return 1
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return imageCellModels.count
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell: ImageCell?
+        
+        cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellReuseIdentifier, for: indexPath) as? ImageCell
+        let cellModel = imageCellModels[indexPath.item]
+        
+        cell?.configureCell(someCellModel: cellModel)
+        
+        return cell!
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        return CGSize(width: collectionView.frame.size.width, height: 200.0)
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  
  
 
