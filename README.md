@@ -54,15 +54,6 @@ let playerItem = CachableAVPlayerItem(url: url,
                                       cachePolicy: .allow) // Remember, this is an default parameter. You can exclude this one if you want caching to be set to .allow.
 
 // Initialize and play your video as usual...
-let player = AVPlayer(playerItem: playerItem)
-player.automaticallyWaitsToMinimizeStalling = false
-let playerLayer = AVPlayerLayer(player: player)
-
-playerLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
-playerLayer.frame = UIScreen.main.bounds
-self.view.layer.addSublayer(playerLayer)
-player.play()
-
 
 ...
 
@@ -174,7 +165,7 @@ class ImageCell: UICollectionViewCell {
 
     // Initialize the URLImageView within the cell as a variable.
     // NOTE: The second initializer is used which does NOT have the urlString argument.
-    private lazy var imageView: URLImageView = {
+    private var imageView: URLImageView = {
         let img = URLImageView(delegate: nil, cachePolicy: .allow, defaultImage: nil)
         img.translatesAutoresizingMaskIntoConstraints = false
         return img
