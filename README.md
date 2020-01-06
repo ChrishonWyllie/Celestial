@@ -223,7 +223,7 @@ imageView.loadImageFrom(urlString: urlString, progressHandler: { (progress) in
 }, completion: {
     print("Image has finished loading")
 }) { (error) in
-print("Error loading image: \(error)")
+    print("Error loading image: \(error)")
 }
 
 ```
