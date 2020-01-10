@@ -115,13 +115,15 @@ extension ViewController {
     }
 
     private func setupURLImageView() {
-         view.addSubview(imageView)
+        
+        view.addSubview(imageView)
          
-         imageView.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
-         imageView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
-         imageView.heightAnchor.constraint(equalToConstant: 200).isActive = true
-         imageView.widthAnchor.constraint(equalToConstant: 200).isActive = true
-     }
+        imageView.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
+        imageView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
+        imageView.heightAnchor.constraint(equalToConstant: 200).isActive = true
+        imageView.widthAnchor.constraint(equalToConstant: 200).isActive = true
+        
+    }
     
     
 
@@ -143,8 +145,9 @@ extension ViewController {
         
 //        TestURLs.urlStrings.forEach { (urlString) in imageCellModels.append(ImageCellModel(urlString: urlString)) }
 //        collectionView.reloadData()
+//        return
         
-        guard let url = URL(string: "https://picsum.photos/v2/list?limit=15") else {
+        guard let url = URL(string: "https://picsum.photos/v2/list?limit=25") else {
             return
         }
         
