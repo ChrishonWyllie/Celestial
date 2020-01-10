@@ -52,7 +52,7 @@ class ViewController: UIViewController {
     }()
 
     private let cellReuseIdentifier = "cell reuse identifier"
-    private var imageCellModels: [ImageCellModel] = []
+    private var cellModels: [ExampleCellModel] = []
     
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
@@ -62,7 +62,7 @@ class ViewController: UIViewController {
         
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.translatesAutoresizingMaskIntoConstraints = false
-        cv.backgroundColor = .white
+        cv.backgroundColor = UIColor.systemGray3
         cv.delegate = self
         cv.dataSource = self
         return cv
@@ -109,11 +109,38 @@ extension ViewController {
      
      private func setupUI() {
 //        setupURLImageView()
-        setupImageCachingCollectionView()
 //        setupCachableAVPlayerItem()
-        setupVideoCachingCollectionView()
+        setupCollectionView()
     }
+    
+    private func setupCollectionView() {
+        view.addSubview(collectionView)
+        
+        collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
+        collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
+        collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
+        collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
+        
+        collectionView.register(ImageCell.self, forCellWithReuseIdentifier: cellReuseIdentifier)
+        collectionView.register(VideoCell.self, forCellWithReuseIdentifier: cellReuseIdentifier)
+        
+//        getRandomImages()
+        getRandomVideos()
+    }
+}
 
+
+
+
+
+
+
+
+
+// MARK: - Set up Image caching
+
+extension ViewController {
+    
     private func setupURLImageView() {
         
         view.addSubview(imageView)
@@ -125,25 +152,9 @@ extension ViewController {
         
     }
     
-    
-
-    private func setupImageCachingCollectionView() {
-        view.addSubview(collectionView)
-        
-        collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
-        collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
-        collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
-        collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
-        
-        collectionView.register(ImageCell.self, forCellWithReuseIdentifier: cellReuseIdentifier)
-        
-        getRandomImages()
-        
-    }
-    
     private func getRandomImages() {
-        
-//        TestURLs.urlStrings.forEach { (urlString) in imageCellModels.append(ImageCellModel(urlString: urlString)) }
+            
+//        TestURLs.Image.urlStrings.forEach { (urlString) in imageCellModels.append(ImageCellModel(urlString: urlString)) }
 //        collectionView.reloadData()
 //        return
         
@@ -162,8 +173,8 @@ extension ViewController {
                     
                     DispatchQueue.main.async {
                         self.collectionView.performBatchUpdates({
-                            self.imageCellModels.append(ImageCellModel(urlString: urlSessionObject.downloadURL))
-                            let lastIndexPath = IndexPath(item: self.imageCellModels.count - 1, section: 0)
+                            self.cellModels.append(ImageCellModel(urlString: urlSessionObject.downloadURL))
+                            let lastIndexPath = IndexPath(item: self.cellModels.count - 1, section: 0)
                             self.collectionView.insertItems(at: [lastIndexPath])
                         }, completion: nil)
                     }
@@ -175,8 +186,24 @@ extension ViewController {
             
         }.resume()
     }
-    
+}
 
+
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - Set up Video caching
+
+extension ViewController {
+    
     private func setupCachableAVPlayerItem() {
         let urlString = "http://www.hochmuth.com/mp3/Tchaikovsky_Nocturne__orch.mp3"
         guard let url = URL(string: urlString) else {
@@ -224,10 +251,15 @@ extension ViewController {
         }
     }
 
-    private func setupVideoCachingCollectionView() {
-        // TBD
+    private func getRandomVideos() {
+        TestURLs.Videos.urlStrings.forEach { (urlString) in cellModels.append(VideoCellModel(urlString: urlString)) }
+        collectionView.reloadData()
+        return
     }
 }
+
+
+
 
 
 
@@ -248,14 +280,15 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     }
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return imageCellModels.count
+        return cellModels.count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell: ImageCell?
+        let cell: ExampleCell?
         
-        cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellReuseIdentifier, for: indexPath) as? ImageCell
-        let cellModel = imageCellModels[indexPath.item]
+//        cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellReuseIdentifier, for: indexPath) as? ImageCell
+        cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellReuseIdentifier, for: indexPath) as? VideoCell
+        let cellModel = cellModels[indexPath.item]
         
         cell?.configureCell(someCellModel: cellModel)
         
@@ -263,7 +296,30 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: collectionView.frame.size.width, height: 200.0)
+        return CGSize(width: collectionView.frame.size.width, height: 400.0)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        guard let videoCell = (cell as? VideoCell) else { return }
+        videoCell.playerView.player?.play()
+        
+        
+//        let visibleCells = collectionView.visibleCells
+//        let minIndex = visibleCells.startIndex
+//        let currentIndex = collectionView.visibleCells.firstIndex(of: cell)
+        
+//        if currentIndex == minIndex {
+//            videoCell.playerView.player?.play()
+//        } else {
+//            return
+//        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        guard let videoCell = cell as? VideoCell else { return }
+        
+        videoCell.playerView.player?.pause()
+        videoCell.playerView.player = nil
     }
 }
 

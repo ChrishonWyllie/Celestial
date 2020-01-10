@@ -11,7 +11,7 @@ internal final class VideoCache: NSObject, CacheManagerProtocol {
     
     // MARK: - Variables
     
-    public static let shared = VideoCache(config: CacheControlConfiguration(countLimit: 100, memoryLimit: 1.gigabytes))
+    public static let shared = VideoCache(config: CacheControlConfiguration(countLimit: 100, memoryLimit: 400.megabytes))
     
     private(set) lazy var encodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
@@ -103,10 +103,6 @@ extension VideoCache: CacheProtocol {
                                                                 originalURLMimeType: decompressedOriginalVideoData.originalURLMimeType,
                                                                 originalURLFileExtension: decompressedOriginalVideoData.originalURLFileExtension)
             lock.lock(); defer { lock.unlock() }
-            
-            print("memory limit: \(config.memoryLimit)")
-            print("storing compressed data with size: \(compressedData.count). Size in mb: \((compressedData as Data).sizeInMB)")
-            
             
             encodedItemsCache.setObject(compressedOriginalVideoData as AnyObject, forKey: urlString as AnyObject)
             decodedItemsCache.setObject(decompressedOriginalVideoData as AnyObject, forKey: urlString as AnyObject, cost: decompressedOriginalVideoData.videoData.count)
