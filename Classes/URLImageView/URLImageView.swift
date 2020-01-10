@@ -22,7 +22,10 @@ open class URLImageView: UIImageView {
     
     private var defaultImage: UIImage?
     
+    private var downloadTaskHandler: DownloadTaskHandler<UIImage>?
     
+    // Wait for layoutSubviews to set this property
+    private var size: CGSize?
     
     
     
@@ -56,7 +59,10 @@ open class URLImageView: UIImageView {
     
     
     
-    
+    open override func layoutSubviews() {
+        super.layoutSubviews()
+        self.size = self.frame.size
+    }
     
     
     
@@ -79,9 +85,9 @@ open class URLImageView: UIImageView {
         
     }
     
-    private var downloadTaskHandler: DownloadTaskHandler<UIImage>?
-    
     public func loadImageFrom(urlString: String, progressHandler: (DownloadTaskProgressHandler?), completion: (() -> ())?, errorHandler: (DownloadTaskErrorHandler?)) {
+        
+        self.image = nil
         
         if let cachedImage = Celestial.shared.image(for: urlString) {
             self.image = cachedImage
@@ -170,9 +176,16 @@ extension URLImageView: URLSessionDownloadDelegate {
         // does it right away.
         do {
             let data = try Data(contentsOf: location)
-            if let downloadedImage = UIImage(data: data) {
+            if var downloadedImage = UIImage(data: data) {
                 
                 guard let urlString = self.urlString else { return }
+                
+                // Often, the downloaded image is high resolution, and thus very large
+                // in both memory and pixel size.
+                // Create a thumbnail that is the size of the URLImageView that downloaded
+                // it (self).
+                let thumbnailImageSize = self.size ?? UIScreen.main.bounds.size
+                downloadedImage = downloadedImage.resize(size: thumbnailImageSize) ?? downloadedImage
                 
                 if cachePolicy == .allow {
                     Celestial.shared.store(image: downloadedImage, with: urlString)
