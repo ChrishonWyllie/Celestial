@@ -91,9 +91,10 @@ internal struct CacheControlConfiguration {
     let memoryLimit: Int
     
     static let defaultCountLimit: Int = 100 // 100 images
-    static let defaultMemoryLimit: Int = Int.OneMegabyte * 100 // 100 MB
+    static let defaultMemoryLimit: Int = 100.megabytes // 100 MB
     
-    static let defaultConfig = CacheControlConfiguration(countLimit: CacheControlConfiguration.defaultCountLimit, memoryLimit: CacheControlConfiguration.defaultMemoryLimit)
+    static let defaultConfig = CacheControlConfiguration(countLimit: CacheControlConfiguration.defaultCountLimit,
+                                                         memoryLimit: CacheControlConfiguration.defaultMemoryLimit)
 }
 
 
