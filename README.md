@@ -205,7 +205,7 @@ You may prefer to observe three delegation properties: `download completion`, `d
 In such cases, URLImageView provides another function for downloading and caching images from URLs:
 
 ```swift
-    public func loadImageFrom(urlString: String, progressHandler: (DownloadTaskProgressHandler?), completion: (() -> ())?, errorHandler: (DownloadTaskErrorHandler?))
+public func loadImageFrom(urlString: String, progressHandler: (DownloadTaskProgressHandler?), completion: (() -> ())?, errorHandler: (DownloadTaskErrorHandler?))
 ```
 
 which is called like so...
