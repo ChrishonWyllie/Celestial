@@ -16,7 +16,12 @@ internal extension UIImage {
         guard let cgImage = cgImage else { return self }
         let size = CGSize(width: cgImage.width, height: cgImage.height)
         let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let context = CGContext(data: nil, width: Int(size.width), height: Int(size.height), bitsPerComponent: 8, bytesPerRow: cgImage.bytesPerRow, space: colorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue)
+        let context = CGContext(data: nil,
+                                width: Int(size.width), height: Int(size.height),
+                                bitsPerComponent: 8,
+                                bytesPerRow: cgImage.bytesPerRow,
+                                space: colorSpace,
+                                bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue)
         context?.draw(cgImage, in: CGRect(origin: .zero, size: size))
         guard let decodedImage = context?.makeImage() else { return self }
         return UIImage(cgImage: decodedImage)
@@ -26,6 +31,34 @@ internal extension UIImage {
     var diskSize: Int {
         guard let cgImage = cgImage else { return 0 }
         return cgImage.bytesPerRow * cgImage.height
+    }
+    
+    func resize(width: CGFloat) -> UIImage? {
+        let height = (width / self.size.width) * self.size.height
+        return self.resize(size: CGSize(width: width, height: height))
+    }
+
+    func resize(height: CGFloat) -> UIImage? {
+        let width = (height / self.size.height) * self.size.width
+        return self.resize(size: CGSize(width: width, height: height))
+    }
+
+    func resize(size: CGSize) -> UIImage? {
+        let widthRatio  = size.width / self.size.width
+        let heightRatio = size.height / self.size.height
+        var updateSize = size
+        
+        if (widthRatio > heightRatio) {
+            updateSize = CGSize(width: self.size.width * heightRatio, height: self.size.height * heightRatio)
+        } else if heightRatio > widthRatio {
+            updateSize = CGSize(width: self.size.width * widthRatio,  height: self.size.height * widthRatio)
+        }
+        
+        UIGraphicsBeginImageContextWithOptions(updateSize, false, UIScreen.main.scale)
+        self.draw(in: CGRect(origin: .zero, size: updateSize))
+        let newImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return newImage
     }
 }
 
@@ -50,6 +83,18 @@ public extension Int {
     
     /// Number of bytes in one gigabyte. Used to set the cost limit of the decoded items NSCache.
     static let OneGigabyte = OneMegabyte * 1000
+    
+    var megabytes: Int {
+        return self * Int.OneMegabyte
+    }
+    
+    var gigabytes: Int {
+        return self * Int.OneGigabyte
+    }
+    
+    var sizeInMB: Float {
+        return Float(self) / Float(Int.OneMegabyte)
+    }
 }
 
 

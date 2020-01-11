@@ -11,17 +11,21 @@ internal final class VideoCache: NSObject, CacheManagerProtocol {
     
     // MARK: - Variables
     
-    public static let shared = VideoCache(config: CacheControlConfiguration(countLimit: 100, memoryLimit: Int.OneGigabyte))
+    public static let shared = VideoCache(config: CacheControlConfiguration(countLimit: 100, memoryLimit: 400.megabytes))
     
     private(set) lazy var encodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
+        cache.name = "Encoded items cache"
         cache.countLimit = config.countLimit
+        cache.delegate = self
         return cache
     }()
     
     private(set) lazy var decodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
+        cache.name = "Decoded items cache"
         cache.totalCostLimit = config.memoryLimit
+        cache.delegate = self
         return cache
     }()
     
@@ -87,7 +91,11 @@ extension VideoCache: CacheProtocol {
     }
 
     func store(_ item: OriginalVideoData?, with urlString: String) {
-        guard let decompressedOriginalVideoData = item else { return removeItem(at: urlString) }
+        guard let decompressedOriginalVideoData = item else {
+            // Store `nil` at this urlString
+            // In other words, remove the video data at this key.
+            return removeItem(at: urlString)
+        }
 
         do {
             let compressedData = try (decompressedOriginalVideoData.videoData as NSData).compressed(using: NSData.CompressionAlgorithm.lzfse)
@@ -95,10 +103,6 @@ extension VideoCache: CacheProtocol {
                                                                 originalURLMimeType: decompressedOriginalVideoData.originalURLMimeType,
                                                                 originalURLFileExtension: decompressedOriginalVideoData.originalURLFileExtension)
             lock.lock(); defer { lock.unlock() }
-            
-            print("memory limit: \(config.memoryLimit)")
-            print("storing compressed data with size: \(compressedData.count). Size in mb: \((compressedData as Data).sizeInMB)")
-            
             
             encodedItemsCache.setObject(compressedOriginalVideoData as AnyObject, forKey: urlString as AnyObject)
             decodedItemsCache.setObject(decompressedOriginalVideoData as AnyObject, forKey: urlString as AnyObject, cost: decompressedOriginalVideoData.videoData.count)
@@ -136,4 +140,26 @@ extension VideoCache: CacheProtocol {
         }
     }
 
+}
+
+
+
+
+
+
+
+
+// MARK: - NSCacheDelegate
+    
+extension VideoCache: NSCacheDelegate {
+    
+    func cache(_ cache: NSCache<AnyObject, AnyObject>, willEvictObject obj: Any) {
+        guard let videoData = obj as? OriginalVideoData else {
+            return
+        }
+        if Celestial.shared.debugModeIsActive {
+            print("[Video Cache] - cache with name: \"\(cache.name)\" and cost limit:    \(cache.totalCostLimit). In megabytes: \(cache.totalCostLimit.sizeInMB)")
+            print("[Video Cache] - cache with name: \"\(cache.name)\" will evict object: \(videoData) with size: \(videoData.videoData.count) bytes.... in megabytes: \(videoData.videoData.count.sizeInMB)\n")
+        }
+    }
 }

@@ -14,6 +14,10 @@
 		607FACDD1AFB9204008FA782 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 607FACDC1AFB9204008FA782 /* Images.xcassets */; };
 		607FACE01AFB9204008FA782 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 607FACDE1AFB9204008FA782 /* LaunchScreen.xib */; };
 		607FACEC1AFB9204008FA782 /* Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607FACEB1AFB9204008FA782 /* Tests.swift */; };
+		668F70AF23BECE7F0055FA0D /* ExampleCells.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668F70AE23BECE7F0055FA0D /* ExampleCells.swift */; };
+		668F70B023BECE7F0055FA0D /* ExampleCells.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668F70AE23BECE7F0055FA0D /* ExampleCells.swift */; };
+		668F70B223BECEE20055FA0D /* ExampleCellModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668F70B123BECEE20055FA0D /* ExampleCellModels.swift */; };
+		668F70B323BECEE20055FA0D /* ExampleCellModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668F70B123BECEE20055FA0D /* ExampleCellModels.swift */; };
 		733C058B57BB4A2B34FAECA2 /* Pods_Celestial_Example.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B470A2F1D14D15E9464F845 /* Pods_Celestial_Example.framework */; };
 /* End PBXBuildFile section */
 
@@ -40,6 +44,8 @@
 		607FACEA1AFB9204008FA782 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		607FACEB1AFB9204008FA782 /* Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests.swift; sourceTree = "<group>"; };
 		632F758C22176CE8217A8D07 /* Pods-Celestial_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Celestial_Tests.debug.xcconfig"; path = "Target Support Files/Pods-Celestial_Tests/Pods-Celestial_Tests.debug.xcconfig"; sourceTree = "<group>"; };
+		668F70AE23BECE7F0055FA0D /* ExampleCells.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleCells.swift; sourceTree = "<group>"; };
+		668F70B123BECEE20055FA0D /* ExampleCellModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleCellModels.swift; sourceTree = "<group>"; };
 		734ECB4F0DD4850852FD1A6C /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		9669D0683F191E9D2C94A6D1 /* Celestial.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = Celestial.podspec; path = ../Celestial.podspec; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		B3E6E7B5052B1F4C9F02D42D /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
@@ -102,8 +108,10 @@
 		607FACD21AFB9204008FA782 /* Example for Celestial */ = {
 			isa = PBXGroup;
 			children = (
+				668F70AC23BECE570055FA0D /* models */,
+				668F70AB23BECE490055FA0D /* views */,
+				668F70AD23BECE5D0055FA0D /* controllers */,
 				607FACD51AFB9204008FA782 /* AppDelegate.swift */,
-				607FACD71AFB9204008FA782 /* ViewController.swift */,
 				607FACD91AFB9204008FA782 /* Main.storyboard */,
 				607FACDC1AFB9204008FA782 /* Images.xcassets */,
 				607FACDE1AFB9204008FA782 /* LaunchScreen.xib */,
@@ -146,6 +154,30 @@
 				B3E6E7B5052B1F4C9F02D42D /* LICENSE */,
 			);
 			name = "Podspec Metadata";
+			sourceTree = "<group>";
+		};
+		668F70AB23BECE490055FA0D /* views */ = {
+			isa = PBXGroup;
+			children = (
+				668F70AE23BECE7F0055FA0D /* ExampleCells.swift */,
+			);
+			name = views;
+			sourceTree = "<group>";
+		};
+		668F70AC23BECE570055FA0D /* models */ = {
+			isa = PBXGroup;
+			children = (
+				668F70B123BECEE20055FA0D /* ExampleCellModels.swift */,
+			);
+			name = models;
+			sourceTree = "<group>";
+		};
+		668F70AD23BECE5D0055FA0D /* controllers */ = {
+			isa = PBXGroup;
+			children = (
+				607FACD71AFB9204008FA782 /* ViewController.swift */,
+			);
+			name = controllers;
 			sourceTree = "<group>";
 		};
 		A7BF35898BE97E3E9B9D40D2 /* Pods */ = {
@@ -212,10 +244,12 @@
 				TargetAttributes = {
 					607FACCF1AFB9204008FA782 = {
 						CreatedOnToolsVersion = 6.3.1;
+						DevelopmentTeam = UL42AV8U5L;
 						LastSwiftMigration = 1130;
 					};
 					607FACE41AFB9204008FA782 = {
 						CreatedOnToolsVersion = 6.3.1;
+						DevelopmentTeam = UL42AV8U5L;
 						LastSwiftMigration = 1130;
 						TestTargetID = 607FACCF1AFB9204008FA782;
 					};
@@ -333,6 +367,8 @@
 			files = (
 				607FACD81AFB9204008FA782 /* ViewController.swift in Sources */,
 				607FACD61AFB9204008FA782 /* AppDelegate.swift in Sources */,
+				668F70B223BECEE20055FA0D /* ExampleCellModels.swift in Sources */,
+				668F70AF23BECE7F0055FA0D /* ExampleCells.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -340,6 +376,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				668F70B023BECE7F0055FA0D /* ExampleCells.swift in Sources */,
+				668F70B323BECEE20055FA0D /* ExampleCellModels.swift in Sources */,
 				607FACEC1AFB9204008FA782 /* Tests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

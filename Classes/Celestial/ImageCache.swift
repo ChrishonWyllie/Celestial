@@ -11,19 +11,23 @@ internal final class ImageCache: NSObject, CacheManagerProtocol {
 
     // MARK: - Variables
     
-    public static let shared = ImageCache()
+    public static let shared = ImageCache(config: CacheControlConfiguration(countLimit: 100, memoryLimit: 200.megabytes))
     
     // 1st level cache, that contains encoded images
     private(set) lazy var encodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
+        cache.name = "Encoded items cache"
         cache.countLimit = config.countLimit
+        cache.delegate = self
         return cache
     }()
     
     // 2nd level cache, that contains decoded images
     private(set) lazy var decodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
+        cache.name = "Decoded items cache"
         cache.totalCostLimit = config.memoryLimit
+        cache.delegate = self
         return cache
     }()
     
@@ -68,7 +72,7 @@ extension ImageCache: CacheProtocol {
         // search for image data
         if let image = encodedItemsCache.object(forKey: urlString as AnyObject) as? UIImage {
             let decodedImage = image.decodedImage()
-            decodedItemsCache.setObject(image as AnyObject, forKey: urlString as AnyObject, cost: decodedImage.diskSize)
+            decodedItemsCache.setObject(decodedImage as AnyObject, forKey: urlString as AnyObject, cost: decodedImage.diskSize)
             return decodedImage
         }
 
@@ -76,7 +80,12 @@ extension ImageCache: CacheProtocol {
     }
 
     func store(_ item: UIImage?, with urlString: String) {
-        guard let image = item else { return removeItem(at: urlString) }
+        guard let image = item else {
+            // Store `nil` at this urlString
+            // In other words, remove the image at this key.
+            return removeItem(at: urlString)
+        }
+        
         let decodedImage = image.decodedImage()
 
         lock.lock(); defer { lock.unlock() }
@@ -114,4 +123,25 @@ extension ImageCache: CacheProtocol {
         }
     }
 
+}
+    
+
+
+
+
+
+
+// MARK: - NSCacheDelegate
+    
+extension ImageCache: NSCacheDelegate {
+    
+    func cache(_ cache: NSCache<AnyObject, AnyObject>, willEvictObject obj: Any) {
+        guard let image = obj as? UIImage else {
+            return
+        }
+        if Celestial.shared.debugModeIsActive {
+            print("[Video Cache] - cache with name: \"\(cache.name)\" and cost limit:    \(cache.totalCostLimit). In megabytes: \(cache.totalCostLimit.sizeInMB)")
+            print("[Video Cache] - cache with name: \"\(cache.name)\" will evict object: \(image) with size: \(image.diskSize) bytes.... in megabytes: \(image.diskSize.sizeInMB)\n")
+        }
+    }
 }
