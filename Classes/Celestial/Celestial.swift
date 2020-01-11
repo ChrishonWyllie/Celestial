@@ -12,6 +12,7 @@ public final class Celestial: NSObject {
     /// Public shared instance property
     public static let shared = Celestial()
     
+    internal var debugModeIsActive: Bool = false
     
     
     
@@ -199,6 +200,19 @@ extension Celestial: CelestialCacheProtocol {
         if let imageCacheLimit = imageCache {
             ImageCache.shared.setCacheCostLimit(numMegabytes: imageCacheLimit)
         }
+    }
+    
+    /// Sets an internal Boolean value which determines whether debug statements will be printed to console.
+    /// For example, information regarding when the image or video cache is evicting items for memory space
+    /// will be printed.
+    /// It is set to `false` by default
+    /// - Parameter on: Boolean value which will determine if debug statements will be printed to console.
+    /// - Usage:
+    /// ````
+    ///     Celestial.shared.setDebugMode(on: true)
+    /// ````
+    public func setDebugMode(on: Bool) {
+        debugModeIsActive = on
     }
     
     /// Evicts all items from both the video and image caches.
