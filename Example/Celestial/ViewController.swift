@@ -108,6 +108,9 @@ class ViewController: UIViewController {
 extension ViewController {
      
      private func setupUI() {
+        
+        Celestial.shared.setDebugMode(on: true)
+        
 //        setupURLImageView()
 //        setupCachableAVPlayerItem()
         setupCollectionView()
