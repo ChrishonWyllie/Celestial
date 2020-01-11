@@ -1,3 +1,17 @@
+## [Version 0.5.20](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.5.20)  
+
+### New
+* Added a "debug mode" to optionally print information to the console
+* Added NSCacheDelegate to observe when items are about to be evicted
+* Updated example code to showcase new cachable videos within UICollectionView
+* Added more code examples to README
+
+### Improvements
+* Resizes downloaded images on background thread (within URLImageView downloadTask) to match the size of the URLImageView, resulting in smaller image files. This also made scrolling cells with images faster and removed visible stutter.
+
+### Bug fixes
+* Fix scroll stutter due to handling large images on main thread
+
 ## [Version 0.5.6](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.5.6)  
 
 ### New
