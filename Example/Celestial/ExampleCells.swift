@@ -95,12 +95,11 @@ class VideoCell: ExampleCell {
     
 //    }
     
-    var someCellModel: ExampleCellModel!
+    private weak var playtimeObserver: NSObjectProtocol?
 
     // This function is called during the cell dequeue process and will load the image
     // using the `CellModel` struct. However, this would be replaced with your method.
     public override func configureCell(someCellModel: ExampleCellModel) {
-        self.someCellModel = someCellModel
         
         let urlString = someCellModel.urlString
         guard let url = URL(string: urlString) else {
@@ -110,8 +109,19 @@ class VideoCell: ExampleCell {
         let playerItem = CachableAVPlayerItem(url: url, delegate: nil)
         let player = AVPlayer(playerItem: playerItem)
         
+        if playtimeObserver != nil {
+            NotificationCenter.default.removeObserver(playtimeObserver!)
+            playtimeObserver = nil
+        }
+        playtimeObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main, using: { [weak self] (notification) in
+            guard let strongSelf = self else { return }
+            strongSelf.playerView.player?.seek(to: CMTime.zero)
+            strongSelf.playerView.player?.play()
+        })
+        
         playerView.player = player
     }
+    
 }
 
 
