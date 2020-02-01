@@ -11,8 +11,8 @@
 <br />
 <div id="images">
     <p align="center">
-    <img style="display: inline; margin: 0 5px;" src="Github Images/celestial-app-demo-without-caching.gif" width=300 height=300 />
-    <img style="display: inline; margin: 0 5px;" src="Github Images/celestial-app-demo-with-caching.gif" width=300 height=300 />
+    <img style="display: inline; margin: 0 5px;" src="Github Images/celestial-app-demo-without-caching.gif" width=300 height=600 />
+    <img style="display: inline; margin: 0 5px;" src="Github Images/celestial-app-demo-with-caching.gif" width=300 height=600 />
 </p>
 </div>
 
