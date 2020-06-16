@@ -1,3 +1,14 @@
+## [Version 0.5.26](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.5.26)  
+
+### New
+N/A
+
+### Improvements
+N/A
+
+### Bug fixes
+* Made the setCacheCostLimit function public
+
 ## [Version 0.5.20](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.5.20)  
 
 ### New
