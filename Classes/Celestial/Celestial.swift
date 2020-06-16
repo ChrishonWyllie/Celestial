@@ -193,7 +193,7 @@ extension Celestial: CelestialCacheProtocol {
     /// ````
     ///     Celestial.shared.setCacheItemLimit(videoCache: Int.OneGigabyte, imageCache: Int.OneMegabyte * 100)
     /// ````
-    func setCacheCostLimit(videoCache: Int?, imageCache: Int?) {
+    public func setCacheCostLimit(videoCache: Int?, imageCache: Int?) {
         if let videoCacheLimit = videoCache {
             VideoCache.shared.setCacheCostLimit(numMegabytes: videoCacheLimit)
         }
