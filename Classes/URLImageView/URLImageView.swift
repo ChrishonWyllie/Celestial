@@ -148,25 +148,29 @@ extension URLImageView: URLSessionDownloadDelegate {
     
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
         
-        let percentage = CGFloat(totalBytesWritten) / CGFloat(totalBytesExpectedToWrite)
-        let totalSize = ByteCountFormatter.string(fromByteCount: totalBytesExpectedToWrite, countStyle: .file)
-        let humanReadablePercentage = String(format: "%.1f%% of %@", percentage * 100, totalSize)
+        let (downloadProgress, humanReadableDownloadProgress) = Utility.shared.getDownloadProgress(totalBytesWritten: totalBytesWritten, totalBytesExpectedToWrite: totalBytesExpectedToWrite)
         
-        delegate?.urlImageView?(self, downloadProgress: percentage, humanReadableProgress: humanReadablePercentage)
         
-        // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
-        // In which case, this property will be non-nil
-        downloadTaskHandler?.progressHandler?(percentage)
+        if downloadTaskHandler != nil {
+            // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
+            // In which case, this property will be non-nil
+            downloadTaskHandler?.progressHandler?(CGFloat(downloadProgress))
+        } else {
+            delegate?.urlImageView?(self, downloadProgress: CGFloat(downloadProgress), humanReadableProgress: humanReadableDownloadProgress)
+        }
     }
     
     public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard let error = error else { return }
         fallbackOnDefaultImageIfExists()
-        delegate?.urlImageView(self, downloadFailedWith: error)
         
-        // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
-        // In which case, this property will be non-nil
-        downloadTaskHandler?.errorHandler?(error)
+        if downloadTaskHandler != nil {
+            // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
+            // In which case, this property will be non-nil
+            downloadTaskHandler?.errorHandler?(error)
+        } else {
+            delegate?.urlImageView(self, downloadFailedWith: error)
+        }
     }
     
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
