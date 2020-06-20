@@ -1,3 +1,14 @@
+## [Version 0.6.0](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.6.0)  
+
+### New
+* Added `VideoPlayerView` for conveniently allowing for playing videos in a UIView that maintains and auto resizes its own AVPlayerLayer. Also contains getter/setter for AVPlayer
+
+### Improvements
+N/A
+
+### Bug fixes
+N/A
+
 ## [Version 0.5.26](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.5.26)  
 
 ### New
