@@ -46,10 +46,21 @@ class ExampleCell: UICollectionViewCell {
 
 
 
+
+
+
+
+
+
+
+
+
+// MARK: - VideoCell
+
 class VideoCell: ExampleCell {
     
-    public var playerView: VideoPlayerView = {
-        let v = VideoPlayerView()
+    public lazy var playerView: URLVideoPlayerView = {
+        let v = URLVideoPlayerView(delegate: self)
         v.translatesAutoresizingMaskIntoConstraints = false
         v.playerLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
         return v
@@ -71,12 +82,6 @@ class VideoCell: ExampleCell {
         playerView.bottomAnchor.constraint(equalTo: super.containerView.bottomAnchor, constant: -12).isActive = true
     }
     
-//    override func prepareForReuse() {
-//        super.prepareForReuse()
-//        playerView.player?.pause()
-////        player = nil
-    
-//    }
     
     private weak var playtimeObserver: NSObjectProtocol?
 
@@ -85,28 +90,32 @@ class VideoCell: ExampleCell {
     public override func configureCell(someCellModel: ExampleCellModel) {
         
         let urlString = someCellModel.urlString
-        guard let url = URL(string: urlString) else {
-            return
-        }
-        
-        let playerItem = CachableAVPlayerItem(url: url, delegate: nil)
-        let player = AVPlayer(playerItem: playerItem)
+        playerView.loadVideoFrom(urlString: urlString, playOnDownloadCompletion: false)
         
         if playtimeObserver != nil {
             NotificationCenter.default.removeObserver(playtimeObserver!)
             playtimeObserver = nil
         }
-        playtimeObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main, using: { [weak self] (notification) in
+        playtimeObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerView.playerItem, queue: .main, using: { [weak self] (notification) in
             guard let strongSelf = self else { return }
             strongSelf.playerView.player?.seek(to: CMTime.zero)
             strongSelf.playerView.player?.play()
         })
-        
-        playerView.player = player
     }
     
 }
 
+extension VideoCell: URLVideoPlayerViewDelegate {
+    
+    func urlVideoPlayerView(_ view: URLVideoPlayerView, didFinishDownloading data: Data) {
+//        print("url video player video did finish downloading data: \(data.count)")
+    }
+    
+    func urlVideoPlayerView(_ view: URLVideoPlayerView, downloadFailedWith error: Error) {
+//        print("url video player video download failed with error: \(error)")
+    }
+    
+}
 
 
 
@@ -139,7 +148,7 @@ class ImageCell: ExampleCell {
     // Initialize the URLImageView within the cell as a variable.
     // NOTE: The second initializer is used which does NOT have the urlString argument.
     private lazy var imageView: URLImageView = {
-        let img = URLImageView(delegate: nil, cachePolicy: .allow, defaultImage: nil)
+        let img = URLImageView(delegate: self, cachePolicy: .allow, defaultImage: nil)
         img.translatesAutoresizingMaskIntoConstraints = false
         img.backgroundColor = .gray
         img.contentMode = .scaleAspectFill
@@ -175,4 +184,19 @@ class ImageCell: ExampleCell {
 //        }
     }
 
+}
+
+extension ImageCell: URLImageViewDelegate {
+    
+    func urlImageView(_ view: URLImageView, didFinishDownloading image: UIImage) {
+        
+    }
+    
+    func urlImageView(_ view: URLImageView, downloadFailedWith error: Error) {
+        
+    }
+    
+    func urlImageView(_ view: URLImageView, downloadProgress progress: CGFloat, humanReadableProgress: String) {
+        
+    }
 }
