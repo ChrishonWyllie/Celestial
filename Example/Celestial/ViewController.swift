@@ -28,17 +28,34 @@ fileprivate struct URLSessionObject {
     }
 }
 
+fileprivate enum ExpectedMediaType {
+    case image, video
+}
+
 class ViewController: UIViewController {
      
     // MARK: - Variables
 
     private var player: AVPlayer!
 
+    private var expectedMediaType: ExpectedMediaType = .video
 
-
+    private let cellReuseIdentifier = "cell reuse identifier"
+    private var cellModels: [ExampleCellModel] = []
+    private var downloadedImageCellModels: [ImageCellModel] = []
+    private var downloadedVideoCellModels: [VideoCellModel] = []
+    
+    
+    
+    
 
 
     // MARK: - UI Elements
+    
+    private lazy var toggleDataSourceButton: UIBarButtonItem = {
+        let btn = UIBarButtonItem(title: "Toggle", style: .plain, target: self, action: #selector(toggleDataSource))
+        return btn
+    }()
 
     private lazy var imageView: URLImageView = {
         let urlString = "https://picsum.photos/400/800/?random"
@@ -51,9 +68,6 @@ class ViewController: UIViewController {
         return img
     }()
 
-    private let cellReuseIdentifier = "cell reuse identifier"
-    private var cellModels: [ExampleCellModel] = []
-    
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.minimumLineSpacing = 8
@@ -111,6 +125,7 @@ extension ViewController {
         
         Celestial.shared.setDebugMode(on: true)
         
+        
 //        setupURLImageView()
 //        setupCachableAVPlayerItem()
         setupCollectionView()
@@ -119,17 +134,44 @@ extension ViewController {
     private func setupCollectionView() {
         view.addSubview(collectionView)
         
+        navigationItem.rightBarButtonItem = toggleDataSourceButton
+        
         collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
         collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
         collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
         collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
         
-        collectionView.register(ImageCell.self, forCellWithReuseIdentifier: cellReuseIdentifier)
-        collectionView.register(VideoCell.self, forCellWithReuseIdentifier: cellReuseIdentifier)
+        collectionView.register(ImageCell.self, forCellWithReuseIdentifier: String(describing: ImageCell.self))
+        collectionView.register(VideoCell.self, forCellWithReuseIdentifier: String(describing: VideoCell.self))
         
-//        getRandomImages()
-        getRandomVideos()
+        switch expectedMediaType {
+        case .image: getRandomImages()
+        case .video: getRandomVideos()
+        }
     }
+    
+    @objc private func toggleDataSource() {
+        
+        if expectedMediaType == .video {
+            if let visibleCells = collectionView.visibleCells as? [VideoCell] {
+                visibleCells.forEach { (cell) in
+                    cell.playerView.player?.pause()
+                }
+            }
+        }
+        
+        cellModels.removeAll()
+        collectionView.reloadData()
+        
+        let newDataSourceType: ExpectedMediaType = expectedMediaType == .image ? .video : .image
+        self.expectedMediaType = newDataSourceType
+        
+        switch expectedMediaType {
+        case .image: getRandomImages()
+        case .video: getRandomVideos()
+        }
+    }
+
 }
 
 
@@ -157,37 +199,44 @@ extension ViewController {
     
     private func getRandomImages() {
             
-//        TestURLs.Image.urlStrings.forEach { (urlString) in imageCellModels.append(ImageCellModel(urlString: urlString)) }
-//        collectionView.reloadData()
-//        return
-        
         guard let url = URL(string: "https://picsum.photos/v2/list?limit=25") else {
             return
         }
         
-        URLSession.shared.dataTask(with: url) { (data, response, error) in
-            guard let data = data else { return }
-            do {
-                guard let jsonDataArray = try JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.allowFragments) as? [[String: AnyObject]] else {
-                    return
-                }
-                jsonDataArray.forEach { (jsonObject) in
-                    let urlSessionObject = URLSessionObject(object: jsonObject)
-                    
-                    DispatchQueue.main.async {
-                        self.collectionView.performBatchUpdates({
-                            self.cellModels.append(ImageCellModel(urlString: urlSessionObject.downloadURL))
-                            let lastIndexPath = IndexPath(item: self.cellModels.count - 1, section: 0)
-                            self.collectionView.insertItems(at: [lastIndexPath])
-                        }, completion: nil)
+        if self.downloadedImageCellModels.count == 0 {
+            let group = DispatchGroup()
+            
+            group.enter()
+            
+            URLSession.shared.dataTask(with: url) { (data, response, error) in
+                guard let data = data else { return }
+                do {
+                    guard let jsonDataArray = try JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.allowFragments) as? [[String: AnyObject]] else {
+                        return
                     }
+                    
+                    jsonDataArray.forEach { (jsonObject) in
+                        let urlSessionObject = URLSessionObject(object: jsonObject)
+                        self.downloadedImageCellModels.append(ImageCellModel(urlString: urlSessionObject.downloadURL))
+                    }
+                    
+                    group.leave()
+                    
+                } catch let error {
+                    print("error converting data to json: \(error)")
                 }
                 
-            } catch let error {
-                print("error converting data to json: \(error)")
+            }.resume()
+            
+            group.notify(queue: DispatchQueue.main) {
+                self.cellModels = self.downloadedImageCellModels
+                self.collectionView.reloadData()
             }
             
-        }.resume()
+        } else {
+            self.cellModels = downloadedImageCellModels
+            self.collectionView.reloadData()
+        }
     }
 }
 
@@ -255,9 +304,13 @@ extension ViewController {
     }
 
     private func getRandomVideos() {
-        TestURLs.Videos.urlStrings.forEach { (urlString) in cellModels.append(VideoCellModel(urlString: urlString)) }
+        if downloadedVideoCellModels.count == 0 {
+            downloadedVideoCellModels = TestURLs.Videos.urlStrings.map { VideoCellModel(urlString: $0) }
+            collectionView.reloadData()
+        }
+        
+        cellModels = downloadedVideoCellModels
         collectionView.reloadData()
-        return
     }
 }
 
@@ -289,8 +342,13 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell: ExampleCell?
         
-//        cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellReuseIdentifier, for: indexPath) as? ImageCell
-        cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellReuseIdentifier, for: indexPath) as? VideoCell
+        switch expectedMediaType {
+        case .image:
+            cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: ImageCell.self), for: indexPath) as? ImageCell
+        case .video:
+            cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: VideoCell.self), for: indexPath) as? VideoCell
+        }
+        
         let cellModel = cellModels[indexPath.item]
         
         cell?.configureCell(someCellModel: cellModel)
@@ -299,7 +357,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: collectionView.frame.size.width, height: 400.0)
+        return CGSize(width: collectionView.frame.size.width, height: 240.0)
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
