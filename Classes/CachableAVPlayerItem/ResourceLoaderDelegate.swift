@@ -17,8 +17,8 @@ internal class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
     private var mediaData: Data?
     private var response: URLResponse?
     private var pendingRequests = Set<AVAssetResourceLoadingRequest>()
-    
-    private weak var owner: CachableAVPlayerItem?
+    private var cachePolicy: MultimediaCachePolicy = .allow
+    private weak var playerItemRequestingResource: CachableAVPlayerItem?
     
     
     
@@ -35,8 +35,9 @@ internal class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
     }
     
     
-    public func setCachableAVPlayerItem(to: CachableAVPlayerItem) {
-        self.owner = to
+    public func setCachableAVPlayerItem(to playerItem: CachableAVPlayerItem, with cachePolicy: MultimediaCachePolicy) {
+        self.playerItemRequestingResource = playerItem
+        self.cachePolicy = cachePolicy
     }
     
     public func setMediaData(_ data: Data, mimeType: String) {
@@ -61,18 +62,20 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
         mediaData?.append(data)
         processPendingRequests()
         
-        guard let cachableAVPlayerItem = owner, let mediaData = mediaData else {
+        guard let cachableAVPlayerItem = playerItemRequestingResource, let mediaData = mediaData else {
             return
         }
         
-        let totalBytesExpectedToWrite = dataTask.countOfBytesExpectedToReceive
-        let percentage = CGFloat(mediaData.count) / CGFloat(totalBytesExpectedToWrite)
-        let totalSize = ByteCountFormatter.string(fromByteCount: totalBytesExpectedToWrite, countStyle: .file)
-        let humanReadablePercentage = String(format: "%.1f%% of %@", percentage * 100, totalSize)
+        // TODO
+        // Move this function to utility
+        let totalBytesWritten: Int64 = Int64(mediaData.count)
+        let totalBytesExpectedToWrite: Int64 = dataTask.countOfBytesExpectedToReceive
         
-        owner?.delegate?.playerItem?(cachableAVPlayerItem,
-                                     downloadProgress: percentage,
-                                     humanReadableProgress: humanReadablePercentage)
+        let (downloadProgress, humanReadableDownloadProgress) = Utility.shared.getDownloadProgress(totalBytesWritten: totalBytesWritten, totalBytesExpectedToWrite: totalBytesExpectedToWrite)
+        
+        cachableAVPlayerItem.delegate?.playerItem?(cachableAVPlayerItem,
+                                                   downloadProgress: CGFloat(downloadProgress),
+                                                   humanReadableProgress: humanReadableDownloadProgress)
         
     }
     
@@ -87,24 +90,25 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         
-        guard let cachableAVPlayerItem = owner, let mediaData = mediaData else {
+        guard let cachableAVPlayerItem = playerItemRequestingResource, let mediaData = mediaData else {
             return
         }
         
         if let errorUnwrapped = error {
-            owner?.delegate?.playerItem(cachableAVPlayerItem, downloadFailedWith: errorUnwrapped)
-            return
+            cachableAVPlayerItem.delegate?.playerItem(cachableAVPlayerItem, downloadFailedWith: errorUnwrapped)
+        } else {
+            processPendingRequests()
+            
+            if self.cachePolicy == .allow {
+                let url = cachableAVPlayerItem.url
+                let originalVideoData = OriginalVideoData(videoData: mediaData,
+                                                          originalURLMimeType: url.mimeType(),
+                                                          originalURLFileExtension: url.pathExtension)
+                Celestial.shared.store(video: originalVideoData, with: url.absoluteString)
+            }
+            
+            cachableAVPlayerItem.delegate?.playerItem(cachableAVPlayerItem, didFinishDownloading: mediaData)
         }
-        processPendingRequests()
-        
-        if owner?.cachePolicy == .allow, let url = owner?.url {
-            let originalVideoData = OriginalVideoData(videoData: mediaData,
-                                                      originalURLMimeType: url.mimeType(),
-                                                      originalURLFileExtension: url.pathExtension)
-            Celestial.shared.store(video: originalVideoData, with: url.absoluteString)
-        }
-        
-        owner?.delegate?.playerItem(cachableAVPlayerItem, didFinishDownloading: mediaData)
     }
     
 }
@@ -124,7 +128,7 @@ extension ResourceLoaderDelegate: AVAssetResourceLoaderDelegate {
             
             // If we're playing from a url, we need to download the file.
             // We start loading the file on first request only.
-            guard let initialUrl = owner?.url else {
+            guard let initialUrl = playerItemRequestingResource?.url else {
                 fatalError("internal inconsistency")
             }
 
@@ -196,17 +200,19 @@ extension ResourceLoaderDelegate {
         let requestedLength = dataRequest.requestedLength
         let currentOffset = Int(dataRequest.currentOffset)
         
-        guard let songDataUnwrapped = mediaData,
-            songDataUnwrapped.count > currentOffset else {
+        guard
+            let mediaDataUnwrapped = mediaData,
+            mediaDataUnwrapped.count > currentOffset
+            else {
             // Don't have any data at all for this request.
             return false
         }
         
-        let bytesToRespond = min(songDataUnwrapped.count - currentOffset, requestedLength)
-        let dataToRespond = songDataUnwrapped.subdata(in: Range(uncheckedBounds: (currentOffset, currentOffset + bytesToRespond)))
+        let bytesToRespond = min(mediaDataUnwrapped.count - currentOffset, requestedLength)
+        let dataToRespond = mediaDataUnwrapped.subdata(in: Range(uncheckedBounds: (currentOffset, currentOffset + bytesToRespond)))
         dataRequest.respond(with: dataToRespond)
         
-        return songDataUnwrapped.count >= requestedLength + requestedOffset
+        return mediaDataUnwrapped.count >= requestedLength + requestedOffset
         
     }
 }
