@@ -44,29 +44,12 @@ class ExampleCell: UICollectionViewCell {
 }
 
 
-class PlayerView: UIView {
-    override static var layerClass: AnyClass {
-        return AVPlayerLayer.self
-    }
 
-    var playerLayer: AVPlayerLayer {
-        return layer as! AVPlayerLayer
-    }
-    
-    var player: AVPlayer? {
-        get {
-            return playerLayer.player
-        }
-        set {
-            playerLayer.player = newValue
-        }
-    }
-}
 
 class VideoCell: ExampleCell {
     
-    public var playerView: PlayerView = {
-        let v = PlayerView()
+    public var playerView: VideoPlayerView = {
+        let v = VideoPlayerView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.playerLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
         return v
@@ -159,6 +142,8 @@ class ImageCell: ExampleCell {
         let img = URLImageView(delegate: nil, cachePolicy: .allow, defaultImage: nil)
         img.translatesAutoresizingMaskIntoConstraints = false
         img.backgroundColor = .gray
+        img.contentMode = .scaleAspectFill
+        img.clipsToBounds = true
         return img
     }()
     
