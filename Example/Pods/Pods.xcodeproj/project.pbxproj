@@ -28,6 +28,8 @@
 		663A31C023B995E50004AA37 /* OriginalVideoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A31BF23B995E40004AA37 /* OriginalVideoData.swift */; };
 		663A31C123B995E50004AA37 /* OriginalVideoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663A31BF23B995E40004AA37 /* OriginalVideoData.swift */; };
 		66884BF3249DE66A004793E5 /* VideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66884BF2249DE66A004793E5 /* VideoPlayerView.swift */; };
+		66884BF5249EC308004793E5 /* Utility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66884BF4249EC308004793E5 /* Utility.swift */; };
+		66884BF6249EC47D004793E5 /* Utility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66884BF4249EC308004793E5 /* Utility.swift */; };
 		668F70B523C2C7C30055FA0D /* DownloadTaskHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668F70B423C2C7C30055FA0D /* DownloadTaskHandler.swift */; };
 		668F70B623C2C7C30055FA0D /* DownloadTaskHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668F70B423C2C7C30055FA0D /* DownloadTaskHandler.swift */; };
 		668F70B723C2C7C30055FA0D /* DownloadTaskHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668F70B423C2C7C30055FA0D /* DownloadTaskHandler.swift */; };
@@ -81,6 +83,7 @@
 		663A31BC23B826ED0004AA37 /* ResourceLoaderDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceLoaderDelegate.swift; sourceTree = "<group>"; };
 		663A31BF23B995E40004AA37 /* OriginalVideoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalVideoData.swift; sourceTree = "<group>"; };
 		66884BF2249DE66A004793E5 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerView.swift; sourceTree = "<group>"; };
+		66884BF4249EC308004793E5 /* Utility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utility.swift; sourceTree = "<group>"; };
 		668F70B423C2C7C30055FA0D /* DownloadTaskHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadTaskHandler.swift; sourceTree = "<group>"; };
 		66F3AC4323B7A2E500C4505D /* CachableAVPlayerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachableAVPlayerItem.swift; sourceTree = "<group>"; };
 		68BD6AB4BBE8DE3A626834606FB29915 /* Pods-Celestial_Tests-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-Celestial_Tests-acknowledgements.markdown"; sourceTree = "<group>"; };
@@ -160,6 +163,7 @@
 				66884BF1249DE655004793E5 /* VideoPlayerView */,
 				66270B9623B43B3D00A34A17 /* URLImageView */,
 				66F3AC4223B7A23200C4505D /* CachableAVPlayerItem */,
+				66884BF4249EC308004793E5 /* Utility.swift */,
 			);
 			path = Classes;
 			sourceTree = "<group>";
@@ -484,6 +488,7 @@
 				66270B9523B438DD00A34A17 /* Extensions.swift in Sources */,
 				663A31C123B995E50004AA37 /* OriginalVideoData.swift in Sources */,
 				66270B8B23B435DA00A34A17 /* MultimediaCacheProtocols.swift in Sources */,
+				66884BF6249EC47D004793E5 /* Utility.swift in Sources */,
 				66F3AC4523B7A2E500C4505D /* CachableAVPlayerItem.swift in Sources */,
 				66270B9123B437C600A34A17 /* VideoCache.swift in Sources */,
 				66270B8E23B4372800A34A17 /* ImageCache.swift in Sources */,
@@ -505,6 +510,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				66884BF5249EC308004793E5 /* Utility.swift in Sources */,
 				66270B9823B43B6200A34A17 /* URLImageView.swift in Sources */,
 				668F70B523C2C7C30055FA0D /* DownloadTaskHandler.swift in Sources */,
 				663A31BD23B826ED0004AA37 /* ResourceLoaderDelegate.swift in Sources */,
