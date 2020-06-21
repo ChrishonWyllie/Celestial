@@ -90,7 +90,7 @@ open class CachableAVPlayerItem: AVPlayerItem {
         asset.resourceLoader.setDelegate(assetResourceLoader, queue: DispatchQueue.main)
         super.init(asset: asset, automaticallyLoadedAssetKeys: nil)
         
-        assetResourceLoader.loaderDelegate = self
+        assetResourceLoader.delegate = self
         
         setupNotificationObservers()
         
@@ -113,7 +113,7 @@ open class CachableAVPlayerItem: AVPlayerItem {
         asset.resourceLoader.setDelegate(assetResourceLoader, queue: DispatchQueue.main)
         super.init(asset: asset, automaticallyLoadedAssetKeys: nil)
         
-        assetResourceLoader.loaderDelegate = self
+        assetResourceLoader.delegate = self
         
         setupNotificationObservers()
     }
