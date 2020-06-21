@@ -1,5 +1,5 @@
 //
-//  ResourceLoaderDelegate.swift
+//  MediaResourceLoader.swift
 //  Pods
 //
 //  Created by Chrishon Wyllie on 12/28/19.
@@ -7,7 +7,7 @@
 
 import AVFoundation
 
-internal class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
+internal class MediaResourceLoader: NSObject, URLSessionDelegate {
     
     // MARK: - Variables
    
@@ -73,7 +73,7 @@ internal class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
 
 // MARK: - URLSessionDataDelegate
 
-extension ResourceLoaderDelegate: URLSessionDataDelegate {
+extension MediaResourceLoader: URLSessionDataDelegate {
     
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         mediaData?.append(data)
@@ -134,7 +134,7 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
 
 // MARK: - Private utility functions
 
-extension ResourceLoaderDelegate {
+extension MediaResourceLoader {
     
     fileprivate func processPendingRequests() {
         
@@ -220,14 +220,14 @@ extension ResourceLoaderDelegate {
 
 // MARK: - AVURLAssetResourceLoader
 
-internal class AVURLAssetResourceLoader: ResourceLoaderDelegate, AVAssetResourceLoaderDelegate {
+internal class AVURLAssetResourceLoader: MediaResourceLoader, AVAssetResourceLoaderDelegate {
     
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
         
         if isPlayingFromData {
             
             // Nothing to load.
-            print("ResourceLoaderDelegate - Nothing to load")
+            print("MediaResourceLoader - Nothing to load")
             
         } else if session == nil {
             

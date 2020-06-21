@@ -182,15 +182,15 @@ open class CachableAVPlayerItem: AVPlayerItem {
 
 extension CachableAVPlayerItem: MediaResourceLoaderDelegate {
     
-    func resourceLoader(_ loader: ResourceLoaderDelegate, didFinishDownloading media: Any) {
+    func resourceLoader(_ loader: MediaResourceLoader, didFinishDownloading media: Any) {
         print("cachable av player item did finish downloading media: \(media)")
     }
     
-    func resourceLoader(_ loader: ResourceLoaderDelegate, downloadFailedWith error: Error) {
+    func resourceLoader(_ loader: MediaResourceLoader, downloadFailedWith error: Error) {
         print("cachable av player item download failed with error: \(error)")
     }
     
-    func resourceLoader(_ loader: ResourceLoaderDelegate, downloadProgress progress: CGFloat, humanReadableProgress: String) {
+    func resourceLoader(_ loader: MediaResourceLoader, downloadProgress progress: CGFloat, humanReadableProgress: String) {
 //        print("cachable av player item download progress: \(humanReadableProgress)")
     }
     
