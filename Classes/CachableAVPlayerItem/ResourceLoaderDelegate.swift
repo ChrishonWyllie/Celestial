@@ -18,7 +18,27 @@ internal class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
     private var response: URLResponse?
     private var pendingRequests = Set<AVAssetResourceLoadingRequest>()
     private var cachePolicy: MultimediaCachePolicy = .allow
-    private weak var playerItemRequestingResource: CachableAVPlayerItem?
+    private var initialURL: URL?
+    
+    public weak var loaderDelegate: MediaResourceLoaderDelegate?
+    
+    
+    
+    
+    
+    
+    
+    // MARK: - Initializers
+    
+    convenience init(url: URL, cachePolicy: MultimediaCachePolicy = .allow) {
+        self.init(cachePolicy: cachePolicy)
+        self.initialURL = url
+    }
+    
+    init(cachePolicy: MultimediaCachePolicy = .allow) {
+        super.init()
+        self.cachePolicy = cachePolicy
+    }
     
     
     
@@ -32,12 +52,6 @@ internal class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
         configuration.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
         session?.dataTask(with: url).resume()
-    }
-    
-    
-    public func setCachableAVPlayerItem(to playerItem: CachableAVPlayerItem, with cachePolicy: MultimediaCachePolicy) {
-        self.playerItemRequestingResource = playerItem
-        self.cachePolicy = cachePolicy
     }
     
     public func setMediaData(_ data: Data, mimeType: String) {
@@ -62,7 +76,7 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
         mediaData?.append(data)
         processPendingRequests()
         
-        guard let cachableAVPlayerItem = playerItemRequestingResource, let mediaData = mediaData else {
+        guard let mediaData = mediaData else {
             return
         }
         
@@ -73,9 +87,7 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
         
         let (downloadProgress, humanReadableDownloadProgress) = Utility.shared.getDownloadProgress(totalBytesWritten: totalBytesWritten, totalBytesExpectedToWrite: totalBytesExpectedToWrite)
         
-        cachableAVPlayerItem.delegate?.playerItem?(cachableAVPlayerItem,
-                                                   downloadProgress: CGFloat(downloadProgress),
-                                                   humanReadableProgress: humanReadableDownloadProgress)
+        loaderDelegate?.resourceLoader(self, downloadProgress: CGFloat(downloadProgress), humanReadableProgress: humanReadableDownloadProgress)
         
     }
     
@@ -90,24 +102,27 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         
-        guard let cachableAVPlayerItem = playerItemRequestingResource, let mediaData = mediaData else {
+        guard let mediaData = mediaData else {
             return
         }
         
         if let errorUnwrapped = error {
-            cachableAVPlayerItem.delegate?.playerItem(cachableAVPlayerItem, downloadFailedWith: errorUnwrapped)
+            loaderDelegate?.resourceLoader(self, downloadFailedWith: errorUnwrapped)
         } else {
             processPendingRequests()
             
-            if self.cachePolicy == .allow {
-                let url = cachableAVPlayerItem.url
-                let originalVideoData = OriginalVideoData(videoData: mediaData,
-                                                          originalURLMimeType: url.mimeType(),
-                                                          originalURLFileExtension: url.pathExtension)
-                Celestial.shared.store(video: originalVideoData, with: url.absoluteString)
+            guard let sourceURL = task.originalRequest?.url else {
+                return
             }
             
-            cachableAVPlayerItem.delegate?.playerItem(cachableAVPlayerItem, didFinishDownloading: mediaData)
+            let originalVideoData = OriginalVideoData(videoData: mediaData,
+                                                      originalURLMimeType: sourceURL.mimeType(),
+                                                      originalURLFileExtension: sourceURL.pathExtension)
+            if self.cachePolicy == .allow {
+                Celestial.shared.store(video: originalVideoData, with: sourceURL.absoluteString)
+            }
+            
+            loaderDelegate?.resourceLoader(self, didFinishDownloading: originalVideoData)
         }
     }
     
@@ -123,16 +138,18 @@ extension ResourceLoaderDelegate: AVAssetResourceLoaderDelegate {
         if isPlayingFromData {
             
             // Nothing to load.
+            print("ResourceLoaderDelegate - Nothing to load")
             
         } else if session == nil {
             
             // If we're playing from a url, we need to download the file.
             // We start loading the file on first request only.
-            guard let initialUrl = playerItemRequestingResource?.url else {
+            guard let initialURL = initialURL else {
                 fatalError("internal inconsistency")
             }
 
-            startDataRequest(with: initialUrl)
+            startDataRequest(with: initialURL)
+            
         }
         
         pendingRequests.insert(loadingRequest)
