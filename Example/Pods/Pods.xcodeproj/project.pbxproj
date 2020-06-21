@@ -157,13 +157,12 @@
 		66270B8323B42A8000A34A17 /* Classes */ = {
 			isa = PBXGroup;
 			children = (
-				66270B9223B438CE00A34A17 /* Extensions */,
+				66270B9223B438CE00A34A17 /* Utility */,
 				66270B8823B435BA00A34A17 /* Protocols+Declarations */,
 				66270B8723B4355700A34A17 /* Celestial */,
 				66884BF1249DE655004793E5 /* VideoPlayerView */,
 				66270B9623B43B3D00A34A17 /* URLImageView */,
 				66F3AC4223B7A23200C4505D /* CachableAVPlayerItem */,
-				66884BF4249EC308004793E5 /* Utility.swift */,
 			);
 			path = Classes;
 			sourceTree = "<group>";
@@ -188,12 +187,13 @@
 			path = "Protocols+Declarations";
 			sourceTree = "<group>";
 		};
-		66270B9223B438CE00A34A17 /* Extensions */ = {
+		66270B9223B438CE00A34A17 /* Utility */ = {
 			isa = PBXGroup;
 			children = (
 				66270B9323B438DD00A34A17 /* Extensions.swift */,
+				66884BF4249EC308004793E5 /* Utility.swift */,
 			);
-			path = Extensions;
+			path = Utility;
 			sourceTree = "<group>";
 		};
 		66270B9623B43B3D00A34A17 /* URLImageView */ = {
