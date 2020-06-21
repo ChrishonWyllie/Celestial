@@ -19,7 +19,7 @@ open class CachableAVPlayerItem: AVPlayerItem {
     public private(set) var cachePolicy: MultimediaCachePolicy = .allow
     public private(set) weak var delegate: CachableAVPlayerItemDelegate?
     
-    private let resourceLoaderDelegate = ResourceLoaderDelegate()
+    private let assetResourceLoader: AVURLAssetResourceLoader!
     private var initialScheme: String?
     private var customFileExtension: String?
     private let cachableAVPlayerItemScheme = "cachableAVPlayerItemScheme"
@@ -50,14 +50,16 @@ open class CachableAVPlayerItem: AVPlayerItem {
         var asset: AVURLAsset
         
         if let originalVideoData = Celestial.shared.video(for: url.absoluteString) {
-            guard let fakeUrl = URL(string: cachableAVPlayerItemScheme + "://whatever/file.\(originalVideoData.originalURLFileExtension)") else {
+            let fakeURLString = cachableAVPlayerItemScheme + "://whatever/file.\(originalVideoData.originalURLFileExtension)"
+            guard let fakeUrl = URL(string: fakeURLString) else {
                 fatalError("internal inconsistency")
             }
             
             self.url = fakeUrl
             self.initialScheme = nil
             
-            resourceLoaderDelegate.setMediaData(originalVideoData.videoData, mimeType: originalVideoData.originalURLMimeType)
+            assetResourceLoader = AVURLAssetResourceLoader(url: url)
+            assetResourceLoader.setMediaData(originalVideoData.videoData, mimeType: originalVideoData.originalURLMimeType)
             
             asset = AVURLAsset(url: fakeUrl)
         } else {
@@ -73,6 +75,8 @@ open class CachableAVPlayerItem: AVPlayerItem {
             self.cachePolicy = cachePolicy
             self.initialScheme = scheme
             
+            assetResourceLoader = AVURLAssetResourceLoader(url: url)
+            
             if let ext = customFileExtension {
                 urlWithCustomScheme.deletePathExtension()
                 urlWithCustomScheme.appendPathExtension(ext)
@@ -83,11 +87,10 @@ open class CachableAVPlayerItem: AVPlayerItem {
         }
         
         
-        
-        asset.resourceLoader.setDelegate(resourceLoaderDelegate, queue: DispatchQueue.main)
+        asset.resourceLoader.setDelegate(assetResourceLoader, queue: DispatchQueue.main)
         super.init(asset: asset, automaticallyLoadedAssetKeys: nil)
         
-        resourceLoaderDelegate.setCachableAVPlayerItem(to: self, with: self.cachePolicy)
+        assetResourceLoader.loaderDelegate = self
         
         setupNotificationObservers()
         
@@ -96,20 +99,21 @@ open class CachableAVPlayerItem: AVPlayerItem {
     /// Is used for playing from Data.
     public init(data: Data, mimeType: String, fileExtension: String) {
         
-        guard let fakeUrl = URL(string: cachableAVPlayerItemScheme + "://whatever/file.\(fileExtension)") else {
+        let fakeURLString = cachableAVPlayerItemScheme + "://whatever/file.\(fileExtension)"
+        guard let fakeUrl = URL(string: fakeURLString) else {
             fatalError("internal inconsistency")
         }
         
         self.url = fakeUrl
         self.initialScheme = nil
-        
-        resourceLoaderDelegate.setMediaData(data, mimeType: mimeType)
+        assetResourceLoader = AVURLAssetResourceLoader()
+        assetResourceLoader.setMediaData(data, mimeType: mimeType)
         
         let asset = AVURLAsset(url: fakeUrl)
-        asset.resourceLoader.setDelegate(resourceLoaderDelegate, queue: DispatchQueue.main)
+        asset.resourceLoader.setDelegate(assetResourceLoader, queue: DispatchQueue.main)
         super.init(asset: asset, automaticallyLoadedAssetKeys: nil)
         
-        resourceLoaderDelegate.setCachableAVPlayerItem(to: self, with: self.cachePolicy)
+        assetResourceLoader.loaderDelegate = self
         
         setupNotificationObservers()
     }
@@ -130,7 +134,7 @@ open class CachableAVPlayerItem: AVPlayerItem {
     deinit {
         NotificationCenter.default.removeObserver(self)
         removeObserver(self, forKeyPath: "status")
-        resourceLoaderDelegate.session?.invalidateAndCancel()
+        assetResourceLoader.session?.invalidateAndCancel()
     }
     
     
@@ -142,8 +146,8 @@ open class CachableAVPlayerItem: AVPlayerItem {
     // MARK: - Functions
     
     public func download() {
-        if resourceLoaderDelegate.session == nil {
-            resourceLoaderDelegate.startDataRequest(with: url)
+        if assetResourceLoader.session == nil {
+            assetResourceLoader.startDataRequest(with: url)
         }
     }
     
@@ -163,4 +167,31 @@ open class CachableAVPlayerItem: AVPlayerItem {
         delegate?.playerItemPlaybackStalled?(self)
     }
 
+}
+
+
+
+
+
+
+
+
+
+
+
+
+extension CachableAVPlayerItem: MediaResourceLoaderDelegate {
+    
+    func resourceLoader(_ loader: ResourceLoaderDelegate, didFinishDownloading media: Any) {
+        print("cachable av player item did finish downloading media: \(media)")
+    }
+    
+    func resourceLoader(_ loader: ResourceLoaderDelegate, downloadFailedWith error: Error) {
+        print("cachable av player item download failed with error: \(error)")
+    }
+    
+    func resourceLoader(_ loader: ResourceLoaderDelegate, downloadProgress progress: CGFloat, humanReadableProgress: String) {
+//        print("cachable av player item download progress: \(humanReadableProgress)")
+    }
+    
 }

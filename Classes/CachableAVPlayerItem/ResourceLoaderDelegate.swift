@@ -12,15 +12,18 @@ internal class ResourceLoaderDelegate: NSObject, URLSessionDelegate {
     // MARK: - Variables
    
     public private(set) var session: URLSession?
+    public private(set) var initialURL: URL?
     public private(set) var isPlayingFromData = false
-    private var mimeType: String? // is required when playing from Data
-    private var mediaData: Data?
-    private var response: URLResponse?
-    private var pendingRequests = Set<AVAssetResourceLoadingRequest>()
-    private var cachePolicy: MultimediaCachePolicy = .allow
-    private var initialURL: URL?
     
-    public weak var loaderDelegate: MediaResourceLoaderDelegate?
+    private var response: URLResponse?
+    
+    fileprivate var mimeType: String? // is required when playing from Data
+    fileprivate var mediaData: Data?
+    fileprivate var pendingRequests = Set<AVAssetResourceLoadingRequest>()
+    
+    private var cachePolicy: MultimediaCachePolicy = .allow
+    
+    public weak var delegate: MediaResourceLoaderDelegate?
     
     
     
@@ -87,7 +90,7 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
         
         let (downloadProgress, humanReadableDownloadProgress) = Utility.shared.getDownloadProgress(totalBytesWritten: totalBytesWritten, totalBytesExpectedToWrite: totalBytesExpectedToWrite)
         
-        loaderDelegate?.resourceLoader(self, downloadProgress: CGFloat(downloadProgress), humanReadableProgress: humanReadableDownloadProgress)
+        delegate?.resourceLoader(self, downloadProgress: CGFloat(downloadProgress), humanReadableProgress: humanReadableDownloadProgress)
         
     }
     
@@ -107,7 +110,7 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
         }
         
         if let errorUnwrapped = error {
-            loaderDelegate?.resourceLoader(self, downloadFailedWith: errorUnwrapped)
+            delegate?.resourceLoader(self, downloadFailedWith: errorUnwrapped)
         } else {
             processPendingRequests()
             
@@ -122,44 +125,8 @@ extension ResourceLoaderDelegate: URLSessionDataDelegate {
                 Celestial.shared.store(video: originalVideoData, with: sourceURL.absoluteString)
             }
             
-            loaderDelegate?.resourceLoader(self, didFinishDownloading: originalVideoData)
+            delegate?.resourceLoader(self, didFinishDownloading: originalVideoData)
         }
-    }
-    
-}
-
-
-// MARK: - AVAssetResourceLoaderDelegate
-
-extension ResourceLoaderDelegate: AVAssetResourceLoaderDelegate {
-    
-    func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
-        
-        if isPlayingFromData {
-            
-            // Nothing to load.
-            print("ResourceLoaderDelegate - Nothing to load")
-            
-        } else if session == nil {
-            
-            // If we're playing from a url, we need to download the file.
-            // We start loading the file on first request only.
-            guard let initialURL = initialURL else {
-                fatalError("internal inconsistency")
-            }
-
-            startDataRequest(with: initialURL)
-            
-        }
-        
-        pendingRequests.insert(loadingRequest)
-        processPendingRequests()
-        return true
-        
-    }
-    
-    func resourceLoader(_ resourceLoader: AVAssetResourceLoader, didCancel loadingRequest: AVAssetResourceLoadingRequest) {
-        pendingRequests.remove(loadingRequest)
     }
     
 }
@@ -169,7 +136,7 @@ extension ResourceLoaderDelegate: AVAssetResourceLoaderDelegate {
 
 extension ResourceLoaderDelegate {
     
-    private func processPendingRequests() {
+    fileprivate func processPendingRequests() {
         
         // get all fullfilled requests
         let requestsFulfilled = Set<AVAssetResourceLoadingRequest>(pendingRequests.compactMap {
@@ -232,4 +199,56 @@ extension ResourceLoaderDelegate {
         return mediaDataUnwrapped.count >= requestedLength + requestedOffset
         
     }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - AVURLAssetResourceLoader
+
+internal class AVURLAssetResourceLoader: ResourceLoaderDelegate, AVAssetResourceLoaderDelegate {
+    
+    func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
+        
+        if isPlayingFromData {
+            
+            // Nothing to load.
+            print("ResourceLoaderDelegate - Nothing to load")
+            
+        } else if session == nil {
+            
+            // If we're playing from a url, we need to download the file.
+            // We start loading the file on first request only.
+            guard let initialURL = initialURL else {
+                fatalError("internal inconsistency")
+            }
+
+            startDataRequest(with: initialURL)
+            
+        }
+        
+        pendingRequests.insert(loadingRequest)
+        processPendingRequests()
+        return true
+        
+    }
+    
+    func resourceLoader(_ resourceLoader: AVAssetResourceLoader, didCancel loadingRequest: AVAssetResourceLoadingRequest) {
+        pendingRequests.remove(loadingRequest)
+    }
+    
 }
