@@ -157,9 +157,9 @@ extension VideoCache: NSCacheDelegate {
         guard let videoData = obj as? OriginalVideoData else {
             return
         }
-        if Celestial.shared.debugModeIsActive {
-            print("[Video Cache] - cache with name: \"\(cache.name)\" and cost limit:    \(cache.totalCostLimit). In megabytes: \(cache.totalCostLimit.sizeInMB)")
-            print("[Video Cache] - cache with name: \"\(cache.name)\" will evict object: \(videoData) with size: \(videoData.videoData.count) bytes.... in megabytes: \(videoData.videoData.count.sizeInMB)\n")
-        }
+        let messageOne = "[Video Cache] - cache with name: \"\(cache.name)\" and cost limit:    \(cache.totalCostLimit). In megabytes: \(cache.totalCostLimit.sizeInMB)"
+        let messageTwo = "[Video Cache] - cache with name: \"\(cache.name)\" will evict object: \(videoData) with size: \(videoData.videoData.count) bytes.... in megabytes: \(videoData.videoData.count.sizeInMB)\n"
+        DebugLogger.shared.addDebugMessage(messageOne)
+        DebugLogger.shared.addDebugMessage(messageTwo)
     }
 }
