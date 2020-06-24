@@ -80,6 +80,15 @@ internal protocol DownloadModelRepresentable: class {
        - downloadState: The new current state of the download
     */
     func update(downloadState: DownloadTaskState)
+    
+    /**
+     Initializes a download model to begin a download and link its status with a receiver
+
+    - Parameters:
+       - sourceURL: The URL of the resource to be downloaded.
+       - delegate: Used to notify receiver of download state events such as completion, progress and errors
+    */
+    init(sourceURL: URL, delegate: CachableDownloadModelDelegate?)
 }
 
 /// Model used to initiate a download and link the state of the download with its receiver.
@@ -89,7 +98,7 @@ internal class GenericDownloadModel: DownloadModelRepresentable, CustomStringCon
     weak var delegate: CachableDownloadModelDelegate?
     var downloadState: DownloadTaskState = .none
     
-    init(sourceURL: URL, delegate: CachableDownloadModelDelegate?) {
+    required init(sourceURL: URL, delegate: CachableDownloadModelDelegate?) {
         self.sourceURL = sourceURL
         self.delegate = delegate
     }
