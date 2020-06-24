@@ -80,6 +80,8 @@ protocol DownloadTaskManagerProtocol {
 
     - Parameters:
        - url: The url of the resource
+    - Returns:
+       - Boolean value of whether the download for the requested resource is currently in progress
     */
     func downloadIsInProgress(for url: URL) -> Bool
     
@@ -88,6 +90,8 @@ protocol DownloadTaskManagerProtocol {
 
     - Parameters:
        - url: The url of the resource
+    - Returns:
+       - Boolean value of whether the download for the requested resource is in a paused state
     */
     func downloadIsPaused(for url: URL) -> Bool
     
@@ -96,6 +100,8 @@ protocol DownloadTaskManagerProtocol {
 
     - Parameters:
        - url: The url of the resource
+    - Returns:
+       - Float value of download progress
     */
     func getDownloadProgress(for url: URL) -> Float?
     
@@ -256,7 +262,7 @@ extension DownloadTaskManager {
 extension DownloadTaskManager: URLSessionDownloadDelegate {
     
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        // 1
+        
         guard let sourceURL = downloadTask.originalRequest?.url else {
             return
         }
@@ -264,10 +270,10 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
         guard let download = activeDownloads[sourceURL] else {
             return
         }
+        
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - finished download for url: \(sourceURL)")
         activeDownloads[sourceURL] = nil
       
-        // 3
         moveToIntermediateTemporaryFile(originalTemporaryURL: location, download: download)
     }
     
@@ -289,7 +295,7 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
                     didWriteData bytesWritten: Int64, totalBytesWritten: Int64,
                     totalBytesExpectedToWrite: Int64) {
-        // 1
+        
         guard let sourceURL = downloadTask.originalRequest?.url else {
             return
         }
@@ -298,12 +304,10 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
             return
         }
         
-        // 2
         let (downloadProgress, humanReadableDownloadProgress) = Utility.shared.getDownloadProgress(totalBytesWritten: totalBytesWritten, totalBytesExpectedToWrite: totalBytesExpectedToWrite)
         
         download.progress = downloadProgress
         
-        // 3
         // Notify delegate
         if download.downloadModel.delegate == nil {
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - delegate nil for download object: \(download.downloadModel)")
