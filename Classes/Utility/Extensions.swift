@@ -7,6 +7,7 @@
 
 import UIKit
 import MobileCoreServices
+import AVFoundation
 
 // MARK: - UIImage
 
@@ -175,6 +176,41 @@ internal extension URL {
 
 
 
+
+
+
+
+
+
+
+
+
+
+// MARK: - AVURLAsset
+
+extension AVURLAsset {
+    var resoulution: CGSize? {
+        guard let track = self.tracks(withMediaType: AVMediaType.video).first else {
+            return nil
+        }
+        let size = track.naturalSize.applying(track.preferredTransform)
+        return CGSize(width: abs(size.width), height: abs(size.height))
+    }
+}
+
+extension AVPlayerItem {
+    var resolution: CGSize? {
+        return (self.asset as? AVURLAsset)?.resoulution
+    }
+    
+    var aspectRatio: Double? {
+        guard let width = resolution?.width, let height = resolution?.height else {
+           return nil
+        }
+
+        return Double(height / width)
+    }
+}
 
 
 
