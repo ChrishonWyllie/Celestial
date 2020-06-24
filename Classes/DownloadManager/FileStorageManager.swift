@@ -8,18 +8,18 @@
 import Foundation
 import UIKit
 
-class FileStorageManager: NSObject {
+/// Manages directories for downloaded and cached resources
+class FileStorageDirectoryManager: NSObject {
     
-    // MARK: - Variables
+    // NOTE
+    // For hiding access to urls
     
-    public static let shared = FileStorageManager()
-    
-    var documentsDirectoryURL: URL {
+    fileprivate var documentsDirectoryURL: URL {
         return FileManager.default.urls(for: FileManager.SearchPathDirectory.documentDirectory,
                                         in: FileManager.SearchPathDomainMask.userDomainMask).first!
     }
     
-    var temporaryDirectoryURL: URL {
+    fileprivate var temporaryDirectoryURL: URL {
         
         let pathComponent = "Celestial_Temporary_Directory"
         let destinationURL = documentsDirectoryURL.appendingPathComponent(pathComponent)
@@ -31,20 +31,160 @@ class FileStorageManager: NSObject {
 
         return temporaryDirectoryURL
     }
-    var celestialDirectoryURL: URL {
-        let celestialDirectoryPathName = "Celestial"
-        return documentsDirectoryURL.appendingPathComponent(celestialDirectoryPathName, isDirectory: true)
+   
+    fileprivate var celestialDirectoryURL: URL {
+        let celestialDirectoryName = "Celestial"
+        return documentsDirectoryURL.appendingPathComponent(celestialDirectoryName, isDirectory: true)
     }
-    var videosDirectoryURL: URL {
-        let videosDireectoryPathName = "CachedVideos"
-        return celestialDirectoryURL.appendingPathComponent(videosDireectoryPathName, isDirectory: true)
+    fileprivate var videosDirectoryURL: URL {
+        let videosDireectoryName = "CachedVideos"
+        return celestialDirectoryURL.appendingPathComponent(videosDireectoryName, isDirectory: true)
     }
-    var imagesDirectoryURL: URL {
-        let imagesDirectoryPathName = "CachedImages"
-        return celestialDirectoryURL.appendingPathComponent(imagesDirectoryPathName, isDirectory: true)
+    fileprivate var imagesDirectoryURL: URL {
+        let imagesDirectoryName = "CachedImages"
+        return celestialDirectoryURL.appendingPathComponent(imagesDirectoryName, isDirectory: true)
     }
     
     
+    override init() {
+        super.init()
+        createCacheDirectories()
+    }
+    
+    private func createCacheDirectories() {
+        createCacheDirectory(at: videosDirectoryURL)
+        createCacheDirectory(at: imagesDirectoryURL)
+    }
+    
+    private func createCacheDirectory(at cacheDirectoryURL: URL) {
+        do {
+            try FileManager.default.createDirectory(at: cacheDirectoryURL, withIntermediateDirectories: true, attributes: nil)
+        } catch let error {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error creating directory for path: \(cacheDirectoryURL).\n Error: \(error)")
+        }
+    }
+}
+
+
+
+/// Manages downloaded and cached resources.
+internal protocol FileStorageMangerProtocol {
+    var directoryManager: FileStorageDirectoryManager { get }
+    
+    /**
+     Deletes the intermediate temporary file that was created after the `DownloadTaskManager` completes a request
+
+    - Parameters:
+       - intermediateTemporaryFileLocation: The temporary url of the resource that was recently downloaded
+    - Returns:
+       - Boolean value of whether the file was successfully deleted
+    */
+    @discardableResult func deleteFileAt(intermediateTemporaryFileLocation location: URL) -> Bool
+    
+    /**
+     Clears the cache of the specified file type
+
+    - Parameters:
+       - style: The directory to be cleared. (Images, Videos, all)
+    */
+    func clearCache(_ style: FileStorageManager.CacheClearingStyle)
+    
+    /**
+     Moves the temporary file created from a download task to an intermediate location
+
+    - Parameters:
+       - originalTemporaryURL: The url of the downloaded resource that is generated as a result of a `URLSessionDownloadTask`
+    - Returns:
+       The intermediate temporary url of the downloaded resource. May throw error if moving the file fails
+    */
+    func moveToIntermediateTemporaryURL(originalTemporaryURL: URL) throws -> URL
+    
+    /**
+     Resizes the video with a given resolution and caches it
+
+    - Parameters:
+       - sourceURL: The url of the resource that has been requested
+       - resolution: The resolution to downsize the video to
+       - intermediateTemporaryFileURL: The intermediate file url that the downloaded resource has been moved to after the `URLSessionDownloadTask` has completed
+     
+    - Returns:
+       - A url of the newly resized and cached resource
+    */
+    func cachedAndResizedVideo(sourceURL: URL, resolution: CGSize, intermediateTemporaryFileURL: URL) -> URL?
+    
+    /**
+     Resizes the image with a given resolution and caches it
+
+    - Parameters:
+       - sourceURL: The url of the resource that has been requested
+       - size: The iOS point size to downsize the image to
+       - intermediateTemporaryFileURL: The intermediate file url that the downloaded resource has been moved to after the `URLSessionDownloadTask` has completed
+     
+    - Returns:
+       - A image of the newly resized and cached resource
+    */
+    func cachedAndResizedImage(sourceURL: URL, size: CGSize, intermediateTemporaryFileURL: URL) -> UIImage?
+    
+    /**
+     Returns a url for the cached resource
+
+    - Parameters:
+       - sourceURL: The url of the resource that has been requested
+     
+    - Returns:
+       - A url of the cached resource
+    */
+    func getCachedVideoURL(for sourceURL: URL) -> URL?
+    
+    /**
+     Returns a url for the cached resource
+
+    - Parameters:
+       - sourceURL: The url of the resource that has been requested
+       - size: The iOS point size of the image. Used to cache multiple sizes of the same image in order to maintain quality when displaying in different UIImageView sizes
+     
+    - Returns:
+       - A url of the cached resource
+    */
+    func getCachedImageURL(for sourceURL: URL, size: CGSize) -> URL?
+    
+    /**
+     Returns a boolean value of whether the video exists
+
+    - Parameters:
+       - sourceURL: The url of the resource that has been requested
+     
+    - Returns:
+       - A boolean value of whether the resource has been cached and exists for use
+    */
+    func videoExists(for sourceURL: URL) -> Bool
+    
+    /**
+     Returns a boolean value of whether the image exists
+
+    - Parameters:
+       - sourceURL: The url of the resource that has been requested
+     
+    - Returns:
+       - A boolean value of whether the resource has been cached and exists for use
+    */
+    func imageExists(for sourceURL: URL) -> Bool
+}
+
+
+class FileStorageManager: NSObject, FileStorageMangerProtocol {
+    
+    // MARK: - Variables
+    
+    public static let shared = FileStorageManager()
+    
+    let directoryManager = FileStorageDirectoryManager()
+    
+    enum CacheClearingStyle {
+        case videos
+        case images
+        case all
+    }
     
     
     
@@ -53,7 +193,6 @@ class FileStorageManager: NSObject {
     
     private override init() {
         super.init()
-        createCacheDirectories()
     }
     
     
@@ -67,52 +206,11 @@ class FileStorageManager: NSObject {
     
     // MARK: - Functions
     
-    private func createCacheDirectories() {
-        createCacheDirectory(at: videosDirectoryURL)
-        createCacheDirectory(at: imagesDirectoryURL)
-//        createCacheDirectory(at: temporaryDirectoryURL)
+    @discardableResult internal func deleteFileAt(intermediateTemporaryFileLocation location: URL) -> Bool {
+        return deleteFile(forCompleteFilePath: location)
     }
     
-    private func createCacheDirectory(at cacheDirectoryPath: URL) {
-        do {
-            try FileManager.default.createDirectory(at: cacheDirectoryPath, withIntermediateDirectories: true, attributes: nil)
-        } catch let error {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error creating directory for path: \(cacheDirectoryPath).\n Error: \(error)")
-        }
-    }
-    
-    func replaceFileAt(temporaryFileURL: URL, withDestinationURL destinationURL: URL) throws {
-        let fileManager = FileManager.default
-        try? fileManager.removeItem(at: destinationURL)
-        try fileManager.copyItem(at: temporaryFileURL, to: destinationURL)
-    }
-    
-    func localFilePath(for url: URL) -> URL {
-        switch url.fileType {
-        case .video: return videosDirectoryURL.appendingPathComponent(url.lastPathComponent)
-        case .image: return imagesDirectoryURL.appendingPathComponent(url.lastPathComponent)
-        case .audio: fatalError("Not implemented")
-        }
-    }
-    
-    func downloadedFile(for sourceURL: URL) -> URL? {
-        let downloadedFileURL = localFilePath(for: sourceURL)
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - searching for downloaded file with local url: \(downloadedFileURL)")
-        if FileManager.default.fileExists(atPath: downloadedFileURL.path) {
-            return downloadedFileURL
-        } else {
-            return nil
-        }
-    }
-    
-    @discardableResult func deleteFile(forOriginalSourceURL sourceURL: URL) -> Bool {
-        guard let filePath = downloadedFile(for: sourceURL) else {
-            return false
-        }
-        return deleteFile(forCompleteFilePath: filePath)
-    }
-    
-    @discardableResult func deleteFile(forCompleteFilePath filePath: URL) -> Bool {
+    @discardableResult private func deleteFile(forCompleteFilePath filePath: URL) -> Bool {
         do {
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Attempting to delete file for path: \(filePath)")
             try FileManager.default.removeItem(at: filePath)
@@ -123,81 +221,33 @@ class FileStorageManager: NSObject {
         }
     }
     
-    func deleteAllFiles(ofType fileType: MediaFileType) {
-        switch fileType {
-        case .video: deleteDirectory(for: videosDirectoryURL)
-        case .image: deleteDirectory(for: imagesDirectoryURL)
-        default: fatalError("Not implemented")
-        }
-    }
-    
-    func test() {
-        getInfoForDirectory(at: videosDirectoryURL)
-        getInfoForDirectory(at: imagesDirectoryURL)
-    }
-    
-    enum CacheClearingStyle {
-        case videos
-        case images
-        case all
-    }
-    
-    func clearCache(_ style: CacheClearingStyle) {
+    internal func clearCache(_ style: CacheClearingStyle) {
         switch style {
-        case .videos: deleteDirectory(for: videosDirectoryURL)
-        case .images: deleteDirectory(for: imagesDirectoryURL)
-        default:
-            deleteDirectory(for: celestialDirectoryURL)
+        case .videos: deleteItemsInDirectory(for: directoryManager.videosDirectoryURL)
+        case .images: deleteItemsInDirectory(for: directoryManager.imagesDirectoryURL)
+        default:      deleteItemsInDirectory(for: directoryManager.celestialDirectoryURL)
         }
     }
     
-    private func deleteDirectory(for directoryPath: URL) {
+    private func deleteItemsInDirectory(for directoryURL: URL) {
         do {
-            getInfoForDirectory(at: directoryPath)
+            getInfoForDirectory(at: directoryURL)
             
-            guard let directoryContents = try? FileManager.default.contentsOfDirectory(atPath: directoryPath.path) else {
+            guard let directoryContents = try? FileManager.default.contentsOfDirectory(atPath: directoryURL.path) else {
                 return
             }
             
             for path in directoryContents {
-                let filePath = directoryPath.appendingPathComponent(path)
+                let filePath = directoryURL.appendingPathComponent(path)
                 try FileManager.default.removeItem(at: filePath)
             }
             
-//            try FileManager.default.removeItem(atPath: directoryPath.path)
         } catch let error {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error deleting directory at path: \(directoryPath.path).\n Error: \(error)")
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error deleting directory at path: \(directoryURL.path).\n Error: \(error)")
         }
     }
     
-    private func getInfoForDirectory(at directoryPath: URL) {
-        guard let directoryContents = try? FileManager.default.contentsOfDirectory(atPath: directoryPath.path) else {
-            return
-        }
-        
-        let folderSize = FileManager.default.folderSizeAtPath(path: directoryPath.path)
-        let formattedFolderSize = FileManager.default.format(size: folderSize)
-        
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Number of items in directory: \(String(describing: directoryContents.count)). Folder size: \(formattedFolderSize)")
-        
-        do {
-            for fileName in directoryContents {
-                let fileURL = directoryPath.appendingPathComponent(fileName)
-
-                let fileAttribute = try FileManager.default.attributesOfItem(atPath: fileURL.path)
-                let fileSize = fileAttribute[FileAttributeKey.size] as! Int64
-                let formattedFileSize = FileManager.default.format(size: fileSize)
-                let fileType = fileAttribute[FileAttributeKey.type] as! String
-                let filecreationDate = fileAttribute[FileAttributeKey.creationDate] as! Date
-                let fileExtension = fileURL.pathExtension;
-
-                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - file Name: \(fileName), Size: \(formattedFileSize), Type: \(fileType), Date: \(filecreationDate), Extension: \(fileExtension)")
-            }
-        } catch let error {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting attributes of item in directory: \(directoryPath.path). Error: \(error)")
-        }
-        
-    }
+    
     
     
     
@@ -211,20 +261,23 @@ class FileStorageManager: NSObject {
         let temporaryFilename = ProcessInfo().globallyUniqueString
 
         let intermediateTemporaryFileURL =
-            temporaryDirectoryURL.appendingPathComponent(temporaryFilename)
+            directoryManager.temporaryDirectoryURL.appendingPathComponent(temporaryFilename)
         
         try FileManager.default.copyItem(at: originalTemporaryURL, to: intermediateTemporaryFileURL)
         return intermediateTemporaryFileURL
     }
     
-    internal func cacheAndResizeImage(sourceURL: URL, size: CGSize, intermediateTemporaryFileURL: URL) -> UIImage? {
+    internal func cachedAndResizedVideo(sourceURL: URL, resolution: CGSize, intermediateTemporaryFileURL: URL) -> URL? {
+        return nil
+    }
+    
+    internal func cachedAndResizedImage(sourceURL: URL, size: CGSize, intermediateTemporaryFileURL: URL) -> UIImage? {
         
         var cachedAndResizedImage: UIImage?
         
-        let sizeFormattedURL = constructFormattedURL(from: sourceURL, expectedDirectoryURL: imagesDirectoryURL, size: size)
+        let sizeFormattedURL = constructFormattedURL(from: sourceURL, expectedDirectoryURL: directoryManager.imagesDirectoryURL, size: size)
         
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - new size formatted url: \(sizeFormattedURL.path)")
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - new size formatted url: \(sizeFormattedURL.absoluteString)")
         
         do {
             // Create Data from url
@@ -253,24 +306,30 @@ class FileStorageManager: NSObject {
         } catch let error {
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error caching and downsizing the downloaded image for source url: \(sourceURL). Error: \(error)")
         }
-//        let imageData = try! Data(contentsOf: intermediateTemporaryFileURL)
-//        let downloadedImage = UIImage(data: imageData)!
-//        let resizedImage = downloadedImage.resize(size: size)!
-//        let resizedImageData = resizedImage.pngData()!
-//        try! resizedImageData.write(to: sizeFormattedURL, options: Data.WritingOptions.atomic)
-        
-//        let downloadedFileExistsKey: String = imagesDirectoryURL.appendingPathComponent(sourceURL.absoluteString).absoluteString
-//        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Storing file exists for user defaults key: \(downloadedFileExistsKey)")
-//        UserDefaults.standard.setValue(true, forKey: downloadedFileExistsKey)
         
         // Finally delete the local intermediate file
-        deleteFile(forCompleteFilePath: intermediateTemporaryFileURL)
+        deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
         
         return cachedAndResizedImage
     }
     
+    internal func getCachedVideoURL(for sourceURL: URL) -> URL? {
+//        guard let track = AVURLAsset(url: sourceURL).tracks(withMediaType: AVMediaTypeVideo).first else { return nil }
+//        let size = track.naturalSize.applying(track.preferredTransform)
+//        return CGSize(width: fabs(size.width), height: fabs(size.height))
+        let size = CGSize.zero
+        
+        let downloadedFileURL = constructFormattedURL(from: sourceURL, expectedDirectoryURL: directoryManager.videosDirectoryURL, size: size)
+
+        if FileManager.default.fileExists(atPath: downloadedFileURL.path) {
+            return downloadedFileURL
+        } else {
+            return nil
+        }
+    }
+    
     internal func getCachedImageURL(for sourceURL: URL, size: CGSize) -> URL? {
-        let downloadedFileURL = constructFormattedURL(from: sourceURL, expectedDirectoryURL: imagesDirectoryURL, size: size)
+        let downloadedFileURL = constructFormattedURL(from: sourceURL, expectedDirectoryURL: directoryManager.imagesDirectoryURL, size: size)
         
         if FileManager.default.fileExists(atPath: downloadedFileURL.path) {
             return downloadedFileURL
@@ -279,11 +338,22 @@ class FileStorageManager: NSObject {
         }
     }
     
+    
+    
+    internal func videoExists(for sourceURL: URL) -> Bool {
+        return downloadedFileExists(for: sourceURL, inDirectory: directoryManager.videosDirectoryURL)
+    }
+    
     internal func imageExists(for sourceURL: URL) -> Bool {
-        
+        return downloadedFileExists(for: sourceURL, inDirectory: directoryManager.imagesDirectoryURL)
+    }
+    
+    
+    
+    private func downloadedFileExists(for sourceURL: URL, inDirectory directoryURL: URL) -> Bool {
         let actualFileName = sourceURL.lastPathComponent
         
-        guard let directoryContents = try? FileManager.default.contentsOfDirectory(atPath: imagesDirectoryURL.path) else {
+        guard let directoryContents = try? FileManager.default.contentsOfDirectory(atPath: directoryURL.path) else {
             return false
         }
         
@@ -313,60 +383,32 @@ class FileStorageManager: NSObject {
         return sizeFormattedURL
     }
     
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-extension FileManager {
-    
-    func fileSizeAtPath(path: String) -> Int64 {
-        do {
-            let fileAttributes = try attributesOfItem(atPath: path)
-            let fileSizeNumber = fileAttributes[FileAttributeKey.size] as? NSNumber
-            let fileSize = fileSizeNumber?.int64Value
-            return fileSize!
-        } catch {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - error reading filesize, NSFileManager extension fileSizeAtPath")
-            return 0
+    private func getInfoForDirectory(at directoryURL: URL) {
+        guard let directoryContents = try? FileManager.default.contentsOfDirectory(atPath: directoryURL.path) else {
+            return
         }
-    }
-
-    func folderSizeAtPath(path: String) -> Int64 {
-        var size : Int64 = 0
+        
+        let folderSize = FileManager.default.folderSizeAtPath(path: directoryURL.path)
+        let formattedFolderSize = FileManager.default.format(size: folderSize)
+        
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Number of items in directory: \(String(describing: directoryContents.count)). Folder size: \(formattedFolderSize)")
+        
         do {
-            let files = try subpathsOfDirectory(atPath: path)
-            for i in 0 ..< files.count {
-                size += fileSizeAtPath(path: path.appending("/"+files[i]))
+            for fileName in directoryContents {
+                let fileURL = directoryURL.appendingPathComponent(fileName)
+
+                let fileAttribute = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+                let fileSize = fileAttribute[FileAttributeKey.size] as? Int64 ?? 0
+                let formattedFileSize = FileManager.default.format(size: fileSize)
+                let fileType = fileAttribute[FileAttributeKey.type] as? String
+                let filecreationDate = fileAttribute[FileAttributeKey.creationDate] as? Date
+                let fileExtension = fileURL.pathExtension
+
+                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - file Name: \(fileName), Size: \(formattedFileSize), Type: \(String(describing: fileType)), Date: \(String(describing: filecreationDate)), Extension: \(fileExtension)")
             }
-        } catch {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - error reading directory, NSFileManager extension folderSizeAtPath")
+        } catch let error {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting attributes of item in directory: \(directoryURL.path). Error: \(error)")
         }
-        return size
-    }
-    
-    func format(size: Int64) -> String {
-        let folderSizeStr = ByteCountFormatter.string(fromByteCount: size, countStyle: ByteCountFormatter.CountStyle.file)
-        return folderSizeStr
+        
     }
 }
