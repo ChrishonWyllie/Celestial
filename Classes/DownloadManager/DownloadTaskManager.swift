@@ -7,19 +7,101 @@
 
 import Foundation
 
+/// Singleton for managing all downloads of resources from external URLs
 protocol DownloadTaskManagerProtocol {
+    /// Dictionary of currently active or paused downloads.
+    /// Key: the URL of the requested resource
+    /// Value: the `DownloadTaskRequest` for the request resource
     var activeDownloads: [URL: DownloadTaskRequest] { get }
+    
+    /// Session for downloads
     var downloadsSession: URLSession { get }
     
+    /**
+     Cancels an active download
+
+    - Parameters:
+       - url: The URL of the resource
+    */
+    func cancelDownload(for url: URL)
+    
+    /**
+     Cancels an active download
+
+    - Parameters:
+       - model: The DownloadModel object that originally initiated the download.
+    */
     func cancelDownload(model: DownloadModelRepresentable)
     
+    /**
+     Pauses an active download. May be resumed
+
+    - Parameters:
+       - url: The URL of the resource
+    */
+    func pauseDownload(for url: URL)
+    
+    /**
+     Pauses an active download. May be resumed
+
+    - Parameters:
+       - model: The DownloadModel object that originally initiated the download.
+    */
     func pauseDownload(model: DownloadModelRepresentable)
     
+    /**
+     Resumes a previously paused download
+
+    - Parameters:
+       - url: The URL of the resource
+    */
+    func resumeDownload(for url: URL)
+    
+    /**
+     Resumes a previously paused download
+
+    - Parameters:
+       - model: The DownloadModel object that originally initiated the download. However in cases where the original model was deinitialized, a re-initiated model will still resume the same download
+    */
     func resumeDownload(model: DownloadModelRepresentable)
     
+    /**
+     Begins a download for a requested resource. May be paused, resumed or cancelled
+
+    - Parameters:
+       - model: The DownloadModel object used to initiate the download.
+    */
     func startDownload(model: DownloadModelRepresentable)
+    
+    
+    
+    /**
+     Returns a boolean denoting whether a download is currently active and in progress
+
+    - Parameters:
+       - url: The url of the resource
+    */
+    func downloadIsInProgress(for url: URL) -> Bool
+    
+    /**
+     Returns a boolean denoting whether a download has previously been initiated but is in a paused state
+
+    - Parameters:
+       - url: The url of the resource
+    */
+    func downloadIsPaused(for url: URL) -> Bool
+    
+    /**
+     Returns a Float value from 0.0 to 1.0 of a download if it exists and is currently in progress
+
+    - Parameters:
+       - url: The url of the resource
+    */
+    func getDownloadProgress(for url: URL) -> Float?
+    
 }
 
+/// Singleton for managing all downloads of resources from external URLs
 class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     
     internal static let shared = DownloadTaskManager()
@@ -48,30 +130,7 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     
     
     
-    internal func downloadIsInProgress(for url: URL) -> Bool {
-        guard let download = activeDownloads[url] else {
-            return false
-        }
-        return download.downloadObject.downloadState == .downloading
-    }
     
-    internal func downloadIsPaused(for url: URL) -> Bool {
-        guard let download = activeDownloads[url] else {
-            return false
-        }
-        return download.downloadObject.downloadState == .paused
-    }
-    
-    
-    
-    
-    
-    internal func getDownloadProgress(for url: URL) -> Float? {
-        guard let download = activeDownloads[url] else {
-            return nil
-        }
-        return download.progress
-    }
     
     
     
@@ -95,7 +154,7 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
             return
         }
         
-        guard download.downloadObject.downloadState == .downloading else {
+        guard download.downloadModel.downloadState == .downloading else {
             return
         }
         
@@ -105,7 +164,7 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
             download.resumeData = data
         })
 
-        download.downloadObject.update(downloadState: .paused)
+        download.downloadModel.update(downloadState: .paused)
     }
     internal func pauseDownload(model: DownloadModelRepresentable) {
         pauseDownload(for: model.sourceURL)
@@ -125,17 +184,17 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
         }
              
         download.task?.resume()
-        download.downloadObject.update(downloadState: .downloading)
+        download.downloadModel.update(downloadState: .downloading)
     }
     internal func resumeDownload(model: DownloadModelRepresentable) {
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - using new download: \(String(describing: model.delegate))")
-        activeDownloads[model.sourceURL]?.downloadObject.delegate = model.delegate
+        activeDownloads[model.sourceURL]?.downloadModel.delegate = model.delegate
         resumeDownload(for: model.sourceURL)
     }
     
     internal func startDownload(model: DownloadModelRepresentable) {
         if let _ = activeDownloads[model.sourceURL] {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - currently active download")
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Attempted to start a download, but an active download already exists")
             resumeDownload(model: model)
             return
         }
@@ -145,19 +204,49 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     private func beginFreshDownload(model: DownloadModelRepresentable) {
         DebugLogger.shared.addDebugMessage("starting download for url: \(model.sourceURL)")
         // 1
-        let download = DownloadTaskRequest(downloadObject: model)
+        let download = DownloadTaskRequest(downloadModel: model)
         // 2
         download.task = downloadsSession.downloadTask(with: model.sourceURL)
         // 3
         download.task?.resume()
         // 4
-        download.downloadObject.update(downloadState: .downloading)
+        download.downloadModel.update(downloadState: .downloading)
         // 5
         activeDownloads[model.sourceURL] = download
     }
     
 }
 
+
+
+
+
+
+// MARK: - Utility
+
+extension DownloadTaskManager {
+    
+    internal func downloadIsInProgress(for url: URL) -> Bool {
+        guard let download = activeDownloads[url] else {
+            return false
+        }
+        return download.downloadModel.downloadState == .downloading
+    }
+    
+    internal func downloadIsPaused(for url: URL) -> Bool {
+        guard let download = activeDownloads[url] else {
+            return false
+        }
+        return download.downloadModel.downloadState == .paused
+    }
+    
+    internal func getDownloadProgress(for url: URL) -> Float? {
+        guard let download = activeDownloads[url] else {
+            return nil
+        }
+        return download.progress
+    }
+}
 
 
 
@@ -186,14 +275,14 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
         do {
             let temporaryFileURL = try FileStorageManager.shared.moveToIntermediateTemporaryURL(originalTemporaryURL: originalTemporaryURL)
             
-            download.downloadObject.update(downloadState: .finished)
+            download.downloadModel.update(downloadState: .finished)
             
             // Notify delegate
-            download.downloadObject.delegate?.cachable(download, didFinishDownloadingTo: temporaryFileURL)
+            download.downloadModel.delegate?.cachable(download, didFinishDownloadingTo: temporaryFileURL)
             
         } catch let error {
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Could not copy file to disk: \(error.localizedDescription)")
-            download.downloadObject.delegate?.cachable(download, downloadFailedWith: error)
+            download.downloadModel.delegate?.cachable(download, downloadFailedWith: error)
         }
     }
     
@@ -216,10 +305,10 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
         
         // 3
         // Notify delegate
-        if download.downloadObject.delegate == nil {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - delegate nil for download object: \(download.downloadObject)")
+        if download.downloadModel.delegate == nil {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - delegate nil for download object: \(download.downloadModel)")
         }
-        download.downloadObject.delegate?.cachable(download, downloadProgress: downloadProgress, humanReadableProgress: humanReadableDownloadProgress)
+        download.downloadModel.delegate?.cachable(download, downloadProgress: downloadProgress, humanReadableProgress: humanReadableDownloadProgress)
     }
     
 //    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
@@ -250,3 +339,5 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
 //        }
 //    }
 //}
+
+
