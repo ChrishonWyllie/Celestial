@@ -57,7 +57,7 @@ internal final class ImageCache: NSObject, CacheManagerProtocol {
 
 // MARK: - ImageCacheProtocol
 
-extension ImageCache: CacheProtocol {
+extension ImageCache: MemoryCacheProtocol {
 
     typealias T = UIImage
     
