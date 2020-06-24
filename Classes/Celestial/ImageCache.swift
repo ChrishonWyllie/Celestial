@@ -139,9 +139,10 @@ extension ImageCache: NSCacheDelegate {
         guard let image = obj as? UIImage else {
             return
         }
-        if Celestial.shared.debugModeIsActive {
-            print("[Video Cache] - cache with name: \"\(cache.name)\" and cost limit:    \(cache.totalCostLimit). In megabytes: \(cache.totalCostLimit.sizeInMB)")
-            print("[Video Cache] - cache with name: \"\(cache.name)\" will evict object: \(image) with size: \(image.diskSize) bytes.... in megabytes: \(image.diskSize.sizeInMB)\n")
-        }
+        
+        let messageOne = "[Video Cache] - cache with name: \"\(cache.name)\" and cost limit:    \(cache.totalCostLimit). In megabytes: \(cache.totalCostLimit.sizeInMB)"
+        let messageTwo = "[Video Cache] - cache with name: \"\(cache.name)\" will evict object: \(image) with size: \(image.diskSize) bytes.... in megabytes: \(image.diskSize.sizeInMB)\n"
+        DebugLogger.shared.addDebugMessage(messageOne)
+        DebugLogger.shared.addDebugMessage(messageTwo)
     }
 }
