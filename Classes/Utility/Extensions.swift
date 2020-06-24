@@ -60,6 +60,12 @@ internal extension UIImage {
         UIGraphicsEndImageContext()
         return newImage
     }
+    
+    var pixelSize: CGSize {
+        let widthInPixels = self.size.width * self.scale
+        let heightInPixels = self.size.height * self.scale
+        return CGSize(width: widthInPixels, height: heightInPixels)
+    }
 }
 
 
@@ -165,5 +171,58 @@ internal extension URL {
         }
         return UTTypeConformsTo(uti, kUTTypeMovie)
     }
+}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - FileManager
+
+extension FileManager {
+    
+    func sizeOfFile(at path: String) -> Int64 {
+        do {
+            let fileAttributes = try attributesOfItem(atPath: path)
+            let fileSizeNumber = fileAttributes[FileAttributeKey.size] as? NSNumber
+            let fileSize = fileSizeNumber?.int64Value
+            return fileSize ?? 0
+        } catch {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - error reading filesize, NSFileManager extension fileSizeAtPath")
+            return 0
+        }
+    }
+
+    func sizeOfFolder(at path: String) -> Int64 {
+        var size: Int64 = 0
+        do {
+            let files = try subpathsOfDirectory(atPath: path)
+            for i in 0..<files.count {
+                let filePath = path.appending("/"+files[i])
+                size += sizeOfFile(at: filePath)
+            }
+        } catch {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - error reading directory, NSFileManager extension folderSizeAtPath")
+        }
+        return size
+    }
+    
+    func format(size: Int64) -> String {
+        let humanReadableFolderSize = ByteCountFormatter.string(fromByteCount: size, countStyle: ByteCountFormatter.CountStyle.file)
+        return humanReadableFolderSize
+    }
 }
