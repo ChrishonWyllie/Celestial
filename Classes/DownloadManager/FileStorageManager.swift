@@ -388,7 +388,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
             return
         }
         
-        let folderSize = FileManager.default.folderSizeAtPath(path: directoryURL.path)
+        let folderSize = FileManager.default.sizeOfFolder(at: directoryURL.path)
         let formattedFolderSize = FileManager.default.format(size: folderSize)
         
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Number of items in directory: \(String(describing: directoryContents.count)). Folder size: \(formattedFolderSize)")
