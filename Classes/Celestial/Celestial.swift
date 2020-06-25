@@ -32,8 +32,8 @@ public final class Celestial: NSObject {
 
 extension Celestial: CelestialCacheProtocol {
     
-    public func videoExists(for sourceURL: URL, cacheStyle: DownloadCompletionCacheStyle) -> Bool {
-        switch cacheStyle {
+    public func videoExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool {
+        switch cacheLocation {
         case .inMemory:
             return videoData(for: sourceURL.absoluteString) != nil
         case .fileSystem:
@@ -86,8 +86,8 @@ extension Celestial: CelestialCacheProtocol {
     
     
     
-    public func imageExists(for sourceURL: URL, cacheStyle: DownloadCompletionCacheStyle) -> Bool {
-        switch cacheStyle {
+    public func imageExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool {
+        switch cacheLocation {
         case .inMemory:
             return image(for: sourceURL.absoluteString) != nil
         case .fileSystem:

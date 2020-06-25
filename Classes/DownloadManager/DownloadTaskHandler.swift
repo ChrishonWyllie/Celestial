@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// The DownloadTaskHandler provides a set of closures that provide extra flexibility to classes that implement URLSession downloadTask.
+/// Provides a set of closures that provide extra flexibility to classes that implement URLSession downloadTask.
 /// For example, in the case of URLImageView, this allows for observing download completion, download progress and possible errors all from
 /// a single function. i.e., no need to use the URLImageViewDelegate.
 internal struct DownloadTaskHandler<T> {
@@ -26,7 +26,7 @@ internal struct DownloadTaskHandler<T> {
 public typealias DownloadTaskCompletionHandler<T> = (T) -> Void
 
 /// Closure for providing the current download progress as provided by URLSession download task delegate back to the caller
-public typealias DownloadTaskProgressHandler = (CGFloat) -> Void
+public typealias DownloadTaskProgressHandler = (Float) -> Void
 
 /// Closure for providing any possible errors that occur during download progress back to the caller
 public typealias DownloadTaskErrorHandler = (Error) -> Void

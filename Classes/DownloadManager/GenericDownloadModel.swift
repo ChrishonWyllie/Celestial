@@ -54,9 +54,9 @@ internal enum DownloadTaskState {
 }
 
 /// Determines where cached files will be stored if `cachePolicy == .allow`
-public enum DownloadCompletionCacheStyle {
+@objc public enum DownloadCompletionCacheLocation: Int {
     /// Downloaded resources will be stored in local `NSCache`
-    case inMemory
+    case inMemory = 0
     /// Downloaded resources will be stored in local file system
     case fileSystem
 }

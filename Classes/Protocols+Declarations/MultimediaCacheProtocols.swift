@@ -10,9 +10,9 @@ import UIKit.UIImage
 // MARK: - MultimediaCachePolicy
 
 /// Enum for specifying if the image or video should be cached or not.
-/// Used as optional argument in the URLImageView and CachableAVPlayerItem initializer.
-public enum MultimediaCachePolicy {
-    case allow
+/// Used as optional argument in the URLImageView, URLVideoPlayerView and CachableAVPlayerItem initializer.
+@objc public enum MultimediaCachePolicy: Int {
+    case allow = 0
     case notAllowed
 }
 
@@ -30,12 +30,12 @@ internal protocol CelestialCacheProtocol: class {
 
     - Parameters:
        - sourceURL: The url of the resource that has been requested
-       - cacheStyle: The cache style that determines where to look for the cached item if it exists
+       - cacheLocation: Determines where to look for the cached item if it exists
      
     - Returns:
        - A boolean value of whether the requested resource has been previously cached
     */
-    func videoExists(for sourceURL: URL, cacheStyle: DownloadCompletionCacheStyle) -> Bool
+    func videoExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool
     
     
     
@@ -196,12 +196,12 @@ internal protocol CelestialCacheProtocol: class {
 
     - Parameters:
        - sourceURL: The url of the resource that has been requested
-       - cacheStyle: The cache style that determines where to look for the cached item if it exists
+       - cacheLocation: Determines where to look for the cached item if it exists
      
     - Returns:
        - A boolean value of whether the requested resource has been previously cached
     */
-    func imageExists(for sourceURL: URL, cacheStyle: DownloadCompletionCacheStyle) -> Bool
+    func imageExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool
     
     
     
