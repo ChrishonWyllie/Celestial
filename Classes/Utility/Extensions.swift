@@ -114,7 +114,7 @@ internal extension Data {
     
     /// Quick reference for calculating the number of megabytes that a video uses.
     var sizeInMB: Float {
-        return Float(self.count) / Float(Int.OneMegabyte)
+        return self.count.sizeInMB
     }
     
 }
@@ -195,6 +195,23 @@ extension AVURLAsset {
         }
         let size = track.naturalSize.applying(track.preferredTransform)
         return CGSize(width: abs(size.width), height: abs(size.height))
+    }
+    
+    func compressVideo(to outputURL: URL, completion: @escaping (_ exportSession: AVAssetExportSession?) -> ()) {
+        
+        guard let exportSession = AVAssetExportSession(asset: self, presetName: AVAssetExportPresetMediumQuality) else {
+            completion(nil)
+            return
+        }
+        
+        try? FileManager.default.removeItem(at: outputURL)
+        
+        exportSession.outputURL = outputURL
+        exportSession.outputFileType = AVFileType.mp4
+        exportSession.shouldOptimizeForNetworkUse = true
+        exportSession.exportAsynchronously {
+            completion(exportSession)
+        }
     }
 }
 
