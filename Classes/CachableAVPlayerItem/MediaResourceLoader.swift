@@ -177,7 +177,7 @@ extension MediaResourceLoader:  AVAssetResourceLoaderDelegate {
         if isPlayingFromData {
             
             // Nothing to load.
-            print("MediaResourceLoader - Nothing to load")
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) -  Nothing to load")
             
         } else if session == nil {
             
