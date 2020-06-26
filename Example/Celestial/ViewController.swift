@@ -39,6 +39,7 @@ class ViewController: UIViewController {
     private var player: AVPlayer!
 
     private var expectedMediaType: ExpectedMediaType = .video
+//    private var expectedMediaType: ExpectedMediaType = .image
 
     private let cellReuseIdentifier = "cell reuse identifier"
     private var cellModels: [ExampleCellModel] = []
@@ -56,10 +57,15 @@ class ViewController: UIViewController {
         let btn = UIBarButtonItem(title: "Toggle", style: .plain, target: self, action: #selector(toggleDataSource))
         return btn
     }()
+    
+    private lazy var clearCacheButton: UIBarButtonItem = {
+        let btn = UIBarButtonItem(title: "Clear Cache", style: .plain, target: self, action: #selector(clearDataSourceCache))
+        return btn
+    }()
 
     private lazy var imageView: URLImageView = {
         let urlString = "https://picsum.photos/400/800/?random"
-        let img = URLImageView(urlString: urlString, delegate: self)
+        let img = URLImageView(delegate: self, sourceURLString: urlString)
         img.translatesAutoresizingMaskIntoConstraints = false
         img.contentMode = .scaleAspectFill
         img.layer.cornerRadius = 10
@@ -77,6 +83,9 @@ class ViewController: UIViewController {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.translatesAutoresizingMaskIntoConstraints = false
         cv.backgroundColor = UIColor.systemGray3
+        cv.allowsMultipleSelection = true
+        cv.prefetchDataSource = self
+        cv.isPrefetchingEnabled = true
         cv.delegate = self
         cv.dataSource = self
         return cv
@@ -125,6 +134,7 @@ extension ViewController {
         
         Celestial.shared.setDebugMode(on: true)
         
+        navigationItem.rightBarButtonItems = [toggleDataSourceButton, clearCacheButton]
         
 //        setupURLImageView()
 //        setupCachableAVPlayerItem()
@@ -133,8 +143,6 @@ extension ViewController {
     
     private func setupCollectionView() {
         view.addSubview(collectionView)
-        
-        navigationItem.rightBarButtonItem = toggleDataSourceButton
         
         collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
         collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
@@ -172,6 +180,12 @@ extension ViewController {
         }
     }
 
+    @objc private func clearDataSourceCache() {
+        switch expectedMediaType {
+        case .image: Celestial.shared.clearAllImages()
+        case .video: Celestial.shared.clearAllVideos()
+        }
+    }
 }
 
 
@@ -286,7 +300,7 @@ extension ViewController {
                 playerLayer.removeFromSuperlayer()
                 self.player = nil
 
-                if let _ = Celestial.shared.video(for: urlString) {
+                if let _ = Celestial.shared.videoData(for: urlString) {
                     
                     // At this point, the video will already be cached
                     let playerItem2 = CachableAVPlayerItem(url: url, delegate: self)
@@ -357,7 +371,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: collectionView.frame.size.width, height: 240.0)
+        return CGSize(width: collectionView.frame.size.width, height: 360.0)
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
@@ -378,9 +392,28 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     
     func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
         guard let videoCell = cell as? VideoCell else { return }
-        
         videoCell.playerView.player?.pause()
-        videoCell.playerView.player = nil
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard let videoCell = (collectionView.cellForItem(at: indexPath) as? VideoCell) else { return }
+        videoCell.playerView.player!.play()
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
+        guard let videoCell = (collectionView.cellForItem(at: indexPath) as? VideoCell) else { return }
+        videoCell.playerView.player?.pause()
+    }
+    
+}
+
+extension ViewController: UICollectionViewDataSourcePrefetching {
+    func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        print("prefetching items at indexPaths: \(indexPaths)")
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
+        print("canceling prefetching items at indexPaths: \(indexPaths)")
     }
 }
 
@@ -396,24 +429,23 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
 
 
 
-
  
  
 
-// MARK: - URLImageView delegate
+// MARK: - URLCachableViewDelegate
 
-extension ViewController: URLImageViewDelegate {
+extension ViewController: URLCachableViewDelegate {
     
-    func urlImageView(_ view: URLImageView, didFinishDownloading image: UIImage) {
-        print("download completed with url string: \(String(describing: view.urlString))")
+    func urlCachableView(_ view: URLCachableView, didFinishDownloading media: Any) {
+        print("download completed with url string: \(String(describing: view.sourceURL?.absoluteString))")
         print("image has been cached?: \(view.cachePolicy == .allow)")
     }
     
-    func urlImageView(_ view: URLImageView, downloadFailedWith error: Error) {
+    func urlCachableView(_ view: URLCachableView, downloadFailedWith error: Error) {
         print("downlaod failed with error: \(error)")
     }
     
-    func urlImageView(_ view: URLImageView, downloadProgress progress: CGFloat, humanReadableProgress: String) {
+    func urlCachableView(_ view: URLCachableView, downloadProgress progress: Float, humanReadableProgress: String) {
         print("download progress: \(progress)")
         print("human readable download progress: \(humanReadableProgress)")
     }
@@ -437,12 +469,12 @@ extension ViewController: CachableAVPlayerItemDelegate {
         print("asset duration after downloading: \(CMTimeGetSeconds(playerItem.asset.duration))")
         print("video has been cached?: \(playerItem.cachePolicy == .allow)")
     }
-    
+
     func playerItem(_ playerItem: CachableAVPlayerItem, downloadFailedWith error: Error) {
         print("Error downloading video: \(error.localizedDescription)")
     }
-    
-    
+
+
     func playerItem(_ playerItem: CachableAVPlayerItem, downloadProgress progress: CGFloat, humanReadableProgress: String) {
         print("download progress: \(progress)")
         print("human readable download progress: \(humanReadableProgress)")
