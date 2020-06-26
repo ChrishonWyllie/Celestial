@@ -20,7 +20,7 @@ public final class Celestial: NSObject {
     // MARK: - Initializers
     
     private override init() {
-        
+        super.init()
     }
 }
 
@@ -53,8 +53,8 @@ extension Celestial: CelestialCacheProtocol {
         VideoCache.shared.store(videoData, with: sourceURLString)
     }
     
-    public func storeVideoURL(_ videoURL: URL, withSourceURL sourceURL: URL, resolution: CGSize) -> URL? {
-        return FileStorageManager.shared.cachedAndResizedVideo(sourceURL: sourceURL, resolution: resolution, intermediateTemporaryFileURL: videoURL)
+    public func storeVideoURL(_ videoURL: URL, withSourceURL sourceURL: URL, resolution: CGSize, completion: @escaping (URL?) -> ()) {
+        FileStorageManager.shared.cachedAndResizedVideo(sourceURL: sourceURL, resolution: resolution, intermediateTemporaryFileURL: videoURL, completion: completion)
     }
     
     
