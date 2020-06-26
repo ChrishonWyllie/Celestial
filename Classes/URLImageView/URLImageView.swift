@@ -52,17 +52,17 @@ open class URLImageView: UIImageView, URLCachableView {
     public convenience init(delegate: URLCachableViewDelegate?,
                             cachePolicy: MultimediaCachePolicy = .allow,
                             cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
-        self.init(frame: .zero, delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
+        self.init(frame: .zero, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
+        self.delegate = delegate
     }
     
-    public required init(frame: CGRect, delegate: URLCachableViewDelegate?, cachePolicy: MultimediaCachePolicy, cacheLocation: DownloadCompletionCacheLocation) {
+    public required init(frame: CGRect, cachePolicy: MultimediaCachePolicy, cacheLocation: DownloadCompletionCacheLocation) {
         super.init(frame: frame)
         
         if translatesAutoresizingMaskIntoConstraints == true && frame != .zero {
             self.expectedImageSize = frame.size
         }
         
-        self.delegate = delegate
         self.cachePolicy = cachePolicy
         self.cacheLocation = cacheLocation
     }
@@ -180,28 +180,31 @@ open class URLImageView: UIImageView, URLCachableView {
                 completion?()
                 return
             }
+            asyncSetImage(from: cachedImageURL, completion: completion)
+        }
+    }
+    
+    private func asyncSetImage(from cachedImageURL: URL, completion: (() -> ())?) {
+        DispatchQueue.global(qos: .default).async { [weak self] in
             
-            DispatchQueue.global(qos: .default).async { [weak self] in
-                
-                guard let cachedImageDataFromURL = try? Data(contentsOf: cachedImageURL) else {
-                    completion?()
-                    return
-                }
-                
-                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - image data size: \(cachedImageDataFromURL.sizeInMB)")
-                
-                guard let cachedImage = UIImage(data: cachedImageDataFromURL) else {
-                    completion?()
-                    return
-                }
-                
-                let pixelSize = cachedImage.pixelSize
-                let scale = cachedImage.scale
-                let pointSize = cachedImage.size
-                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - image pixel size: \(pixelSize). scale: \(scale). point size: \(pointSize)")
-                
-                self?.useImageOnMainThread(cachedImage, completion: completion)
+            guard let cachedImageDataFromURL = try? Data(contentsOf: cachedImageURL) else {
+                completion?()
+                return
             }
+            
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - image data size: \(cachedImageDataFromURL.sizeInMB)")
+            
+            guard let cachedImage = UIImage(data: cachedImageDataFromURL) else {
+                completion?()
+                return
+            }
+            
+            let pixelSize = cachedImage.pixelSize
+            let scale = cachedImage.scale
+            let pointSize = cachedImage.size
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - image pixel size: \(pixelSize). scale: \(scale). point size: \(pointSize)")
+            
+            self?.useImageOnMainThread(cachedImage, completion: completion)
         }
     }
     
