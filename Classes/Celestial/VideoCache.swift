@@ -82,7 +82,7 @@ extension VideoCache: MemoryCacheProtocol {
                 decodedItemsCache.setObject(decompressedMemoryCachedVideoData as AnyObject, forKey: urlString as AnyObject, cost: decompressedMemoryCachedVideoData.videoData.count)
                 return decompressedMemoryCachedVideoData as MemoryCachedVideoData
             } catch let error {
-                print("Error getting decompressed Data from cache: \(error.localizedDescription)")
+                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting decompressed Data from cache: \(error.localizedDescription)")
                 return nil
             }
         }
@@ -107,7 +107,7 @@ extension VideoCache: MemoryCacheProtocol {
             encodedItemsCache.setObject(compressedMemoryCachedVideoData as AnyObject, forKey: urlString as AnyObject)
             decodedItemsCache.setObject(decompressedMemoryCachedVideoData as AnyObject, forKey: urlString as AnyObject, cost: decompressedMemoryCachedVideoData.videoData.count)
         } catch let error {
-            print("Error storing compressed Data from cache: \(error.localizedDescription)")
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error storing compressed Data from cache: \(error.localizedDescription)")
         }
     }
 
