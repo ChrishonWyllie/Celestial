@@ -148,9 +148,11 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                 fatalError("Error loading video asset: \(String(describing: error))")
             }
             let playerItem = AVPlayerItem(asset: playableAsset)
-            let player = AVPlayer(playerItem: playerItem)
-            strongSelf.player = player
-            strongSelf.delegate?.urlVideoPlayerIsReadyToPlay?(strongSelf)
+            DispatchQueue.main.async {
+                let player = AVPlayer(playerItem: playerItem)
+                strongSelf.player = player
+                strongSelf.delegate?.urlVideoPlayerIsReadyToPlay?(strongSelf)
+            }
         }
         
         if Celestial.shared.videoExists(for: url, cacheLocation: cacheLocation) {
@@ -186,25 +188,21 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                     
         DispatchQueue.global(qos: .default).async {
             asset.loadValuesAsynchronously(forKeys: URLVideoPlayerView.requiredAssetKeys) {
-                DispatchQueue.main.async {
-                    
-                    for key in URLVideoPlayerView.requiredAssetKeys {
-                        var error: NSError? = nil
-                        let status = asset.statusOfValue(forKey: key, error: &error)
-                        switch status {
-                        case .failed:
+                for key in URLVideoPlayerView.requiredAssetKeys {
+                    var error: NSError? = nil
+                    let status = asset.statusOfValue(forKey: key, error: &error)
+                    switch status {
+                    case .failed:
+                        completion(asset, error)
+                    case .loading:
+                        print("Still loading")
+                    case .loaded:
+                        if asset.isPlayable {
                             completion(asset, error)
-                        case .loading:
-                            print("Still loading")
-                        case .loaded:
-                            if asset.isPlayable {
-                                completion(asset, error)
-                            }
-                        default:
-                            print("asset status: \(status)")
                         }
+                    default:
+                        print("asset status: \(status)")
                     }
-                    
                 }
             }
         }
