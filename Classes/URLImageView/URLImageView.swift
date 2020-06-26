@@ -95,26 +95,23 @@ open class URLImageView: UIImageView, URLCachableView {
     
     /// Downloads an image from an external URL string
     public func loadImageFrom(urlString: String) {
-        
-        image = nil
-        
-        // Store a reference to the urlString, so that we can save in Cache when download completes
-        guard let url = URL(string: urlString) else {
-            return
-        }
-        sourceURL = url
-        acquireImageWithoutDownloadTaskHandler(from: url)
+        acquireImage(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
     }
     
     private var imageCompletionHandler: (() -> ())?
-
+    
     public func loadImageFrom(urlString: String,
                               progressHandler: (DownloadTaskProgressHandler?),
                               completion: (() -> ())?,
                               errorHandler: (DownloadTaskErrorHandler?)) {
         
+        acquireImage(from: urlString, progressHandler: progressHandler, completion: completion, errorHandler: errorHandler)
+    }
+    
+    private func acquireImage(from urlString: String, progressHandler: DownloadTaskProgressHandler?, completion: (() -> ())?, errorHandler: DownloadTaskErrorHandler?) {
         image = nil
         
+        // Store a reference to the urlString, so that we can save in Cache when download completes
         guard let url = URL(string: urlString) else {
             return
         }
@@ -130,7 +127,9 @@ open class URLImageView: UIImageView, URLCachableView {
             } else {
                 
                 willWaitForLayoutToGetImageSize = true
-                imageCompletionHandler = completion
+                if completion != nil {
+                    imageCompletionHandler = completion
+                }
                 
             }
         } else {
@@ -141,43 +140,24 @@ open class URLImageView: UIImageView, URLCachableView {
                 
             } else {
                 
-                downloadTaskHandler = DownloadTaskHandler<UIImage>()
-                downloadTaskHandler?.completionHandler = { [weak self] (downloadedImage) in
-                    self?.useImageOnMainThread(downloadedImage, completion: completion)
-                }
-                downloadTaskHandler?.progressHandler = { (downloadProgress) in
-                    progressHandler?(downloadProgress)
-                }
-                downloadTaskHandler?.errorHandler = { (error) in
-                    errorHandler?(error)
+                if progressHandler != nil && completion != nil && progressHandler != nil {
+                    downloadTaskHandler = DownloadTaskHandler<UIImage>()
+                    downloadTaskHandler?.completionHandler = { [weak self] (downloadedImage) in
+                        self?.useImageOnMainThread(downloadedImage, completion: completion)
+                    }
+                    downloadTaskHandler?.progressHandler = { (downloadProgress) in
+                        progressHandler?(downloadProgress)
+                    }
+                    downloadTaskHandler?.errorHandler = { (error) in
+                        errorHandler?(error)
+                    }
                 }
                 
                 finallyBeginFreshDownload(for: url)
             }
         }
     }
-    
-    private func acquireImageWithoutDownloadTaskHandler(from url: URL) {
-       
-        if Celestial.shared.imageExists(for: url, cacheLocation: cacheLocation) {
-            
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - getting image from cache")
-            if let expectedImageSize = expectedImageSize {
-                // This view may already have called layoutSubviews
-                setImage(imageSize: expectedImageSize, completion: nil)
-            } else {
-                willWaitForLayoutToGetImageSize = true
-            }
-            
-        } else {
-            if DownloadTaskManager.shared.downloadIsInProgress(for: url) {
-                fallbackOnDefaultImageIfExists()
-            } else {
-                finallyBeginFreshDownload(for: url)
-            }
-        }
-    }
-    
+
     private func finallyBeginFreshDownload(for sourceURL: URL) {
         downloadModel = GenericDownloadModel(sourceURL: sourceURL, delegate: self)
         DownloadTaskManager.shared.startDownload(model: downloadModel)
