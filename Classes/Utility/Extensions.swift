@@ -7,6 +7,7 @@
 
 import UIKit
 import MobileCoreServices
+import AVFoundation
 
 // MARK: - UIImage
 
@@ -60,6 +61,12 @@ internal extension UIImage {
         UIGraphicsEndImageContext()
         return newImage
     }
+    
+    var pixelSize: CGSize {
+        let widthInPixels = self.size.width * self.scale
+        let heightInPixels = self.size.height * self.scale
+        return CGSize(width: widthInPixels, height: heightInPixels)
+    }
 }
 
 
@@ -107,7 +114,7 @@ internal extension Data {
     
     /// Quick reference for calculating the number of megabytes that a video uses.
     var sizeInMB: Float {
-        return Float(self.count) / Float(Int.OneMegabyte)
+        return self.count.sizeInMB
     }
     
 }
@@ -165,5 +172,110 @@ internal extension URL {
         }
         return UTTypeConformsTo(uti, kUTTypeMovie)
     }
+}
 
+
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - AVURLAsset
+
+extension AVURLAsset {
+    var resoulution: CGSize? {
+        guard let track = self.tracks(withMediaType: AVMediaType.video).first else {
+            return nil
+        }
+        let size = track.naturalSize.applying(track.preferredTransform)
+        return CGSize(width: abs(size.width), height: abs(size.height))
+    }
+    
+    func compressVideo(to outputURL: URL, completion: @escaping (_ exportSession: AVAssetExportSession?) -> ()) {
+        
+        guard let exportSession = AVAssetExportSession(asset: self, presetName: AVAssetExportPresetMediumQuality) else {
+            completion(nil)
+            return
+        }
+        
+        try? FileManager.default.removeItem(at: outputURL)
+        
+        exportSession.outputURL = outputURL
+        exportSession.outputFileType = AVFileType.mp4
+        exportSession.shouldOptimizeForNetworkUse = true
+        exportSession.exportAsynchronously {
+            completion(exportSession)
+        }
+    }
+}
+
+extension AVPlayerItem {
+    var resolution: CGSize? {
+        return (self.asset as? AVURLAsset)?.resoulution
+    }
+    
+    var aspectRatio: Double? {
+        guard let width = resolution?.width, let height = resolution?.height else {
+           return nil
+        }
+
+        return Double(height / width)
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - FileManager
+
+extension FileManager {
+    
+    func sizeOfFile(at path: String) -> Int64 {
+        do {
+            let fileAttributes = try attributesOfItem(atPath: path)
+            let fileSizeNumber = fileAttributes[FileAttributeKey.size] as? NSNumber
+            let fileSize = fileSizeNumber?.int64Value
+            return fileSize ?? 0
+        } catch {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - error reading filesize, NSFileManager extension fileSizeAtPath")
+            return 0
+        }
+    }
+
+    func sizeOfFolder(at path: String) -> Int64 {
+        var size: Int64 = 0
+        do {
+            let files = try subpathsOfDirectory(atPath: path)
+            for i in 0..<files.count {
+                let filePath = path.appending("/"+files[i])
+                size += sizeOfFile(at: filePath)
+            }
+        } catch {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - error reading directory, NSFileManager extension folderSizeAtPath")
+        }
+        return size
+    }
+    
+    func format(size: Int64) -> String {
+        let humanReadableFolderSize = ByteCountFormatter.string(fromByteCount: size, countStyle: ByteCountFormatter.CountStyle.file)
+        return humanReadableFolderSize
+    }
 }

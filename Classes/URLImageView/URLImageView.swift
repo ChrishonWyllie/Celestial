@@ -10,22 +10,30 @@ import UIKit
 /// Subclass of UIImageView which can download and display an image from an external URL,
 /// then cache it for future use if desired.
 /// This is used together with the Celestial cache to prevent needless downloading of the same images.
-open class URLImageView: UIImageView {
+open class URLImageView: UIImageView, URLCachableView {
     
     // MARK: - Variables
     
-    private weak var delegate: URLImageViewDelegate?
+    public private(set) weak var delegate: URLCachableViewDelegate?
     
     public private(set) var cachePolicy: MultimediaCachePolicy = .allow
     
-    public private(set) var urlString: String?
+    public private(set) var sourceURL: URL?
     
-    private var defaultImage: UIImage?
+    public private(set) var cacheLocation: DownloadCompletionCacheLocation = .fileSystem
+    
+    private var downloadModel: GenericDownloadModel!
     
     private var downloadTaskHandler: DownloadTaskHandler<UIImage>?
     
     // Wait for layoutSubviews to set this property
-    private var size: CGSize?
+    private var expectedImageSize: CGSize?
+    
+    private var willWaitForLayoutToGetImageSize: Bool = false
+    
+    /// A default image used until download completes
+    public var defaultImage: UIImage?
+    
     
     
     
@@ -33,23 +41,30 @@ open class URLImageView: UIImageView {
     
     // MARK: - Initializers
     
-    /// - Parameter urlString: The URL.absoluteString of the image you would like to download and display (NOTE: You may download this image sometime after instantiation by using:
-    /// ````
-    ///     loadImageFrom(urlString: String)
-    /// ````
-    /// - Parameter delegate: `URLImageViewDelegate` for useful delegation functions such as knowing when download has completed, or its current progress.
-    /// - Parameter cachePolicy: `MultimediaCachePolicy` for determining whether the image should be cached upon completion of its download.
-    /// - Parameter defaultImage: `UIImage` a default image that will be used if download fails.
-    public convenience init(urlString: String, delegate: URLImageViewDelegate?, cachePolicy: MultimediaCachePolicy = .allow, defaultImage: UIImage? = nil) {
-        self.init(delegate: delegate, cachePolicy: cachePolicy, defaultImage: defaultImage)
-        self.loadImageFrom(urlString: urlString)
+    public convenience init(delegate: URLCachableViewDelegate?,
+                            sourceURLString: String,
+                            cachePolicy: MultimediaCachePolicy = .allow,
+                            cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
+        self.init(delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
+        loadImageFrom(urlString: sourceURLString)
     }
     
-    public init(delegate: URLImageViewDelegate?, cachePolicy: MultimediaCachePolicy = .allow, defaultImage: UIImage? = nil) {
-        super.init(frame: .zero)
-        self.cachePolicy = cachePolicy
+    public convenience init(delegate: URLCachableViewDelegate?,
+                            cachePolicy: MultimediaCachePolicy = .allow,
+                            cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
+        self.init(frame: .zero, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
         self.delegate = delegate
-        self.defaultImage = defaultImage
+    }
+    
+    public required init(frame: CGRect, cachePolicy: MultimediaCachePolicy, cacheLocation: DownloadCompletionCacheLocation) {
+        super.init(frame: frame)
+        
+        if translatesAutoresizingMaskIntoConstraints == true && frame != .zero {
+            self.expectedImageSize = frame.size
+        }
+        
+        self.cachePolicy = cachePolicy
+        self.cacheLocation = cacheLocation
     }
     
     required public init?(coder: NSCoder) {
@@ -61,8 +76,18 @@ open class URLImageView: UIImageView {
     
     open override func layoutSubviews() {
         super.layoutSubviews()
-        self.size = self.frame.size
+        expectedImageSize = frame.size
+        
+        if
+            willWaitForLayoutToGetImageSize == true,
+            image == nil,
+            let imageSize = expectedImageSize {
+            
+            setImage(imageSize: imageSize, completion: imageCompletionHandler)
+        }
     }
+    
+    
     
     
     
@@ -70,154 +95,245 @@ open class URLImageView: UIImageView {
     
     /// Downloads an image from an external URL string
     public func loadImageFrom(urlString: String) {
-        
-        self.image = nil
-        
-        //check cache for image first
-        if let cachedImage = Celestial.shared.image(for: urlString) {
-            self.image = cachedImage
-            return
-        }
-        
-        // Otherwise, fire off a new download
-        
-        performDownload(at: urlString)
-        
+        acquireImage(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
     }
     
-    public func loadImageFrom(urlString: String, progressHandler: (DownloadTaskProgressHandler?), completion: (() -> ())?, errorHandler: (DownloadTaskErrorHandler?)) {
+    private var imageCompletionHandler: (() -> ())?
+    
+    public func loadImageFrom(urlString: String,
+                              progressHandler: (DownloadTaskProgressHandler?),
+                              completion: (() -> ())?,
+                              errorHandler: (DownloadTaskErrorHandler?)) {
         
-        self.image = nil
-        
-        if let cachedImage = Celestial.shared.image(for: urlString) {
-            self.image = cachedImage
-            completion?()
-            return
-        } else {
-            
-            // Otherwise, fire off a new download
-            
-            // First, set up the download task handler
-            
-            downloadTaskHandler = DownloadTaskHandler<UIImage>()
-            downloadTaskHandler?.completionHandler = { (downloadedImage) in
-                DispatchQueue.main.async {
-                    self.image = downloadedImage
-                    completion?()
-                }
-            }
-            downloadTaskHandler?.progressHandler = { (downloadProgress) in
-                progressHandler?(downloadProgress)
-            }
-            downloadTaskHandler?.errorHandler = { (error) in
-                errorHandler?(error)
-            }
-            
-            // Then, perform the download
-            
-            performDownload(at: urlString)
-        }
+        acquireImage(from: urlString, progressHandler: progressHandler, completion: completion, errorHandler: errorHandler)
     }
     
-    private func performDownload(at urlString: String) {
+    private func acquireImage(from urlString: String, progressHandler: DownloadTaskProgressHandler?, completion: (() -> ())?, errorHandler: DownloadTaskErrorHandler?) {
+        image = nil
         
         // Store a reference to the urlString, so that we can save in Cache when download completes
-        self.urlString = urlString
-        
-        let configuration = URLSessionConfiguration.default
-        let urlSession = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
-        
         guard let url = URL(string: urlString) else {
             return
         }
+        sourceURL = url
         
-        let downloadTask = urlSession.downloadTask(with: url)
-        downloadTask.resume()
-    }
-}
-
-
-
-
-
-
-
-// MARK: -  URLSessionDownloadDelegate
-
-extension URLImageView: URLSessionDownloadDelegate {
-    
-    public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        
-        let percentage = CGFloat(totalBytesWritten) / CGFloat(totalBytesExpectedToWrite)
-        let totalSize = ByteCountFormatter.string(fromByteCount: totalBytesExpectedToWrite, countStyle: .file)
-        let humanReadablePercentage = String(format: "%.1f%% of %@", percentage * 100, totalSize)
-        
-        delegate?.urlImageView?(self, downloadProgress: percentage, humanReadableProgress: humanReadablePercentage)
-        
-        // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
-        // In which case, this property will be non-nil
-        downloadTaskHandler?.progressHandler?(percentage)
-    }
-    
-    public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        guard let error = error else { return }
-        fallbackOnDefaultImageIfExists()
-        delegate?.urlImageView(self, downloadFailedWith: error)
-        
-        // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
-        // In which case, this property will be non-nil
-        downloadTaskHandler?.errorHandler?(error)
-    }
-    
-    public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        
-        // The location is only temporary. You need to read it or copy it to your container before
-        // exiting this function. UIImage(contentsOfFile: ) seems to load the image lazily. NSData
-        // does it right away.
-        do {
-            let data = try Data(contentsOf: location)
-            if var downloadedImage = UIImage(data: data) {
+        if Celestial.shared.imageExists(for: url, cacheLocation: cacheLocation) {
+            
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - getting image from cache")
+            if let expectedImageSize = expectedImageSize {
                 
-                guard let urlString = self.urlString else { return }
+                setImage(imageSize: expectedImageSize, completion: completion)
                 
-                // Often, the downloaded image is high resolution, and thus very large
-                // in both memory and pixel size.
-                // Create a thumbnail that is the size of the URLImageView that downloaded
-                // it (self).
-                let thumbnailImageSize = self.size ?? UIScreen.main.bounds.size
-                downloadedImage = downloadedImage.resize(size: thumbnailImageSize) ?? downloadedImage
+            } else {
                 
-                if cachePolicy == .allow {
-                    Celestial.shared.store(image: downloadedImage, with: urlString)
-                }
-                
-                if downloadTaskHandler != nil {
-                    // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
-                    // In which case, this property will be non-nil
-                    downloadTaskHandler?.completionHandler?(downloadedImage)
-                } else {
-                    DispatchQueue.main.async {
-                        self.image = downloadedImage
-                    }
-                    
-                    delegate?.urlImageView(self, didFinishDownloading: downloadedImage)
+                willWaitForLayoutToGetImageSize = true
+                if completion != nil {
+                    imageCompletionHandler = completion
                 }
                 
             }
-        } catch let dataError {
-            fallbackOnDefaultImageIfExists()
-            delegate?.urlImageView(self, downloadFailedWith: dataError)
+        } else {
             
-            // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
-            // In which case, this property will be non-nil
-            downloadTaskHandler?.errorHandler?(dataError)
+            if DownloadTaskManager.shared.downloadIsInProgress(for: url) {
+                
+                fallbackOnDefaultImageIfExists()
+                
+            } else {
+                
+                if progressHandler != nil && completion != nil && progressHandler != nil {
+                    downloadTaskHandler = DownloadTaskHandler<UIImage>()
+                    downloadTaskHandler?.completionHandler = { [weak self] (downloadedImage) in
+                        self?.useImageOnMainThread(downloadedImage, completion: completion)
+                    }
+                    downloadTaskHandler?.progressHandler = { (downloadProgress) in
+                        progressHandler?(downloadProgress)
+                    }
+                    downloadTaskHandler?.errorHandler = { (error) in
+                        errorHandler?(error)
+                    }
+                }
+                
+                finallyBeginFreshDownload(for: url)
+            }
+        }
+    }
+
+    private func finallyBeginFreshDownload(for sourceURL: URL) {
+        downloadModel = GenericDownloadModel(sourceURL: sourceURL, delegate: self)
+        DownloadTaskManager.shared.startDownload(model: downloadModel)
+    }
+    
+    private func setImage(imageSize: CGSize, completion: (() -> ())?) {
+        guard let sourceURL = sourceURL else {
+            completion?()
+            return
+        }
+        
+        switch cacheLocation {
+        case .inMemory:
+            if let cachedImage = Celestial.shared.image(for: sourceURL.absoluteString) {
+                useImageOnMainThread(cachedImage, completion: completion)
+                return
+            }
+        case .fileSystem:
+            guard let cachedImageURL = Celestial.shared.imageURL(for: sourceURL, pointSize: imageSize) else {
+                completion?()
+                return
+            }
+            asyncSetImage(from: cachedImageURL, completion: completion)
+        }
+    }
+    
+    private func asyncSetImage(from cachedImageURL: URL, completion: (() -> ())?) {
+        DispatchQueue.global(qos: .default).async { [weak self] in
+            
+            guard let cachedImageDataFromURL = try? Data(contentsOf: cachedImageURL) else {
+                completion?()
+                return
+            }
+            
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - image data size: \(cachedImageDataFromURL.sizeInMB)")
+            
+            guard let cachedImage = UIImage(data: cachedImageDataFromURL) else {
+                completion?()
+                return
+            }
+            
+            let pixelSize = cachedImage.pixelSize
+            let scale = cachedImage.scale
+            let pointSize = cachedImage.size
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - image pixel size: \(pixelSize). scale: \(scale). point size: \(pointSize)")
+            
+            self?.useImageOnMainThread(cachedImage, completion: completion)
         }
     }
     
     private func fallbackOnDefaultImageIfExists() {
         if let defaultImage = defaultImage {
-            self.image = defaultImage
+            image = defaultImage
         }
     }
     
+    private func useImageOnMainThread(_ image: UIImage, completion: (() -> ())? = nil) {
+        DispatchQueue.main.async { [weak self] in
+            self?.image = image
+            completion?()
+        }
+    }
+}
+
+// MARK: - CachableDownloadModelDelegate
+
+extension URLImageView: CachableDownloadModelDelegate {
+    
+    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, didFinishDownloadingTo localTemporaryFileURL: URL) {
+        
+        prepareAndPossiblyCacheImage(from: localTemporaryFileURL)
+    }
+    
+    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, downloadFailedWith error: Error) {
+        // TODO
+        // MUST IMPLEMENT
+        if downloadTaskHandler != nil {
+            // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
+            // In which case, this property will be non-nil
+            downloadTaskHandler?.errorHandler?(error)
+        } else {
+            delegate?.urlCachableView?(self, downloadFailedWith: error)
+        }
+    }
+    
+    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, downloadProgress progress: Float, humanReadableProgress: String) {
+        if downloadTaskHandler != nil {
+            // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
+            // In which case, this property will be non-nil
+            downloadTaskHandler?.progressHandler?(progress)
+        } else {
+            delegate?.urlCachableView?(self, downloadProgress: progress, humanReadableProgress: humanReadableProgress)
+        }
+    }
+
+    
+    
+    
+    private func prepareAndPossiblyCacheImage(from localTemporaryFileURL: URL) {
+        var imageToDisplay: UIImage?
+        let desiredImageSize = expectedImageSize ?? UIScreen.main.bounds.size
+        
+        switch cachePolicy {
+        case .allow:
+            
+            imageToDisplay = getCachedAndResized(localTemporaryFileURL: localTemporaryFileURL, desiredImageSize: desiredImageSize)
+        default:
+            imageToDisplay = getResizedImage(from: localTemporaryFileURL, desiredImageSize: desiredImageSize)
+            FileStorageManager.shared.deleteFileAt(intermediateTemporaryFileLocation: localTemporaryFileURL)
+        }
+        
+        guard let resizedAndPossiblyCachedImage = imageToDisplay else {
+            return
+        }
+        
+        
+        if downloadTaskHandler != nil {
+            // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
+            // In which case, this property will be non-nil
+            downloadTaskHandler?.completionHandler?(resizedAndPossiblyCachedImage)
+        } else {
+            
+            useImageOnMainThread(resizedAndPossiblyCachedImage)
+            
+            delegate?.urlCachableView?(self, didFinishDownloading: resizedAndPossiblyCachedImage)
+        }
+    }
+    
+    private func getCachedAndResized(localTemporaryFileURL: URL, desiredImageSize: CGSize) -> UIImage? {
+        
+        var resizedCachedImage: UIImage?
+        
+        guard let originalSourceURL = sourceURL else {
+            return nil
+        }
+        
+        switch cacheLocation {
+            case .inMemory:
+               
+                if let resizedImage = getResizedImage(from: localTemporaryFileURL, desiredImageSize: desiredImageSize) {
+                    Celestial.shared.store(image: resizedImage, with: originalSourceURL.absoluteString)
+                    
+                    resizedCachedImage = resizedImage
+                }
+                
+            case .fileSystem:
+               
+                
+                resizedCachedImage = Celestial.shared.storeImageURL(localTemporaryFileURL, withSourceURL: originalSourceURL, pointSize: desiredImageSize)
+               
+               
+        }
+        
+        return resizedCachedImage
+    }
+    
+    private func getResizedImage(from localTemporaryFileURL: URL, desiredImageSize: CGSize) -> UIImage? {
+        
+        var resizedImage: UIImage?
+        
+        do {
+            let data = try Data(contentsOf: localTemporaryFileURL)
+            guard let untouchedDownloadedImage = UIImage(data: data) else {
+                return nil
+            }
+           
+            // Often, the downloaded image is high resolution, and thus very large
+                 // in both memory and pixel size.
+                 // Create a thumbnail that is the size of the URLImageView that downloaded
+                 // it (self).
+            resizedImage = untouchedDownloadedImage.resize(size: desiredImageSize) ?? untouchedDownloadedImage
+            
+            return resizedImage
+        } catch let error {
+            delegate?.urlCachableView?(self, downloadFailedWith: error)
+            return nil
+        }
+    }
 }

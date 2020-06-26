@@ -28,21 +28,44 @@ fileprivate struct URLSessionObject {
     }
 }
 
+fileprivate enum ExpectedMediaType {
+    case image, video
+}
+
 class ViewController: UIViewController {
      
     // MARK: - Variables
 
     private var player: AVPlayer!
 
+    private var expectedMediaType: ExpectedMediaType = .video
+//    private var expectedMediaType: ExpectedMediaType = .image
 
-
+    private let cellReuseIdentifier = "cell reuse identifier"
+    private var cellModels: [ExampleCellModel] = []
+    private var downloadedImageCellModels: [ImageCellModel] = []
+    private var downloadedVideoCellModels: [VideoCellModel] = []
+    
+    
+    
+    
 
 
     // MARK: - UI Elements
+    
+    private lazy var toggleDataSourceButton: UIBarButtonItem = {
+        let btn = UIBarButtonItem(title: "Toggle", style: .plain, target: self, action: #selector(toggleDataSource))
+        return btn
+    }()
+    
+    private lazy var clearCacheButton: UIBarButtonItem = {
+        let btn = UIBarButtonItem(title: "Clear Cache", style: .plain, target: self, action: #selector(clearDataSourceCache))
+        return btn
+    }()
 
     private lazy var imageView: URLImageView = {
         let urlString = "https://picsum.photos/400/800/?random"
-        let img = URLImageView(urlString: urlString, delegate: self)
+        let img = URLImageView(delegate: self, sourceURLString: urlString)
         img.translatesAutoresizingMaskIntoConstraints = false
         img.contentMode = .scaleAspectFill
         img.layer.cornerRadius = 10
@@ -51,9 +74,6 @@ class ViewController: UIViewController {
         return img
     }()
 
-    private let cellReuseIdentifier = "cell reuse identifier"
-    private var cellModels: [ExampleCellModel] = []
-    
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.minimumLineSpacing = 8
@@ -63,6 +83,9 @@ class ViewController: UIViewController {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.translatesAutoresizingMaskIntoConstraints = false
         cv.backgroundColor = UIColor.systemGray3
+        cv.allowsMultipleSelection = true
+        cv.prefetchDataSource = self
+        cv.isPrefetchingEnabled = true
         cv.delegate = self
         cv.dataSource = self
         return cv
@@ -111,6 +134,8 @@ extension ViewController {
         
         Celestial.shared.setDebugMode(on: true)
         
+        navigationItem.rightBarButtonItems = [toggleDataSourceButton, clearCacheButton]
+        
 //        setupURLImageView()
 //        setupCachableAVPlayerItem()
         setupCollectionView()
@@ -124,11 +149,42 @@ extension ViewController {
         collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
         collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
         
-        collectionView.register(ImageCell.self, forCellWithReuseIdentifier: cellReuseIdentifier)
-        collectionView.register(VideoCell.self, forCellWithReuseIdentifier: cellReuseIdentifier)
+        collectionView.register(ImageCell.self, forCellWithReuseIdentifier: String(describing: ImageCell.self))
+        collectionView.register(VideoCell.self, forCellWithReuseIdentifier: String(describing: VideoCell.self))
         
-//        getRandomImages()
-        getRandomVideos()
+        switch expectedMediaType {
+        case .image: getRandomImages()
+        case .video: getRandomVideos()
+        }
+    }
+    
+    @objc private func toggleDataSource() {
+        
+        if expectedMediaType == .video {
+            if let visibleCells = collectionView.visibleCells as? [VideoCell] {
+                visibleCells.forEach { (cell) in
+                    cell.playerView.player?.pause()
+                }
+            }
+        }
+        
+        cellModels.removeAll()
+        collectionView.reloadData()
+        
+        let newDataSourceType: ExpectedMediaType = expectedMediaType == .image ? .video : .image
+        self.expectedMediaType = newDataSourceType
+        
+        switch expectedMediaType {
+        case .image: getRandomImages()
+        case .video: getRandomVideos()
+        }
+    }
+
+    @objc private func clearDataSourceCache() {
+        switch expectedMediaType {
+        case .image: Celestial.shared.clearAllImages()
+        case .video: Celestial.shared.clearAllVideos()
+        }
     }
 }
 
@@ -157,37 +213,44 @@ extension ViewController {
     
     private func getRandomImages() {
             
-//        TestURLs.Image.urlStrings.forEach { (urlString) in imageCellModels.append(ImageCellModel(urlString: urlString)) }
-//        collectionView.reloadData()
-//        return
-        
         guard let url = URL(string: "https://picsum.photos/v2/list?limit=25") else {
             return
         }
         
-        URLSession.shared.dataTask(with: url) { (data, response, error) in
-            guard let data = data else { return }
-            do {
-                guard let jsonDataArray = try JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.allowFragments) as? [[String: AnyObject]] else {
-                    return
-                }
-                jsonDataArray.forEach { (jsonObject) in
-                    let urlSessionObject = URLSessionObject(object: jsonObject)
-                    
-                    DispatchQueue.main.async {
-                        self.collectionView.performBatchUpdates({
-                            self.cellModels.append(ImageCellModel(urlString: urlSessionObject.downloadURL))
-                            let lastIndexPath = IndexPath(item: self.cellModels.count - 1, section: 0)
-                            self.collectionView.insertItems(at: [lastIndexPath])
-                        }, completion: nil)
+        if self.downloadedImageCellModels.count == 0 {
+            let group = DispatchGroup()
+            
+            group.enter()
+            
+            URLSession.shared.dataTask(with: url) { (data, response, error) in
+                guard let data = data else { return }
+                do {
+                    guard let jsonDataArray = try JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.allowFragments) as? [[String: AnyObject]] else {
+                        return
                     }
+                    
+                    jsonDataArray.forEach { (jsonObject) in
+                        let urlSessionObject = URLSessionObject(object: jsonObject)
+                        self.downloadedImageCellModels.append(ImageCellModel(urlString: urlSessionObject.downloadURL))
+                    }
+                    
+                    group.leave()
+                    
+                } catch let error {
+                    print("error converting data to json: \(error)")
                 }
                 
-            } catch let error {
-                print("error converting data to json: \(error)")
+            }.resume()
+            
+            group.notify(queue: DispatchQueue.main) {
+                self.cellModels = self.downloadedImageCellModels
+                self.collectionView.reloadData()
             }
             
-        }.resume()
+        } else {
+            self.cellModels = downloadedImageCellModels
+            self.collectionView.reloadData()
+        }
     }
 }
 
@@ -237,7 +300,7 @@ extension ViewController {
                 playerLayer.removeFromSuperlayer()
                 self.player = nil
 
-                if let _ = Celestial.shared.video(for: urlString) {
+                if let _ = Celestial.shared.videoData(for: urlString) {
                     
                     // At this point, the video will already be cached
                     let playerItem2 = CachableAVPlayerItem(url: url, delegate: self)
@@ -255,9 +318,13 @@ extension ViewController {
     }
 
     private func getRandomVideos() {
-        TestURLs.Videos.urlStrings.forEach { (urlString) in cellModels.append(VideoCellModel(urlString: urlString)) }
+        if downloadedVideoCellModels.count == 0 {
+            downloadedVideoCellModels = TestURLs.Videos.urlStrings.map { VideoCellModel(urlString: $0) }
+            collectionView.reloadData()
+        }
+        
+        cellModels = downloadedVideoCellModels
         collectionView.reloadData()
-        return
     }
 }
 
@@ -289,8 +356,13 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell: ExampleCell?
         
-//        cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellReuseIdentifier, for: indexPath) as? ImageCell
-        cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellReuseIdentifier, for: indexPath) as? VideoCell
+        switch expectedMediaType {
+        case .image:
+            cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: ImageCell.self), for: indexPath) as? ImageCell
+        case .video:
+            cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: VideoCell.self), for: indexPath) as? VideoCell
+        }
+        
         let cellModel = cellModels[indexPath.item]
         
         cell?.configureCell(someCellModel: cellModel)
@@ -299,7 +371,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: collectionView.frame.size.width, height: 400.0)
+        return CGSize(width: collectionView.frame.size.width, height: 360.0)
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
@@ -320,9 +392,28 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     
     func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
         guard let videoCell = cell as? VideoCell else { return }
-        
         videoCell.playerView.player?.pause()
-        videoCell.playerView.player = nil
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard let videoCell = (collectionView.cellForItem(at: indexPath) as? VideoCell) else { return }
+        videoCell.playerView.player!.play()
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
+        guard let videoCell = (collectionView.cellForItem(at: indexPath) as? VideoCell) else { return }
+        videoCell.playerView.player?.pause()
+    }
+    
+}
+
+extension ViewController: UICollectionViewDataSourcePrefetching {
+    func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        print("prefetching items at indexPaths: \(indexPaths)")
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
+        print("canceling prefetching items at indexPaths: \(indexPaths)")
     }
 }
 
@@ -338,24 +429,23 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
 
 
 
-
  
  
 
-// MARK: - URLImageView delegate
+// MARK: - URLCachableViewDelegate
 
-extension ViewController: URLImageViewDelegate {
+extension ViewController: URLCachableViewDelegate {
     
-    func urlImageView(_ view: URLImageView, didFinishDownloading image: UIImage) {
-        print("download completed with url string: \(String(describing: view.urlString))")
+    func urlCachableView(_ view: URLCachableView, didFinishDownloading media: Any) {
+        print("download completed with url string: \(String(describing: view.sourceURL?.absoluteString))")
         print("image has been cached?: \(view.cachePolicy == .allow)")
     }
     
-    func urlImageView(_ view: URLImageView, downloadFailedWith error: Error) {
+    func urlCachableView(_ view: URLCachableView, downloadFailedWith error: Error) {
         print("downlaod failed with error: \(error)")
     }
     
-    func urlImageView(_ view: URLImageView, downloadProgress progress: CGFloat, humanReadableProgress: String) {
+    func urlCachableView(_ view: URLCachableView, downloadProgress progress: Float, humanReadableProgress: String) {
         print("download progress: \(progress)")
         print("human readable download progress: \(humanReadableProgress)")
     }
@@ -379,12 +469,12 @@ extension ViewController: CachableAVPlayerItemDelegate {
         print("asset duration after downloading: \(CMTimeGetSeconds(playerItem.asset.duration))")
         print("video has been cached?: \(playerItem.cachePolicy == .allow)")
     }
-    
+
     func playerItem(_ playerItem: CachableAVPlayerItem, downloadFailedWith error: Error) {
         print("Error downloading video: \(error.localizedDescription)")
     }
-    
-    
+
+
     func playerItem(_ playerItem: CachableAVPlayerItem, downloadProgress progress: CGFloat, humanReadableProgress: String) {
         print("download progress: \(progress)")
         print("human readable download progress: \(humanReadableProgress)")
