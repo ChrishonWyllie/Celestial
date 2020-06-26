@@ -1,3 +1,17 @@
+## [Version 0.7.0](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.7.0) 
+### New
+* Added caching videos
+* Added caching to file system. Option of caching to memory still available
+* Added functionality to pause and resume download of external resources
+
+### Improvements
+* Added option of caching to file system fixes issue of NSCache releasing data at inopportune times.
+* Prevented UI-blocking by preparing images and videos on background thread and displaying on main thread only when ready. Improves scrolling performance in UITableView and UICollectionView
+* Added superclass `URLCachableView` and `URLCachableViewDelegate` to help with subclass conformance and removal of redundant delegate receivers. Latter reduces code on developer's end.
+
+### Bug fixes
+* Fixed issue of scrolling performance taking a hit when disaplying images and videos
+
 ## [Version 0.6.0](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.6.0)  
 
 ### New
