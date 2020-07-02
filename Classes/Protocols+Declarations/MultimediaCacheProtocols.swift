@@ -16,14 +16,10 @@ import UIKit.UIImage
     case notAllowed
 }
 
+// MARK: - CelestialVideoCachingProtocol
 
-// MARK: - CelestialCacheProtocol
-
-/// Specification for the functions that the Celestial cache manager must follow
-/// Examples include basic CRUD functions
-internal protocol CelestialCacheProtocol: class {
-    
-    // Video
+/// Forces conformance for implementing functions related to video caching
+internal protocol CelestialVideoCachingProtocol: class {
     
     /**
      Returns a boolean value of whether a video exists
@@ -174,19 +170,14 @@ internal protocol CelestialCacheProtocol: class {
         Celestial.shared.clearAllVideos()
     */
     func clearAllVideos()
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    // MARK: - Image
+}
+
+
+
+// MARK: - CelestialImageCachingProtocol
+
+/// Forces conformance for implementing functions related to image caching
+internal protocol CelestialImageCachingProtocol: class {
     
     /**
      Returns a boolean value of whether an image exists
@@ -359,11 +350,22 @@ internal protocol CelestialCacheProtocol: class {
         Celestial.shared.clearAllImages()
     */
     func clearAllImages()
+}
+
+
+
+// MARK: - CelestialResourceFetchingProtocol
+
+/// Forces conformance for implementing functions related to getting download state, starting and/or pausing downloads
+internal protocol CelestialResourceFetchingProtocol: class {
     
-    
-    
-    
-    
+}
+
+
+// MARK: - CelestialMemoryCacheProtocol
+
+/// Forces conformance for implementing functions related to in-memory caching
+internal protocol CelestialMemoryCacheProtocol: class {
     
     /**
      Sets the maximum number of items that can be stored in either the video or image cache.
@@ -403,6 +405,15 @@ internal protocol CelestialCacheProtocol: class {
     */
     func setCacheCostLimit(videoCache: Int?, imageCache: Int?)
     
+}
+
+
+
+// MARK: - CelestialMiscellaneousProtocol
+
+/// Forces conformance for implementing functions that otherwise do not fit in the other protocols,
+/// but are necessary nonetheless
+internal protocol CelestialMiscellaneousProtocol: class {
     /**
      Sets an internal Boolean value which determines whether debug statements will be printed to console.
      For example, information regarding when the image or video cache is evicting items for memory space
@@ -436,13 +447,11 @@ internal protocol CelestialCacheProtocol: class {
 
 
 
-
-
-// MARK: - CacheManagerProtocol
+// MARK: - MemoryCacheManagerProtocol
 
 /// Specification for the mandatory properties that a cache manager must have.
 /// For example, the Image and Video caches must have two NSCaches, one for encoded and the other for decoded items.
-internal protocol CacheManagerProtocol: class {
+internal protocol MemoryCacheManagerProtocol: class {
     
     var encodedItemsCache: NSCache<AnyObject, AnyObject> { get }
     var decodedItemsCache: NSCache<AnyObject, AnyObject> { get }
