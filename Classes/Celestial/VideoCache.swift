@@ -7,7 +7,7 @@
 
 import UIKit
 
-internal final class VideoCache: NSObject, CacheManagerProtocol {
+internal final class VideoCache: NSObject, MemoryCacheManagerProtocol {
     
     // MARK: - Variables
     
@@ -15,7 +15,7 @@ internal final class VideoCache: NSObject, CacheManagerProtocol {
     
     private(set) lazy var encodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
-        cache.name = "Encoded items cache"
+        cache.name = "Encoded videos cache"
         cache.countLimit = config.countLimit
         cache.delegate = self
         return cache
@@ -23,7 +23,7 @@ internal final class VideoCache: NSObject, CacheManagerProtocol {
     
     private(set) lazy var decodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
-        cache.name = "Decoded items cache"
+        cache.name = "Decoded videos cache"
         cache.totalCostLimit = config.memoryLimit
         cache.delegate = self
         return cache
