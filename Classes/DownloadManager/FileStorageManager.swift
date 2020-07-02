@@ -108,9 +108,9 @@ internal protocol FileStorageMangerProtocol {
      Clears the cache of the specified file type
 
     - Parameters:
-       - style: The directory to be cleared. (Images, Videos, all)
+       - fileType: The directory to be cleared. (Images, Videos, all)
     */
-    func clearCache(_ style: FileStorageManager.CacheClearingStyle)
+    func clearCache(fileType: FileStorageManager.CacheClearingFileType)
     
     /**
      Moves the temporary file created from a download task to an intermediate location
@@ -203,7 +203,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     let directoryManager = FileStorageDirectoryManager()
     
-    enum CacheClearingStyle {
+    enum CacheClearingFileType {
         case videos
         case images
         case all
@@ -284,10 +284,10 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         }
     }
     
-    internal func clearCache(_ style: CacheClearingStyle) {
+    internal func clearCache(fileType: CacheClearingFileType) {
         DispatchQueue.global(qos: DispatchQoS.QoSClass.background).async { [weak self] in
             guard let strongSelf = self else { return }
-            switch style {
+            switch fileType {
             case .videos: strongSelf.deleteItemsInDirectory(for: strongSelf.directoryManager.videosDirectoryURL)
             case .images: strongSelf.deleteItemsInDirectory(for: strongSelf.directoryManager.imagesDirectoryURL)
             default:      strongSelf.deleteItemsInDirectory(for: strongSelf.directoryManager.celestialDirectoryURL)

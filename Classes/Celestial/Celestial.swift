@@ -68,7 +68,7 @@ extension Celestial: CelestialCacheProtocol {
     
     public func clearAllVideos() {
         VideoCache.shared.clearAllItems()
-        FileStorageManager.shared.clearCache(FileStorageManager.CacheClearingStyle.videos)
+        FileStorageManager.shared.clearCache(fileType: FileStorageManager.CacheClearingFileType.videos)
     }
     
     
@@ -121,7 +121,7 @@ extension Celestial: CelestialCacheProtocol {
     
     public func clearAllImages() {
         ImageCache.shared.clearAllItems()
-        FileStorageManager.shared.clearCache(FileStorageManager.CacheClearingStyle.images)
+        FileStorageManager.shared.clearCache(fileType: FileStorageManager.CacheClearingFileType.images)
     }
     
     
