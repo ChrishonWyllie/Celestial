@@ -164,9 +164,9 @@ extension Celestial: CelestialMemoryCacheProtocol {
 
 
 
-// MARK: - MISC.
+// MARK: - Utility
 
-extension Celestial: CelestialMiscellaneousProtocol {
+extension Celestial: CelestialUtilityProtocol {
     
     public func setDebugMode(on: Bool) {
         debugModeIsActive = on

@@ -411,9 +411,9 @@ internal protocol CelestialMemoryCacheProtocol: class {
 
 // MARK: - CelestialMiscellaneousProtocol
 
-/// Forces conformance for implementing functions that otherwise do not fit in the other protocols,
+/// Forces conformance for implementing miscellaneous utility functions that otherwise do not fit in the other protocols,
 /// but are necessary nonetheless
-internal protocol CelestialMiscellaneousProtocol: class {
+internal protocol CelestialUtilityProtocol: class {
     /**
      Sets an internal Boolean value which determines whether debug statements will be printed to console.
      For example, information regarding when the image or video cache is evicting items for memory space
