@@ -28,9 +28,10 @@ public final class Celestial: NSObject {
 
 
 
-// MARK: -  MemoryCacheProtocol
 
-extension Celestial: CelestialCacheProtocol {
+// MARK: - Video
+
+extension Celestial: CelestialVideoCachingProtocol {
     
     public func videoExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool {
         switch cacheLocation {
@@ -40,11 +41,11 @@ extension Celestial: CelestialCacheProtocol {
             return FileStorageManager.shared.videoExists(for: sourceURL)
         }
     }
-    
+   
     public func videoData(for sourceURLString: String) -> MemoryCachedVideoData? {
         return VideoCache.shared.item(for: sourceURLString)
     }
-    
+   
     public func videoURL(for sourceURL: URL, resolution: CGSize) -> URL? {
         return FileStorageManager.shared.getCachedVideoURL(for: sourceURL, resolution: resolution)
     }
@@ -52,39 +53,30 @@ extension Celestial: CelestialCacheProtocol {
     public func store(videoData: MemoryCachedVideoData?, with sourceURLString: String) {
         VideoCache.shared.store(videoData, with: sourceURLString)
     }
-    
+   
     public func storeVideoURL(_ videoURL: URL, withSourceURL sourceURL: URL, resolution: CGSize, completion: @escaping (URL?) -> ()) {
         FileStorageManager.shared.cachedAndResizedVideo(sourceURL: sourceURL, resolution: resolution, intermediateTemporaryFileURL: videoURL, completion: completion)
     }
-    
-    
+   
     public func removeVideoData(using sourceURLString: String) {
         VideoCache.shared.removeItem(at: sourceURLString)
     }
-    
+   
     public func removeVideoURL(using sourceURL: URL) -> Bool {
         return FileStorageManager.shared.deleteCachedVideo(using: sourceURL)
     }
-    
+   
     public func clearAllVideos() {
         VideoCache.shared.clearAllItems()
         FileStorageManager.shared.clearCache(fileType: FileStorageManager.CacheClearingFileType.videos)
     }
-    
-    
-    
-    
-    
-    
+}
 
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+// MARK: - Image
+
+extension Celestial: CelestialImageCachingProtocol {
     
     public func imageExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool {
         switch cacheLocation {
@@ -123,17 +115,26 @@ extension Celestial: CelestialCacheProtocol {
         ImageCache.shared.clearAllItems()
         FileStorageManager.shared.clearCache(fileType: FileStorageManager.CacheClearingFileType.images)
     }
+}
+
+
+
+
+// MARK: - Downloads
+
+extension Celestial: CelestialResourceFetchingProtocol {
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    // MISC.
+}
+
+
+
+
+
+
+
+// MARK: - MemoryCache
+
+extension Celestial: CelestialMemoryCacheProtocol {
     
     func setCacheItemLimit(videoCache: Int?, imageCache: Int?) {
         if let videoCacheLimit = videoCache {
@@ -152,11 +153,25 @@ extension Celestial: CelestialCacheProtocol {
             ImageCache.shared.setCacheCostLimit(numMegabytes: imageCacheLimit)
         }
     }
+}
+
+
+
+
+
+
+
+
+
+
+// MARK: - MISC.
+
+extension Celestial: CelestialMiscellaneousProtocol {
     
     public func setDebugMode(on: Bool) {
         debugModeIsActive = on
     }
-    
+       
     public func reset() {
         clearAllImages()
         clearAllVideos()
