@@ -320,11 +320,12 @@ extension ViewController {
     private func getRandomVideos() {
         if downloadedVideoCellModels.count == 0 {
             downloadedVideoCellModels = TestURLs.Videos.urlStrings.map { VideoCellModel(urlString: $0) }
+            cellModels = downloadedVideoCellModels
+            collectionView.reloadData()
+        } else {
+            cellModels = downloadedVideoCellModels
             collectionView.reloadData()
         }
-        
-        cellModels = downloadedVideoCellModels
-        collectionView.reloadData()
     }
 }
 
