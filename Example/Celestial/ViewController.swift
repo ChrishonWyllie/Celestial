@@ -411,10 +411,46 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
 extension ViewController: UICollectionViewDataSourcePrefetching {
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
         print("prefetching items at indexPaths: \(indexPaths)")
+        
+        for indexPath in indexPaths {
+            
+            let cellModel = cellModels[indexPath.item]
+            
+            guard let url = URL(string: cellModel.urlString) else {
+                fatalError()
+            }
+            
+            switch Celestial.shared.downloadState(for: url) {
+            case .none:
+                Celestial.shared.startDownload(for: url)
+            case .paused:
+                Celestial.shared.resumeDownload(for: url)
+            case .downloading, .finished:
+                // Nothing more to do
+                continue
+            }
+        }
     }
     
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
         print("canceling prefetching items at indexPaths: \(indexPaths)")
+        
+        for indexPath in indexPaths {
+            
+            let cellModel = cellModels[indexPath.item]
+            
+            guard let url = URL(string: cellModel.urlString) else {
+                fatalError()
+            }
+            
+            switch Celestial.shared.downloadState(for: url) {
+            case .none, .finished, .paused:
+                // Nothing more to do
+                continue
+            case .downloading:
+                Celestial.shared.pauseDownload(for: url)
+            }
+        }
     }
 }
 
