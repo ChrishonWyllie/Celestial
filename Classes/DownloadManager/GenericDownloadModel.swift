@@ -42,7 +42,7 @@ internal protocol CachableDownloadModelDelegate: class {
 }
 
 /// Represents current state of a download of a resource from an external URL
-internal enum DownloadTaskState {
+public enum DownloadTaskState {
     /// First state of a download before it begins
     case none
     /// Download has been temporarily paused. May be resumed
