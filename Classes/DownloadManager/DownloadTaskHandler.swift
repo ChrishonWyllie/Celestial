@@ -30,3 +30,5 @@ public typealias DownloadTaskProgressHandler = (Float) -> Void
 
 /// Closure for providing any possible errors that occur during download progress back to the caller
 public typealias DownloadTaskErrorHandler = (Error) -> Void
+
+public typealias OptionalCompletionHandler = (() -> ())?
