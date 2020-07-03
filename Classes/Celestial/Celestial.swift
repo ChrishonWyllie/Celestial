@@ -68,7 +68,7 @@ extension Celestial: CelestialVideoCachingProtocol {
    
     public func clearAllVideos() {
         VideoCache.shared.clearAllItems()
-        FileStorageManager.shared.clearCache(fileType: FileStorageManager.CacheClearingFileType.videos)
+        FileStorageManager.shared.clearCache(fileType: Celestial.ResourceFileType.video)
     }
 }
 
@@ -113,7 +113,7 @@ extension Celestial: CelestialImageCachingProtocol {
     
     public func clearAllImages() {
         ImageCache.shared.clearAllItems()
-        FileStorageManager.shared.clearCache(fileType: FileStorageManager.CacheClearingFileType.images)
+        FileStorageManager.shared.clearCache(fileType: Celestial.ResourceFileType.image)
     }
 }
 
@@ -122,8 +122,91 @@ extension Celestial: CelestialImageCachingProtocol {
 
 // MARK: - Downloads
 
-extension Celestial: CelestialResourceFetchingProtocol {
+extension Celestial: CelestialResourcePrefetchingProtocol {
     
+    public func downloadState(for sourceURL: URL) -> DownloadTaskState {
+        return DownloadTaskManager.shared.downloadState(for: sourceURL)
+    }
+    
+    public func startDownload(for sourceURL: URL) {
+        // downloadModel will be exchanged with non-nil delegate when view
+        // calls load(urlString:)
+        let downloadModel = GenericDownloadModel(sourceURL: sourceURL, delegate: nil)
+        DownloadTaskManager.shared.startDownload(model: downloadModel)
+    }
+    
+    public func pauseDownload(for sourceURL: URL) {
+        DownloadTaskManager.shared.pauseDownload(for: sourceURL)
+    }
+    
+    public func resumeDownload(for sourceURL: URL) {
+        DownloadTaskManager.shared.resumeDownload(for: sourceURL)
+    }
+    
+    public func cancelDownload(for sourceURL: URL) {
+        DownloadTaskManager.shared.cancelDownload(for: sourceURL)
+    }
+    
+    internal func resourceExistenceState(for sourceURL: URL,
+                                         cacheLocation: DownloadCompletionCacheLocation,
+                                         fileType: Celestial.ResourceFileType) -> ResourceExistenceState {
+        switch fileType {
+        case .video:
+            
+            if FileStorageManager.shared.uncachedFileExists(for: sourceURL)
+                && FileStorageManager.shared.videoExists(for: sourceURL) == false {
+                return .uncached
+            }
+            
+            if videoExists(for: sourceURL, cacheLocation: cacheLocation) {
+                return .cached
+            }
+            
+        case .image:
+            
+            if FileStorageManager.shared.uncachedFileExists(for: sourceURL)
+                && FileStorageManager.shared.imageExists(for: sourceURL) == false {
+                return .uncached
+            }
+            
+            if imageExists(for: sourceURL, cacheLocation: cacheLocation) {
+                return .cached
+            }
+            
+        default:
+            fatalError("Unsupported file type: \(fileType)")
+        }
+        
+        switch downloadState(for: sourceURL) {
+        case .downloading: return .currentlyDownloading
+        case .paused: return .downloadPaused
+        case .none: return .none
+        default: fatalError("The download is simultaneously finished but uncached")
+        }
+    }
+    
+    /// Determines what state a resource is in
+    /// Whether it has been cached, exists in a temporary uncached state, currently
+    internal enum ResourceExistenceState: Int {
+        /// The resource has completed downloading but remains in a temporary
+        /// cache in the file system until URLCachableView decides what to do with it
+        case uncached = 0
+        /// The resource has completed downloading and is cached to either memory or file system
+        case cached
+        /// The resource is currently being downloaded
+        case currentlyDownloading
+        /// The download task for the resource has been paused
+        case downloadPaused
+        /// There are no pending downloads for the resource, nor does it exist anywhere. Must begin new download
+        case none
+    }
+
+    internal enum ResourceFileType {
+        case video
+        case image
+        case temporary
+        case all
+    }
 }
 
 
