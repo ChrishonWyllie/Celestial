@@ -30,7 +30,7 @@ class DataLoadablePlayerItem: AVPlayerItem {
         
         let asset = AVURLAsset(url: fakeUrl)
         
-        let assetKeys: [String] = [URLVideoPlayerView.requiredAssetKeys.playable, .hasProtectedContent].map { $0.rawValue }
+        let assetKeys: [String] = [URLVideoPlayerView.LoadableAssetKeys.playable, .hasProtectedContent].map { $0.rawValue }
         super.init(asset: asset, automaticallyLoadedAssetKeys: assetKeys)
         asset.resourceLoader.setDelegate(self, queue: DispatchQueue.main)
     }
