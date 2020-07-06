@@ -176,7 +176,7 @@ open class URLImageView: UIImageView, URLCachableView {
                 }
             }
             
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of :self))) - starting new download to cache")
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of :self))) - starting new download to cache. URL: \(sourceURL)")
             DownloadTaskManager.shared.startDownload(model: downloadModel)
         }
     }
@@ -250,8 +250,6 @@ extension URLImageView: CachableDownloadModelDelegate {
     }
     
     func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, downloadFailedWith error: Error) {
-        // TODO
-        // MUST IMPLEMENT
         if downloadTaskHandler != nil {
             // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
             // In which case, this property will be non-nil
