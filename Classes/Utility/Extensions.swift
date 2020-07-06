@@ -197,22 +197,6 @@ extension AVURLAsset {
         return CGSize(width: abs(size.width), height: abs(size.height))
     }
     
-    func compressVideo(to outputURL: URL, completion: @escaping (_ exportSession: AVAssetExportSession?) -> ()) {
-        
-        guard let exportSession = AVAssetExportSession(asset: self, presetName: AVAssetExportPresetMediumQuality) else {
-            completion(nil)
-            return
-        }
-        
-        try? FileManager.default.removeItem(at: outputURL)
-        
-        exportSession.outputURL = outputURL
-        exportSession.outputFileType = AVFileType.mp4
-        exportSession.shouldOptimizeForNetworkUse = true
-        exportSession.exportAsynchronously {
-            completion(exportSession)
-        }
-    }
 }
 
 extension AVPlayerItem {
