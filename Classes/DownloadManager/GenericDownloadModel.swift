@@ -17,9 +17,9 @@ internal protocol CachableDownloadModelDelegate: class {
 
     - Parameters:
        - downloadTaskRequest: The DownloadTaskRequest object that finished the download. Note, this object has been invalidated after completion.
-       - localTemporaryFileURL: The temporary url pointing to the downloaded resource
+       - intermediateTemporaryFileURL: The temporary url pointing to the downloaded resource after it is moved to a retrievable URL
     */
-    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, didFinishDownloadingTo localTemporaryFileURL: URL)
+    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, didFinishDownloadingTo intermediateTemporaryFileURL: URL)
     
     /**
      Notifies receiver that the download has failed.

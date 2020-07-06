@@ -287,12 +287,12 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
     
     private func moveToIntermediateTemporaryFile(originalTemporaryURL: URL, download: DownloadTaskRequest) {
         do {
-            let localTemporaryFileURL = try FileStorageManager.shared.moveToIntermediateTemporaryURL(originalTemporaryURL: originalTemporaryURL, sourceURL: download.downloadModel.sourceURL)
+            let intermediateTemporaryFileURL = try FileStorageManager.shared.moveToIntermediateTemporaryURL(originalTemporaryURL: originalTemporaryURL, sourceURL: download.downloadModel.sourceURL)
             
             download.downloadModel.update(downloadState: .finished)
             
             // Notify delegate
-            download.downloadModel.delegate?.cachable(download, didFinishDownloadingTo: localTemporaryFileURL)
+            download.downloadModel.delegate?.cachable(download, didFinishDownloadingTo: intermediateTemporaryFileURL)
             
         } catch let error {
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Could not copy file to disk: \(error.localizedDescription)")
