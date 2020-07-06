@@ -244,9 +244,9 @@ open class URLImageView: UIImageView, URLCachableView {
 
 extension URLImageView: CachableDownloadModelDelegate {
     
-    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, didFinishDownloadingTo localTemporaryFileURL: URL) {
+    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, didFinishDownloadingTo intermediateTemporaryFileURL: URL) {
         
-        prepareAndPossiblyCacheImage(from: localTemporaryFileURL)
+        prepareAndPossiblyCacheImage(from: intermediateTemporaryFileURL)
     }
     
     func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, downloadFailedWith error: Error) {
@@ -274,18 +274,18 @@ extension URLImageView: CachableDownloadModelDelegate {
     
     
     
-    private func prepareAndPossiblyCacheImage(from localTemporaryFileURL: URL) {
+    private func prepareAndPossiblyCacheImage(from intermediateTemporaryFileURL: URL) {
         var imageToDisplay: UIImage?
         let desiredImageSize = expectedImageSize ?? UIScreen.main.bounds.size
         
         switch cachePolicy {
         case .allow:
             
-            imageToDisplay = getCachedAndResized(localTemporaryFileURL: localTemporaryFileURL, desiredImageSize: desiredImageSize)
+            imageToDisplay = getCachedAndResized(localTemporaryFileURL: intermediateTemporaryFileURL, desiredImageSize: desiredImageSize)
         default:
-            imageToDisplay = getResizedImage(from: localTemporaryFileURL, desiredImageSize: desiredImageSize)
+            imageToDisplay = getResizedImage(from: intermediateTemporaryFileURL, desiredImageSize: desiredImageSize)
             DispatchQueue.global(qos: .background).async {
-                FileStorageManager.shared.deleteFileAt(intermediateTemporaryFileLocation: localTemporaryFileURL)
+                FileStorageManager.shared.deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
             }
         }
         
