@@ -281,7 +281,7 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
         
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - finished download for url: \(sourceURL)")
         activeDownloads[sourceURL] = nil
-      
+        
         moveToIntermediateTemporaryFile(originalTemporaryURL: location, download: download)
     }
     
@@ -295,7 +295,7 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
             download.downloadModel.delegate?.cachable(download, didFinishDownloadingTo: intermediateTemporaryFileURL)
             
         } catch let error {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Could not copy file to disk: \(error.localizedDescription)")
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Could not copy file to disk: \(error)")
             download.downloadModel.delegate?.cachable(download, downloadFailedWith: error)
         }
     }

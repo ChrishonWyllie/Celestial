@@ -21,16 +21,7 @@ class FileStorageDirectoryManager: NSObject {
     }
     
     fileprivate var temporaryDirectoryURL: URL {
-        
-        let pathComponent = "Celestial_Temporary_Directory"
-        let destinationURL = documentsDirectoryURL.appendingPathComponent(pathComponent)
-        let temporaryDirectoryURL =
-            try! FileManager.default.url(for: .itemReplacementDirectory,
-                                        in: .userDomainMask,
-                                        appropriateFor: destinationURL,
-                                        create: true)
-
-        return temporaryDirectoryURL
+        return FileManager.default.temporaryDirectory
     }
    
     fileprivate var celestialDirectoryURL: URL {
@@ -329,9 +320,11 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         let sourceURLDecomposition = decomposed(sourceURL: sourceURL)
         let actualFileName = sourceURLDecomposition.actualFileName
         let fileExtension = sourceURLDecomposition.fileExtension
-        let pathComponent = actualFileName + ".\(fileExtension)"
+        
         let intermediateTemporaryFileURL =
-            directoryManager.temporaryDirectoryURL.appendingPathComponent(pathComponent)
+            directoryManager.temporaryDirectoryURL
+                .appendingPathComponent(actualFileName)
+                .appendingPathExtension(fileExtension)
         
         return intermediateTemporaryFileURL
     }
@@ -341,7 +334,9 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
                                         intermediateTemporaryFileURL: URL,
                                         completion: @escaping (_ compressedVideoURL: URL?) -> ()) {
 
-        let sizeFormattedURL = constructFormattedURL(from: sourceURL, expectedDirectoryURL: directoryManager.videosDirectoryURL, size: resolution)
+        let sizeFormattedURL = constructFormattedURL(from: sourceURL,
+                                                     expectedDirectoryURL: directoryManager.videosDirectoryURL,
+                                                     size: resolution)
         
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - new size formatted url: \(sizeFormattedURL.path)")
         
@@ -385,8 +380,12 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
                     completion(outputURL)
                 case .failed:
                     DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - failed to export url: \(outputURL). Error: \(String(describing: exportSession.error))")
+                    completion(nil)
+                    
                 case .cancelled:
                     DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - export for url: \(outputURL) cancelled")
+                    completion(nil)
+                    
                 case .unknown: break
                 case .waiting: break
                 @unknown default:
@@ -407,7 +406,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
                 let status = asset.statusOfValue(forKey: key.rawValue, error: &error)
                 switch status {
                 case .failed:
-                    DebugLogger.shared.addDebugMessage("Asset for url: \(inputURL) failed to load value for key: \(key). Error: \(String(describing: error))")
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error loading asset for url: \(inputURL) failed to load value for key: \(key). Error: \(String(describing: error))")
                 case .loaded:
                     if asset.isExportable {
                         completion(asset)
@@ -419,17 +418,53 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         }
     }
     
-    private func exportLowerQualityVideo(fromAsset asset: AVURLAsset, to outputURL: URL, completion: @escaping (AVAssetExportSession?) -> ()) {
+    private func exportLowerQualityVideo(fromAsset asset: AVURLAsset,
+                                         to outputURL: URL,
+                                         completion: @escaping (AVAssetExportSession?) -> ()) {
         
-        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetMediumQuality) else {
+        guard asset.isExportable else {
             completion(nil)
             return
         }
         
         try? FileManager.default.removeItem(at: outputURL)
+
+        let composition = AVMutableComposition()
+        let compositionVideoTrack = composition.addMutableTrack(withMediaType: AVMediaType.video, preferredTrackID: CMPersistentTrackID(kCMPersistentTrackID_Invalid))
+        let compositionAudioTrack = composition.addMutableTrack(withMediaType: AVMediaType.audio, preferredTrackID: CMPersistentTrackID(kCMPersistentTrackID_Invalid))
+
+        guard
+            let sourceVideoTrack = asset.tracks(withMediaType: AVMediaType.video).first,
+            let sourceAudioTrack = asset.tracks(withMediaType: AVMediaType.audio).first
+            else {
+                completion(nil)
+                return
+        }
         
+        do {
+            try compositionVideoTrack?.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: asset.duration), of: sourceVideoTrack, at: CMTime.zero)
+            try compositionAudioTrack?.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: asset.duration), of: sourceAudioTrack, at: CMTime.zero)
+        } catch(_) {
+            completion(nil)
+            return
+        }
+
+        let compatiblePresets = AVAssetExportSession.exportPresets(compatibleWith: composition)
+        var preset: String = AVAssetExportPresetPassthrough
+        if compatiblePresets.contains(AVAssetExportPresetMediumQuality) { preset = AVAssetExportPresetMediumQuality }
+        
+        guard
+            let exportSession = AVAssetExportSession(asset: composition, presetName: preset),
+            exportSession.supportedFileTypes.contains(AVFileType.mp4) else {
+            completion(nil)
+            return
+        }
+
         exportSession.outputURL = outputURL
         exportSession.outputFileType = AVFileType.mp4
+        let startTime = CMTimeMake(value: 0, timescale: 1)
+        let timeRange = CMTimeRangeMake(start: startTime, duration: asset.duration)
+        exportSession.timeRange = timeRange
         exportSession.shouldOptimizeForNetworkUse = true
         exportSession.exportAsynchronously {
             completion(exportSession)
@@ -525,13 +560,15 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         switch fileType {
         case .video:   directoryURL = directoryManager.videosDirectoryURL
         case .image:   directoryURL = directoryManager.imagesDirectoryURL
-        default:        directoryURL = directoryManager.temporaryDirectoryURL
+        default:       directoryURL = directoryManager.temporaryDirectoryURL
         }
         
         let sourceURLDecomposition = decomposed(sourceURL: sourceURL)
         let actualFileName = sourceURLDecomposition.actualFileName
         
-        guard let directoryContents = try? FileManager.default.contentsOfDirectory(atPath: directoryURL.path) else {
+        guard
+            let directoryContents = try? FileManager.default.contentsOfDirectory(atPath: directoryURL.path)
+            else {
             return false
         }
         
