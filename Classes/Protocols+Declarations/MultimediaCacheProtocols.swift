@@ -67,7 +67,6 @@ internal protocol CelestialVideoCachingProtocol: class {
 
     - Parameters:
        - sourceURL: The url of the resource that has been requested
-       - resolution: The desired video resolution to downsize to
      
     - Usage:
     ```
@@ -79,7 +78,7 @@ internal protocol CelestialVideoCachingProtocol: class {
      
     - Returns: A URL pointing to the video in file system.
     */
-    func videoURL(for sourceURL: URL, resolution: CGSize) -> URL?
+    func videoURL(for sourceURL: URL) -> URL?
     
     
     
@@ -114,19 +113,19 @@ internal protocol CelestialVideoCachingProtocol: class {
     - Parameters:
        - videoURL: The url of the video to be cached. This video URL must not be an external url. It must already exist on file, such as in a temporary directory after a `URLSessionDownloadTask` completes
        - sourceURL: The url of the resource that has been requested
-       - resolution: The desired video resolution to downsize to
        - completion: Executes completion block with a URL pointing to a compressed video
      
     - Usage:
     ```
     let videoURL = <Your URL from recently finished download>
     let sourceURL = <Your URL from external server>
-    let resoluton = <Your desired resolution>
-    Celestial.shared.storeVideoURL(videoURL, with: sourceURL, resolution: resolution)
+    Celestial.shared.storeVideoURL(videoURL, with: sourceURL) { (cachedURL) in
+        ...
+    }
     ```
      
     */
-    func storeVideoURL(_ videoURL: URL, withSourceURL sourceURL: URL, resolution: CGSize, completion: @escaping (URL?) -> ())
+    func storeVideoURL(_ videoURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ())
     
     
     
