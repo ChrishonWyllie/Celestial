@@ -104,7 +104,19 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     
     internal static let shared = DownloadTaskManager()
     
-    private(set) var activeDownloads: [URL : DownloadTaskRequest] = [:]
+    var activeDownloads: [URL : DownloadTaskRequest] {
+        var downloads: [URL : DownloadTaskRequest]!
+        
+        concurrentQueue.sync {
+            downloads = self.threadUnsafeActiveDownloads
+        }
+        return downloads
+    }
+    
+    private var threadUnsafeActiveDownloads: [URL : DownloadTaskRequest] = [:]
+    
+    private let concurrentQueue = DispatchQueue(label: "com.chrishonwyllie.Celestial.downloadTaskQueue",
+                                                attributes: .concurrent)
     
     private(set) lazy var downloadsSession: URLSession = {
         let identifier = "com.chrishonwyllie.Celestial.backgroundSession"
@@ -141,7 +153,7 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
         }
         download.task?.cancel()
 
-        activeDownloads[url] = nil
+        threadUnsafeActiveDownloads[url] = nil
     }
     internal func cancelDownload(model: DownloadModelRepresentable) {
         cancelDownload(for: model.sourceURL)
@@ -200,7 +212,7 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     }
     
     private func beginFreshDownload(model: DownloadModelRepresentable) {
-        DebugLogger.shared.addDebugMessage("starting download for url: \(model.sourceURL)")
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - starting download for url: \(model.sourceURL)")
         // 1
         let download = DownloadTaskRequest(downloadModel: model)
         // 2
@@ -210,7 +222,7 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
         // 4
         download.downloadModel.update(downloadState: .downloading)
         // 5
-        activeDownloads[model.sourceURL] = download
+        threadUnsafeActiveDownloads[model.sourceURL] = download
     }
     
 }
@@ -274,13 +286,21 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
         guard let sourceURL = downloadTask.originalRequest?.url else {
             return
         }
-      
+        
+        guard let httpResponse = downloadTask.response as? HTTPURLResponse,
+            (200...299).contains(httpResponse.statusCode) else {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error after download task completion. Incorrect response code")
+            threadUnsafeActiveDownloads[sourceURL] = nil
+            return
+        }
+        
         guard let download = activeDownloads[sourceURL] else {
             return
         }
         
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - finished download for url: \(sourceURL)")
-        activeDownloads[sourceURL] = nil
+        
+        threadUnsafeActiveDownloads[sourceURL] = nil
         
         moveToIntermediateTemporaryFile(originalTemporaryURL: location, download: download)
     }
@@ -288,6 +308,8 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
     private func moveToIntermediateTemporaryFile(originalTemporaryURL: URL, download: DownloadTaskRequest) {
         do {
             let intermediateTemporaryFileURL = try FileStorageManager.shared.moveToIntermediateTemporaryURL(originalTemporaryURL: originalTemporaryURL, sourceURL: download.downloadModel.sourceURL)
+            
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Moved to intermediate temporary file url: \(intermediateTemporaryFileURL)")
             
             download.downloadModel.update(downloadState: .finished)
             
