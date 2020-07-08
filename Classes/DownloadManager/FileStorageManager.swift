@@ -342,12 +342,13 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     internal func decreaseVideoQuality(sourceURL: URL, inputURL: URL, completion: @escaping (URL?) -> ()) {
         
-        let uncompressedVideoData = try! Data(contentsOf: inputURL)
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - File size before compression: \(uncompressedVideoData.sizeInMB)")
+        if let uncompressedVideoData = try? Data(contentsOf: inputURL) {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - File size before compression: \(uncompressedVideoData.sizeInMB)")
+        }
         
         let assetKeys: [URLVideoPlayerView.LoadableAssetKeys] = [.tracks, .exportable]
         DispatchQueue.global(qos: .background).async {
-            AVURLAsset.prepareUsableAsset(withAssetKeys: assetKeys, inputURL: sourceURL) { [weak self] (exportableAsset, error) in
+            AVURLAsset.prepareUsableAsset(withAssetKeys: assetKeys, inputURL: inputURL) { [weak self] (exportableAsset, error) in
                 guard let strongSelf = self else { return }
                 if let error = error {
                     fatalError("Error loading video from url: \(sourceURL). Error: \(String(describing: error))")
