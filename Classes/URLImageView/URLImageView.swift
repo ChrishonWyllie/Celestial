@@ -176,7 +176,6 @@ open class URLImageView: UIImageView, URLCachableView {
                 }
             }
             
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of :self))) - starting new download to cache. URL: \(sourceURL)")
             DownloadTaskManager.shared.startDownload(model: downloadModel)
         }
     }

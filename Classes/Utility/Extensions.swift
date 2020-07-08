@@ -197,6 +197,34 @@ extension AVURLAsset {
         return CGSize(width: abs(size.width), height: abs(size.height))
     }
     
+    static func prepareUsableAsset(withAssetKeys assetKeys: [URLVideoPlayerView.LoadableAssetKeys],
+                                   inputURL: URL,
+                                   completion: @escaping (AVURLAsset, Error?) -> ()) {
+        
+        let asset = AVURLAsset(url: inputURL)
+        let assetKeyValues = assetKeys.map { $0.rawValue }
+        
+        var numLoadedKeys: Int = 0
+        
+        asset.loadValuesAsynchronously(forKeys: assetKeyValues) {
+            for key in assetKeys {
+                var error: NSError? = nil
+                let status = asset.statusOfValue(forKey: key.rawValue, error: &error)
+                switch status {
+                case .failed:
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error loading asset for url: \(inputURL) failed to load value for key: \(key). Error: \(String(describing: error))")
+                    completion(asset, error)
+                case .loaded:
+                    numLoadedKeys += 1
+                    if numLoadedKeys == assetKeys.count {
+                        completion(asset, nil)
+                    }
+                default:
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - asset status: \(status)")
+                }
+            }
+        }
+    }
 }
 
 extension AVPlayerItem {

@@ -138,9 +138,7 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                 return
             }
             
-            let desiredResolution: CGSize = .zero
-            
-            prepareAndPossiblyCacheVideo(at: temporaryUncachedFileURL, desiredResolution: desiredResolution)
+            prepareAndPossiblyCacheVideo(at: temporaryUncachedFileURL)
             
         case .cached:
             
@@ -159,14 +157,17 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
             // Async load the video regardless of whether it has been cached,
             // due to the creation of AVURLAsset blocking main thread
             
-            asyncSetupPlayableAsset(from: sourceURL) { [weak self] (playableAsset, error) in
-                guard let strongSelf = self else { return }
-                if let error = error {
-                    fatalError("Error loading video from url: \(sourceURL). Error: \(String(describing: error))")
-                }
-                let playerItem = AVPlayerItem(asset: playableAsset)
-                DispatchQueue.main.async {
-                    strongSelf.setupPlayer(with: playerItem)
+            let assetKeys: [LoadableAssetKeys] = [.playable, .duration]
+            DispatchQueue.global(qos: .userInitiated).async {
+                AVURLAsset.prepareUsableAsset(withAssetKeys: assetKeys, inputURL: sourceURL) { [weak self] (playableAsset, error) in
+                    guard let strongSelf = self else { return }
+                    if let error = error {
+                        fatalError("Error loading video from url: \(sourceURL). Error: \(String(describing: error))")
+                    }
+                    let playerItem = AVPlayerItem(asset: playableAsset)
+                    DispatchQueue.main.async {
+                        strongSelf.setupPlayer(with: playerItem)
+                    }
                 }
             }
                         
@@ -186,28 +187,19 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                     }
                 }
                 
-                DebugLogger.shared.addDebugMessage("\(String(describing: type(of :self))) - starting new download to cache. URL: \(sourceURL)")
-                
                 DownloadTaskManager.shared.startDownload(model: downloadModel)
             }
         }
-        
-//        let videoResolution = playerItem.resolution!
-//        let videoAspectRatio = playerItem.aspectRatio!
-//        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - player item video resolution: \(videoResolution) and aspect ratio: \(videoAspectRatio)")
-        
     }
     
     private func setupPlayerIfVideoHasBeenCached(from sourceURL: URL) {
         
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - getting video from cache")
         
-        let resolution: CGSize = .zero
-        
         switch cacheLocation {
         case .inMemory:
             
-            DispatchQueue.global(qos: .default).async { [weak self] in
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 guard let strongSelf = self else { return }
                 guard let memoryCachedVideoData = Celestial.shared.videoData(for: sourceURL.absoluteString) else {
                     return
@@ -224,46 +216,25 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
             
         case .fileSystem:
             
-            guard let cachedVideoURL = Celestial.shared.videoURL(for: sourceURL, resolution: resolution) else {
+            guard let cachedVideoURL = Celestial.shared.videoURL(for: sourceURL) else {
                 return
             }
             
-            asyncSetupPlayableAsset(from: cachedVideoURL) { [weak self] (playableAsset, error) in
-                guard let strongSelf = self else { return }
-                if let error = error {
-                    fatalError("Error loading video from url: \(cachedVideoURL). - Error: \(String(describing: error))")
-                }
-                let playerItem = AVPlayerItem(asset: playableAsset)
-                DispatchQueue.main.async {
-                    strongSelf.setupPlayer(with: playerItem)
-                }
-            }
-        }
-    }
-    
-    private func asyncSetupPlayableAsset(from videoURL: URL, completion: @escaping (AVURLAsset, Error?) -> ()) {
-        let asset = AVURLAsset(url: videoURL)
+            DispatchQueue.global(qos: .userInitiated).async {
+                
+                do {
+                    let cachedVideoData = try Data(contentsOf: cachedVideoURL)
                     
-        DispatchQueue.global(qos: .userInitiated).async {
-            let assetKeys: [LoadableAssetKeys] = [.playable, .duration]
-            let assetKeyValues = assetKeys.map { $0.rawValue }
-            asset.loadValuesAsynchronously(forKeys: assetKeyValues) {
-                for key in assetKeys {
-                    var error: NSError? = nil
-                    let status = asset.statusOfValue(forKey: key.rawValue, error: &error)
-                    switch status {
-                    case .failed:
-                        DebugLogger.shared.addDebugMessage("Asyncsetup failed to load assetKey: \(key) for url: \(videoURL)")
-                        completion(asset, error)
-                        break
-                    case .loaded:
-                        if asset.isPlayable {
-                            print("Asyncsetup is ready to play video for url: \(videoURL)")
-                            completion(asset, error)
-                        }
-                    default:
-                        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - asset status: \(status)")
+                    let playerItem = DataLoadablePlayerItem(data: cachedVideoData,
+                                                            mimeType: cachedVideoURL.mimeType(),
+                                                            fileExtension: cachedVideoURL.pathExtension)
+                    
+                    DispatchQueue.main.async {
+                        self.setupPlayer(with: playerItem)
                     }
+                    
+                } catch let error {
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting video data from url: \(sourceURL). Error: \(error)")
                 }
             }
         }
@@ -312,9 +283,7 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
     
     func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, didFinishDownloadingTo intermediateTemporaryFileURL: URL) {
         
-        let desiredResolution: CGSize = .zero
-        
-        prepareAndPossiblyCacheVideo(at: intermediateTemporaryFileURL, desiredResolution: desiredResolution)
+        prepareAndPossiblyCacheVideo(at: intermediateTemporaryFileURL)
     }
     
     func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, downloadFailedWith error: Error) {
@@ -343,12 +312,11 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
     
     
     
-    private func prepareAndPossiblyCacheVideo(at intermediateTemporaryFileURL: URL, desiredResolution: CGSize) {
+    private func prepareAndPossiblyCacheVideo(at intermediateTemporaryFileURL: URL) {
         switch cachePolicy {
         case .allow:
             
-            getCachedAndResizedVideo(intermediateTemporaryFileURL: intermediateTemporaryFileURL,
-                                     desiredResolution: desiredResolution) { [weak self] (compressedVideoURL) in
+            getCachedAndResizedVideo(intermediateTemporaryFileURL: intermediateTemporaryFileURL) { [weak self] (compressedVideoURL) in
                 
                 guard let strongSelf = self else {
                     return
@@ -382,7 +350,6 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
     }
     
     private func getCachedAndResizedVideo(intermediateTemporaryFileURL: URL,
-                                          desiredResolution: CGSize,
                                           completion: @escaping (_ compressedCachedURL: URL?) -> ()) {
         
         guard let sourceURL = sourceURL else {
@@ -394,8 +361,7 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
         case .inMemory:
            
             FileStorageManager.shared.decreaseVideoQuality(sourceURL: sourceURL,
-                                                           inputURL: intermediateTemporaryFileURL,
-                                                           outputURL: intermediateTemporaryFileURL) { (compressedVideoURL) in
+                                                           inputURL: intermediateTemporaryFileURL) { (compressedVideoURL) in
                 
                 guard let compressedVideoURL = compressedVideoURL else {
                     completion(nil)
@@ -425,7 +391,6 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
            
             Celestial.shared.storeVideoURL(intermediateTemporaryFileURL,
                                            withSourceURL: sourceURL,
-                                           resolution: desiredResolution,
                                            completion: completion)
         }
     }

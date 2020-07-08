@@ -74,7 +74,7 @@ internal protocol FileStorageMangerProtocol {
     @discardableResult func deleteFileAt(intermediateTemporaryFileLocation location: URL) -> Bool
     
     /**
-     Deletes the video that was created from the source URL. Will delete all copies of the video, including ones at different resolutions
+     Deletes the video that was created from the source URL. Will delete all copies of the video
 
     - Parameters:
        - sourceURL: The source URL of the video
@@ -116,19 +116,18 @@ internal protocol FileStorageMangerProtocol {
     func moveToIntermediateTemporaryURL(originalTemporaryURL: URL, sourceURL: URL) throws -> URL
     
     /**
-     Resizes the video with a given resolution and caches it
+     Resizes the video
 
     - Parameters:
        - sourceURL: The url of the resource that has been requested
-       - resolution: The resolution to downsize the video to
        - intermediateTemporaryFileURL: The intermediate file url that the downloaded resource has been moved to after the `URLSessionDownloadTask` has completed
        - completion: Executes completion block with a URL pointing to a compressed video
     
     */
-    func cachedAndResizedVideo(sourceURL: URL, resolution: CGSize, intermediateTemporaryFileURL: URL, completion: @escaping (_ compressedVideoURL: URL?) -> ())
+    func cachedAndResizedVideo(sourceURL: URL, intermediateTemporaryFileURL: URL, completion: @escaping (_ compressedVideoURL: URL?) -> ())
     
     /**
-     Resizes the image with a given resolution and caches it
+     Resizes the image with a given point size and caches it
 
     - Parameters:
        - sourceURL: The url of the resource that has been requested
@@ -145,12 +144,11 @@ internal protocol FileStorageMangerProtocol {
 
     - Parameters:
        - sourceURL: The url of the resource that has been requested
-       - resolution: The desired resolution of the video. Used to cache multiple sizes of the same video in order to maintain quality when displaying in different AVPlayerLayer sizes
      
     - Returns:
        - A url of the cached resource
     */
-    func getCachedVideoURL(for sourceURL: URL, resolution: CGSize) -> URL?
+    func getCachedVideoURL(for sourceURL: URL) -> URL?
     
     /**
      Returns a url for the cached resource
@@ -222,7 +220,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     // MARK: - Functions
     
     @discardableResult internal func deleteFileAt(intermediateTemporaryFileLocation location: URL) -> Bool {
-        return deleteFile(forCompleteFilePath: location)
+        return deleteFile(forCompleteFilePath: location.path)
     }
     
     @discardableResult internal func deleteCachedVideo(using sourceURL: URL) -> Bool {
@@ -260,10 +258,10 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         }
     }
     
-    @discardableResult private func deleteFile(forCompleteFilePath filePath: URL) -> Bool {
+    @discardableResult private func deleteFile(forCompleteFilePath filePath: String) -> Bool {
         do {
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Attempting to delete file for path: \(filePath)")
-            try FileManager.default.removeItem(at: filePath)
+            try FileManager.default.removeItem(atPath: filePath)
             return true
         } catch let error {
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error deleting file for path: \(filePath).\n Error: \(error)")
@@ -284,7 +282,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     private func deleteItemsInDirectory(for directoryURL: URL) {
         do {
-            getInfoForDirectory(at: directoryURL)
+            _ = getInfoForDirectory(at: directoryURL)
             
             guard let directoryContents = try? FileManager.default.contentsOfDirectory(atPath: directoryURL.path) else {
                 return
@@ -312,7 +310,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     internal func moveToIntermediateTemporaryURL(originalTemporaryURL: URL, sourceURL: URL) throws -> URL {
         let intermediateTemporaryFileURL = createTemporaryFileURL(from: sourceURL)
-        try FileManager.default.copyItem(at: originalTemporaryURL, to: intermediateTemporaryFileURL)
+        try FileManager.default.moveItem(at: originalTemporaryURL, to: intermediateTemporaryFileURL)
         return intermediateTemporaryFileURL
     }
     
@@ -330,17 +328,10 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     }
     
     internal func cachedAndResizedVideo(sourceURL: URL,
-                                        resolution: CGSize,
                                         intermediateTemporaryFileURL: URL,
                                         completion: @escaping (_ compressedVideoURL: URL?) -> ()) {
 
-        let sizeFormattedURL = constructFormattedURL(from: sourceURL,
-                                                     expectedDirectoryURL: directoryManager.videosDirectoryURL,
-                                                     size: resolution)
-        
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - new size formatted url: \(sizeFormattedURL.path)")
-        
-        decreaseVideoQuality(sourceURL: sourceURL, inputURL: intermediateTemporaryFileURL, outputURL: sizeFormattedURL) { (sizeFormattedCompressedURL) in
+        decreaseVideoQuality(sourceURL: sourceURL, inputURL: intermediateTemporaryFileURL) { (sizeFormattedCompressedURL) in
             
             // Finally delete the local intermediate file
             self.deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
@@ -349,70 +340,54 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         }
     }
     
-    internal func decreaseVideoQuality(sourceURL: URL, inputURL: URL, outputURL: URL, completion: @escaping (URL?) -> ()) {
+    internal func decreaseVideoQuality(sourceURL: URL, inputURL: URL, completion: @escaping (URL?) -> ()) {
         
         let uncompressedVideoData = try! Data(contentsOf: inputURL)
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - File size before compression: \(uncompressedVideoData.sizeInMB)")
         
-        
-        asyncSetupExportableAsset(with: inputURL) { [weak self] (exportableAsset) in
-            guard let strongSelf = self else {
-                return
-            }
-            
-            strongSelf.exportLowerQualityVideo(fromAsset: exportableAsset, to: outputURL) { (exportSession) in
-                guard let exportSession = exportSession else {
-                    return
+        let assetKeys: [URLVideoPlayerView.LoadableAssetKeys] = [.tracks, .exportable]
+        DispatchQueue.global(qos: .background).async {
+            AVURLAsset.prepareUsableAsset(withAssetKeys: assetKeys, inputURL: sourceURL) { [weak self] (exportableAsset, error) in
+                guard let strongSelf = self else { return }
+                if let error = error {
+                    fatalError("Error loading video from url: \(sourceURL). Error: \(String(describing: error))")
                 }
                 
-                switch exportSession.status {
-                case .exporting:
-                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Exporting video for url: \(outputURL). Progress: \(exportSession.progress)")
-                    
-                case .completed:
-                    if let compressedVideoData = try? Data(contentsOf: outputURL) {
-                        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - File size after compression: \(compressedVideoData.sizeInMB)")
-                    } else {
-                        let fileExists = strongSelf.videoExists(for: sourceURL)
-                        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Finished compressing, but no such file exists at output url: \(outputURL). File exists: \(fileExists)")
+                let outputURL = strongSelf.constructFormattedURL(from: sourceURL,
+                                                                 expectedDirectoryURL: strongSelf.directoryManager.videosDirectoryURL,
+                                                                 size: nil)
+                
+                strongSelf.exportLowerQualityVideo(fromAsset: exportableAsset, to: outputURL) { (exportSession) in
+                    guard let exportSession = exportSession else {
+                        return
                     }
                     
-                    completion(outputURL)
-                case .failed:
-                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - failed to export url: \(outputURL). Error: \(String(describing: exportSession.error))")
-                    completion(nil)
-                    
-                case .cancelled:
-                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - export for url: \(outputURL) cancelled")
-                    completion(nil)
-                    
-                case .unknown: break
-                case .waiting: break
-                @unknown default:
-                    fatalError()
-                }
-            }
-        }
-    }
-    
-    private func asyncSetupExportableAsset(with inputURL: URL, completion: @escaping (AVURLAsset) -> ()) {
-        let asset = AVURLAsset(url: inputURL)
-        let assetKeys: [URLVideoPlayerView.LoadableAssetKeys] = [.exportable, .tracks]
-        let assetKeyValues = assetKeys.map { $0.rawValue }
-        
-        asset.loadValuesAsynchronously(forKeys: assetKeyValues) {
-            for key in assetKeys {
-                var error: NSError? = nil
-                let status = asset.statusOfValue(forKey: key.rawValue, error: &error)
-                switch status {
-                case .failed:
-                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error loading asset for url: \(inputURL) failed to load value for key: \(key). Error: \(String(describing: error))")
-                case .loaded:
-                    if asset.isExportable {
-                        completion(asset)
+                    switch exportSession.status {
+                    case .exporting:
+                        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Exporting video for url: \(outputURL). Progress: \(exportSession.progress)")
+                        
+                    case .completed:
+                        if let compressedVideoData = try? Data(contentsOf: outputURL) {
+                            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - File size after compression: \(compressedVideoData.sizeInMB)")
+                        } else {
+                            let fileExists = strongSelf.videoExists(for: sourceURL)
+                            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Finished compressing, but no such file exists at output url: \(outputURL). File exists: \(fileExists)")
+                        }
+                        
+                        completion(outputURL)
+                    case .failed:
+                        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - failed to export url: \(outputURL). Error: \(String(describing: exportSession.error))")
+                        completion(nil)
+                        
+                    case .cancelled:
+                        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - export for url: \(outputURL) cancelled")
+                        completion(nil)
+                        
+                    case .unknown: break
+                    case .waiting: break
+                    @unknown default:
+                        fatalError()
                     }
-                default:
-                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - asset status: \(status)")
                 }
             }
         }
@@ -513,10 +488,10 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         return cachedAndResizedImage
     }
     
-    internal func getCachedVideoURL(for sourceURL: URL, resolution: CGSize) -> URL? {
+    internal func getCachedVideoURL(for sourceURL: URL) -> URL? {
         let downloadedFileURL = constructFormattedURL(from: sourceURL,
                                                       expectedDirectoryURL: directoryManager.videosDirectoryURL,
-                                                      size: resolution)
+                                                      size: nil)
 
         return ((try? downloadedFileURL.checkResourceIsReachable()) ?? false) ? downloadedFileURL : nil
     }
@@ -584,22 +559,22 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         return fileExists
     }
     
-    internal func constructFormattedURL(from sourceURL: URL, expectedDirectoryURL: URL, size: CGSize) -> URL {
-        
-        // TODO
-        // Determine resolution for video
-//        guard size != .zero else {
-//            fatalError("Invalid size. Image or video size cannot be zero: \(size)")
-//        }
+    internal func constructFormattedURL(from sourceURL: URL, expectedDirectoryURL: URL, size: CGSize?) -> URL {
         
         // size: CGSize(width: 327.0, height: 246.0)
         // image name 1: URL: https://picsum.photos/id/0/5616/3744 -> becomes -> 3744-size-327.0-246.0 (no extension)
-        // image name 2: URL: https://server/url/to/your/image.png -> becomes -> image-size-327.0-246.0.png
-        let sizePathComponent: String = "-size-\(size.width)-\(size.height)"
-        
+        // image name 2: URL: https://server/url/to/your/image.png -> becomes -> image-size-327-0-246-0.png
         let sourceURLDecomposition = decomposed(sourceURL: sourceURL)
         
-        var formattedFileName = sourceURLDecomposition.actualFileName + sizePathComponent
+        var formattedFileName = sourceURLDecomposition.actualFileName
+        
+        if let size = size {
+            let width = String(describing: size.width).replacingOccurrences(of: ".", with: "-")
+            let height = String(describing: size.height).replacingOccurrences(of: ".", with: "-")
+            let sizePathComponent: String = "-size-\(width)-\(height)"
+            
+            formattedFileName += sizePathComponent
+        }
         
         if sourceURLDecomposition.fileExtension.count > 0 {
             formattedFileName += ".\(sourceURLDecomposition.fileExtension)"
@@ -611,39 +586,68 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     private func decomposed(sourceURL: URL) -> SourceURLDecomposition {
         // https://whatever.com/someimage.png -> someimage
-        let actualFileName = sourceURL.deletingPathExtension().lastPathComponent.lowercased()
+        let actualFileName = sourceURL.deletingPathExtension().lastPathComponent
         // https://whatever.com/someimage.png -> png
-        let fileExtension = sourceURL.pathExtension.lowercased()
+        let fileExtension = sourceURL.pathExtension
         
         return SourceURLDecomposition(actualFileName: actualFileName, fileExtension: fileExtension)
     }
     
-    private func getInfoForDirectory(at directoryURL: URL) {
+    private func getInfoForDirectory(at directoryURL: URL) -> [StoredFile] {
+        
+        var info: [StoredFile] = []
+        
         guard let directoryContents = try? FileManager.default.contentsOfDirectory(atPath: directoryURL.path) else {
-            return
+            return []
         }
         
         let folderSize = FileManager.default.sizeOfFolder(at: directoryURL.path)
         let formattedFolderSize = FileManager.default.format(size: folderSize)
         
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Number of items in directory: \(String(describing: directoryContents.count)). Folder size: \(formattedFolderSize)")
+        DebugLogger.shared.addDebugMessage("\n\(String(describing: type(of: self))) - Number of items in directory: \(String(describing: directoryContents.count)). Folder size: \(formattedFolderSize)")
         
         do {
             for fileName in directoryContents {
                 let fileURL = directoryURL.appendingPathComponent(fileName)
 
-                let fileAttribute = try FileManager.default.attributesOfItem(atPath: fileURL.path)
-                let fileSize = fileAttribute[FileAttributeKey.size] as? Int64 ?? 0
-                let formattedFileSize = FileManager.default.format(size: fileSize)
-                let fileType = fileAttribute[FileAttributeKey.type] as? String
-                let filecreationDate = fileAttribute[FileAttributeKey.creationDate] as? Date
-                let fileExtension = fileURL.pathExtension
-
-                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - file Name: \(fileName), Size: \(formattedFileSize), Type: \(String(describing: fileType)), Date: \(String(describing: filecreationDate)), Extension: \(fileExtension)")
+                let fileAttributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+                let fileInfo = StoredFile(fileAttributes: fileAttributes, fileURL: fileURL)
+                info.append(fileInfo)
             }
         } catch let error {
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting attributes of item in directory: \(directoryURL.path). Error: \(error)")
         }
         
+        return info
+    }
+    
+    internal func getCacheInfo() -> [StoredFile] {
+        return getInfoForDirectory(at: directoryManager.videosDirectoryURL) +
+            getInfoForDirectory(at: directoryManager.imagesDirectoryURL)
+        
+    }
+}
+
+internal struct StoredFile: CustomStringConvertible {
+    let fileAttributes: [FileAttributeKey: Any]
+    let fileSize: Int64
+    let formattedFileSize: String
+    let fileType: String
+    let filecreationDate: Date?
+    let fileURL: URL
+    
+    var description: String {
+        let printableString = "File URL: \(fileURL) \n File size: \(fileSize) \n Formatted file size: \(formattedFileSize) \n File type: \(fileType) \n File creation date: \(String(describing: filecreationDate))"
+        return printableString
+    }
+    
+    init(fileAttributes: [FileAttributeKey: Any], fileURL: URL) {
+        self.fileAttributes = fileAttributes
+        self.fileURL = fileURL
+        
+        fileSize = fileAttributes[FileAttributeKey.size] as? Int64 ?? 0
+        formattedFileSize = FileManager.default.format(size: fileSize)
+        fileType = fileAttributes[FileAttributeKey.type] as? String ?? ""
+        filecreationDate = fileAttributes[FileAttributeKey.creationDate] as? Date
     }
 }
