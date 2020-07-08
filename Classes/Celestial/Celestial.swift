@@ -46,16 +46,16 @@ extension Celestial: CelestialVideoCachingProtocol {
         return VideoCache.shared.item(for: sourceURLString)
     }
    
-    public func videoURL(for sourceURL: URL, resolution: CGSize) -> URL? {
-        return FileStorageManager.shared.getCachedVideoURL(for: sourceURL, resolution: resolution)
+    public func videoURL(for sourceURL: URL) -> URL? {
+        return FileStorageManager.shared.getCachedVideoURL(for: sourceURL)
     }
 
     public func store(videoData: MemoryCachedVideoData?, with sourceURLString: String) {
         VideoCache.shared.store(videoData, with: sourceURLString)
     }
    
-    public func storeVideoURL(_ videoURL: URL, withSourceURL sourceURL: URL, resolution: CGSize, completion: @escaping (URL?) -> ()) {
-        FileStorageManager.shared.cachedAndResizedVideo(sourceURL: sourceURL, resolution: resolution, intermediateTemporaryFileURL: videoURL, completion: completion)
+    public func storeVideoURL(_ videoURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ()) {
+        FileStorageManager.shared.cachedAndResizedVideo(sourceURL: sourceURL, intermediateTemporaryFileURL: videoURL, completion: completion)
     }
    
     public func removeVideoData(using sourceURLString: String) {
@@ -258,5 +258,9 @@ extension Celestial: CelestialUtilityProtocol {
     public func reset() {
         clearAllImages()
         clearAllVideos()
+    }
+    
+    public func getCacheInfo() -> [String] {
+        return FileStorageManager.shared.getCacheInfo().map { "\n\($0)" }
     }
 }
