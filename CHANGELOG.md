@@ -1,3 +1,18 @@
+## [Version 0.7.35](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.7.35) 
+### New
+* Downgraded minimum target from iOS 13 to iOS 11
+* Added support for pre-downloading, pausing and resuming tasks. To be used with Prefetching APIs
+
+### Improvements
+* Added resource existence state check which allows for checking various states of a resource such as currently downloading, finished but uncached, cached etc. This expansion of states allows for more flexibility when handing downloading resources in UIScrollViews
+* Exposure of pre-downloads allows for Prefetching APIs to begin downloads before UIScrollView cells appear on screen. Contributes to less time waiting for download
+* Moved AVURLAsset.loadKeys to extension to avoid duplicated code
+* Removed video resolution from file names as it serves little purpose. Cleaner code
+* Used Concurrent queue to initiate downloads. 
+
+### Bug fixes
+* Use of concurrent queue to access current downloads fixes possible reader-writers crash when accessing the dictionary
+
 ## [Version 0.7.0](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.7.0) 
 ### New
 * Added caching videos
