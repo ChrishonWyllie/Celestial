@@ -34,6 +34,13 @@ class ExampleCell: UICollectionViewCell {
         return v
     }()
     
+    fileprivate var titleLabel: UILabel = {
+        let lbl = UILabel()
+        lbl.translatesAutoresizingMaskIntoConstraints = false
+        lbl.numberOfLines = 0
+        return lbl
+    }()
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUIElements()
@@ -43,12 +50,14 @@ class ExampleCell: UICollectionViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
-    open func configureCell(someCellModel: ExampleCellModel) {}
+    open func configureCell(someCellModel: ExampleCellModel) {
+        titleLabel.text = someCellModel.urlString
+    }
     
     open func setupUIElements() {
         addSubview(containerView)
         
-        [progressLabel, progressView].forEach { (subview) in
+        [titleLabel, progressLabel, progressView].forEach { (subview) in
             containerView.addSubview(subview)
         }
         
@@ -60,6 +69,10 @@ class ExampleCell: UICollectionViewCell {
         containerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: padding).isActive = true
         containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -padding).isActive = true
         containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -padding).isActive = true
+        
+        titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: padding).isActive = true
+        titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -padding).isActive = true
+        titleLabel.bottomAnchor.constraint(equalTo: progressLabel.topAnchor, constant: -padding).isActive = true
         
         progressLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: padding).isActive = true
         progressLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -padding).isActive = true
@@ -133,7 +146,7 @@ class VideoCell: ExampleCell {
         playerView.leadingAnchor.constraint(equalTo: super.containerView.leadingAnchor, constant: padding).isActive = true
         playerView.topAnchor.constraint(equalTo: super.containerView.topAnchor, constant: padding).isActive = true
         playerView.trailingAnchor.constraint(equalTo: super.containerView.trailingAnchor, constant: -padding).isActive = true
-        playerView.bottomAnchor.constraint(equalTo: super.progressLabel.topAnchor, constant: -padding).isActive = true
+        playerView.bottomAnchor.constraint(equalTo: super.titleLabel.topAnchor, constant: -padding).isActive = true
         
     }
     
@@ -143,6 +156,7 @@ class VideoCell: ExampleCell {
     // This function is called during the cell dequeue process and will load the image
     // using the `CellModel` struct. However, this would be replaced with your method.
     public override func configureCell(someCellModel: ExampleCellModel) {
+        super.configureCell(someCellModel: someCellModel)
         print("------------------\nstarting new video\n------------------")
         let urlString = someCellModel.urlString
         playerView.loadVideoFrom(urlString: urlString)
@@ -257,12 +271,13 @@ class ImageCell: ExampleCell {
         imageView.leadingAnchor.constraint(equalTo: super.containerView.leadingAnchor, constant: padding).isActive = true
         imageView.topAnchor.constraint(equalTo: super.containerView.topAnchor, constant: padding).isActive = true
         imageView.trailingAnchor.constraint(equalTo: super.containerView.trailingAnchor, constant: -padding).isActive = true
-        imageView.bottomAnchor.constraint(equalTo: super.progressLabel.topAnchor, constant: -padding).isActive = true
+        imageView.bottomAnchor.constraint(equalTo: super.titleLabel.topAnchor, constant: -padding).isActive = true
     }
     
     // This function is called during the cell dequeue process and will load the image
     // using the `CellModel` struct. However, this would be replaced with your method.
     public override func configureCell(someCellModel: ExampleCellModel) {
+        super.configureCell(someCellModel: someCellModel)
 //        imageView.loadImageFrom(urlString: someCellModel.urlString)
         
         imageView.loadImageFrom(urlString: someCellModel.urlString, progressHandler: { (progress) in

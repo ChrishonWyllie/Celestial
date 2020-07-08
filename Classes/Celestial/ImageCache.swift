@@ -7,7 +7,7 @@
 
 import UIKit
 
-internal final class ImageCache: NSObject, CacheManagerProtocol {
+internal final class ImageCache: NSObject, MemoryCacheManagerProtocol {
 
     // MARK: - Variables
     
@@ -16,7 +16,7 @@ internal final class ImageCache: NSObject, CacheManagerProtocol {
     // 1st level cache, that contains encoded images
     private(set) lazy var encodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
-        cache.name = "Encoded items cache"
+        cache.name = "Encoded images cache"
         cache.countLimit = config.countLimit
         cache.delegate = self
         return cache
@@ -25,7 +25,7 @@ internal final class ImageCache: NSObject, CacheManagerProtocol {
     // 2nd level cache, that contains decoded images
     private(set) lazy var decodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
-        cache.name = "Decoded items cache"
+        cache.name = "Decoded images cache"
         cache.totalCostLimit = config.memoryLimit
         cache.delegate = self
         return cache

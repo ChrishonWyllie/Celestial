@@ -17,9 +17,9 @@ internal protocol CachableDownloadModelDelegate: class {
 
     - Parameters:
        - downloadTaskRequest: The DownloadTaskRequest object that finished the download. Note, this object has been invalidated after completion.
-       - localTemporaryFileURL: The temporary url pointing to the downloaded resource
+       - intermediateTemporaryFileURL: The temporary url pointing to the downloaded resource after it is moved to a retrievable URL
     */
-    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, didFinishDownloadingTo localTemporaryFileURL: URL)
+    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, didFinishDownloadingTo intermediateTemporaryFileURL: URL)
     
     /**
      Notifies receiver that the download has failed.
@@ -42,7 +42,7 @@ internal protocol CachableDownloadModelDelegate: class {
 }
 
 /// Represents current state of a download of a resource from an external URL
-internal enum DownloadTaskState {
+public enum DownloadTaskState {
     /// First state of a download before it begins
     case none
     /// Download has been temporarily paused. May be resumed

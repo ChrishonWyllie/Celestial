@@ -16,14 +16,10 @@ import UIKit.UIImage
     case notAllowed
 }
 
+// MARK: - CelestialVideoCachingProtocol
 
-// MARK: - CelestialCacheProtocol
-
-/// Specification for the functions that the Celestial cache manager must follow
-/// Examples include basic CRUD functions
-internal protocol CelestialCacheProtocol: class {
-    
-    // Video
+/// Forces conformance for implementing functions related to video caching
+internal protocol CelestialVideoCachingProtocol: class {
     
     /**
      Returns a boolean value of whether a video exists
@@ -46,13 +42,15 @@ internal protocol CelestialCacheProtocol: class {
      Returns information for cached video data in memory
 
     - Parameters:
-       - sourceURLString: The `URL.absoluteString` of the resource that has been requested
+       - sourceURLString: The url of the resource that has been requested
      
     - Usage:
-        let urlString = <Your URL.absoluteString>
-        guard let originalVideoData = Celestial.shared.videoData(for: urlString) else {
-            return
-        }
+    ```
+    let urlString = <Your URL.absoluteString>
+    guard let originalVideoData = Celestial.shared.videoData(for: urlString) else {
+        return
+    }
+    ```
      
     - Returns: An `MemoryCachedVideoData ` object at the specified urlString, which contains the data of the video file, the mime type and file extension of the original URL.
     */
@@ -69,17 +67,18 @@ internal protocol CelestialCacheProtocol: class {
 
     - Parameters:
        - sourceURL: The url of the resource that has been requested
-       - resolution: The desired video resolution to downsize to
      
     - Usage:
-        let sourceURL = <Your URL>
-        guard let originalVideoData = Celestial.shared.videoURL(for: sourceURL) else {
-            return
-        }
+    ```
+    let sourceURL = <Your URL>
+    guard let originalVideoData = Celestial.shared.videoURL(for: sourceURL) else {
+        return
+    }
+    ```
      
     - Returns: A URL pointing to the video in file system.
     */
-    func videoURL(for sourceURL: URL, resolution: CGSize) -> URL?
+    func videoURL(for sourceURL: URL) -> URL?
     
     
     
@@ -92,12 +91,15 @@ internal protocol CelestialCacheProtocol: class {
 
     - Parameters:
        - videoData: The `MemoryCachedVideoData` object which contains the Data of the video, the mime type and file extension of the original URL . This is necessary for rebuilding the video after caching.
-       - sourceURLString: The `URL.absoluteString` of the resource that has been requested
+       - sourceURLString: The url of the resource that has been requested
      
     - Usage:
-        let url = <Your URL.absoluteString>
-        let originalVideoData(videoData: <your value>, mimeType: <Your URL.mimeType()>, fileExtension: <Your URL.pathExtension>)
-        Celestial.shared.store(video: originalVideoData, with: urlString)
+    ```
+    let url = <Your URL.absoluteString>
+    let originalVideoData(videoData: <your value>, mimeType: <Your URL.mimeType()>, fileExtension: <Your URL.pathExtension>)
+    Celestial.shared.store(video: originalVideoData, with: urlString)
+    ```
+     
     */
     func store(videoData: MemoryCachedVideoData?, with sourceURLString: String)
     
@@ -111,17 +113,19 @@ internal protocol CelestialCacheProtocol: class {
     - Parameters:
        - videoURL: The url of the video to be cached. This video URL must not be an external url. It must already exist on file, such as in a temporary directory after a `URLSessionDownloadTask` completes
        - sourceURL: The url of the resource that has been requested
-       - resolution: The desired video resolution to downsize to
        - completion: Executes completion block with a URL pointing to a compressed video
      
     - Usage:
-        let videoURL = <Your URL from recently finished download>
-        let sourceURL = <Your URL from external server>
-        let resoluton = <Your desired resolution>
-        Celestial.shared.storeVideoURL(videoURL, with: sourceURL, resolution: resolution)
+    ```
+    let videoURL = <Your URL from recently finished download>
+    let sourceURL = <Your URL from external server>
+    Celestial.shared.storeVideoURL(videoURL, with: sourceURL) { (cachedURL) in
+        ...
+    }
+    ```
      
     */
-    func storeVideoURL(_ videoURL: URL, withSourceURL sourceURL: URL, resolution: CGSize, completion: @escaping (URL?) -> ())
+    func storeVideoURL(_ videoURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ())
     
     
     
@@ -130,12 +134,16 @@ internal protocol CelestialCacheProtocol: class {
      Evicts the `MemoryCachedVideoData` at the specified url from the Video cache.
      
     - Warning: This is irreversible. The cache will no longer contain a value for this key, thus requiring the video to be redownloaded and re-cached.
+     
     - Parameters:
        - sourceURLString: The url of the resource that has been requested
      
     - Usage:
-        let sourceURLString = <Your URL.absoluteSring>
-        Celestial.shared.removeVideoData(using: sourceURLString)
+    ```
+    let sourceURLString = <Your URL.absoluteSring>
+    Celestial.shared.removeVideoData(using: sourceURLString)
+    ```
+     
     */
     func removeVideoData(using sourceURLString: String)
     
@@ -150,12 +158,15 @@ internal protocol CelestialCacheProtocol: class {
      Evicts the video  at the specified url from the Video cache.
      
     - Warning: This is irreversible. The cache will no longer contain a value for this key, thus requiring the video to be redownloaded and re-cached.
+     
     - Parameters:
        - sourceURL: The url of the resource that has been requested
      
     - Usage:
-        let sourceURL = <Your URL>
-        Celestial.shared.removeVideoURL(using: sourceURL)
+    ```
+    let sourceURL = <Your URL>
+    Celestial.shared.removeVideoURL(using: sourceURL)
+    ```
      
     - Returns:
         A Boolean value of whether all videos represented by the sourceURL has been deleted
@@ -171,22 +182,20 @@ internal protocol CelestialCacheProtocol: class {
     - Warning: This is irreversible. The video cache will be completely empty: all videos thereafter will need to be redownloaded and re-cached.
     
     - Usage:
-        Celestial.shared.clearAllVideos()
+    ```
+    Celestial.shared.clearAllVideos()
+    ```
+     
     */
     func clearAllVideos()
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    // MARK: - Image
+}
+
+
+
+// MARK: - CelestialImageCachingProtocol
+
+/// Forces conformance for implementing functions related to image caching
+internal protocol CelestialImageCachingProtocol: class {
     
     /**
      Returns a boolean value of whether an image exists
@@ -209,13 +218,15 @@ internal protocol CelestialCacheProtocol: class {
      Returns a cached UIImage using the url as the key
 
     - Parameters:
-       - sourceURLString: The URL.absoluteString of the resource that has been requested
+       - sourceURLString: The url of the resource that has been requested
     
     - Usage:
-        let urlString = <Your URL.absoluteString>
-        guard let image = Celestial.shared.image(for: urlString) else {
-            return
-        }
+    ```
+    let urlString = <Your URL.absoluteString>
+    guard let image = Celestial.shared.image(for: urlString) else {
+        return
+    }
+    ```
      
     - Returns:
        - A `UIImage` at the specified url.absoluteString.
@@ -240,10 +251,12 @@ internal protocol CelestialCacheProtocol: class {
        - pointSize: The CGrect.CGSize of the image that will be displated
     
     - Usage:
-        let sourceURL = <Your URL>
-        guard let image = Celestial.shared.imageURL(for: sourceURL) else {
-            return
-        }
+    ```
+    let sourceURL = <Your URL>
+    guard let image = Celestial.shared.imageURL(for: sourceURL) else {
+        return
+    }
+    ```
      
     - Returns:
        - A URL pointing to the image cached image in file system that is the same point size as the one requested
@@ -262,12 +275,15 @@ internal protocol CelestialCacheProtocol: class {
 
     - Parameters:
        - image: The `UIImage` to be cached in memory
-       - sourceURLString: The `URL.absoluteString`, which will be used as the key.
+       - sourceURLString: The url of the resource that has been requested
     
     - Usage:
-        let downloadImage = <image from URLSessionDownloadTask>
-        let urlString = <Your URL.absoluteString>
-        Celestial.shared.store(image: downloadedImage, with: urlString)
+    ```
+    let downloadImage = <image from URLSessionDownloadTask>
+    let urlString = <Your URL.absoluteString>
+    Celestial.shared.store(image: downloadedImage, with: urlString)
+    ```
+     
     */
     func store(image: UIImage?, with sourceURLString: String)
     
@@ -290,10 +306,12 @@ internal protocol CelestialCacheProtocol: class {
        - pointSize: The iOS point size of the image. Will be used to store and retrieve the same image at different sizes
     
     - Usage:
-        let downloadImageURL = <image URL from URLSessionDownloadTask>
-        let sourceURL = <Your URL>
-        let pointSize = <Your desired point size, possibly after layout finishes>
-        Celestial.shared.storeImageURL(downloadedImageURL, with: sourceURL, pointSize: pointSize)
+    ```
+    let downloadImageURL = <image URL from URLSessionDownloadTask>
+    let sourceURL = <Your URL>
+    let pointSize = <Your desired point size, possibly after layout finishes>
+    Celestial.shared.storeImageURL(downloadedImageURL, with: sourceURL, pointSize: pointSize)
+    ```
      
     - Returns:
         A `UIImage` that has been resized to the desired iOS point size
@@ -308,16 +326,19 @@ internal protocol CelestialCacheProtocol: class {
     
     
     /**
-     Evicts the `UIImage` at the specified url string from the Image cache.
+     Evicts the `UIImage` at the specified url string from the in-memory Image cache.
 
-    - Warning: This is irreversible. The cache will no longer contain a value for this key, thus requiring the image to be redownloaded and re-cached.
+    - Warning: This is irreversible. The in-memory cache will no longer contain a value for this key, thus requiring the image to be redownloaded and re-cached.
      
     - Parameters:
-       - sourceURLString: The `URL.absoluteString`, which will be used as the key.
+       - sourceURLString: The url of the resource that has been requested
     
     - Usage:
-        let urlString = <Your URL.absoluteString>
-        Celestial.shared.removeImage(using: urlString)
+    ```
+    let urlString = <Your URL>
+    Celestial.shared.removeImage(using: urlString)
+    ```
+     
     */
     func removeImage(using sourceURLString: String)
     
@@ -336,8 +357,14 @@ internal protocol CelestialCacheProtocol: class {
        - sourceURL: The URL of the resource that has been requested
     
     - Usage:
-        let sourceURL = <Your URL>
-        Celestial.shared.removeImageURL(using: urlString)
+    ```
+    let urlString = <your URL>
+    guard let url = URL(string: urlString) else {
+        return
+    }
+    
+    Celestial.shared.removeImageURL(using: url)
+    ```
      
     - Returns:
         A Boolean value of whether all videos represented by the sourceURL has been deleted
@@ -351,19 +378,129 @@ internal protocol CelestialCacheProtocol: class {
     
     
     /**
-     Evicts all items from the Video cache. Both in memory and in file system
+     Evicts all items from the Image cache. Both in-memory and in-filesystem
      
     - Warning: This is irreversible. The image cache will be completely empty: all images thereafter will need to be redownloaded and re-cached.
     
     - Usage:
-        Celestial.shared.clearAllImages()
+    ```
+    Celestial.shared.clearAllImages()
+    ```
     */
     func clearAllImages()
+}
+
+
+
+// MARK: - CelestialResourcePrefetchingProtocol
+
+/// Forces conformance for implementing functions related to manually managing the state of resource
+/// prior to the URLCachableView being available. 
+internal protocol CelestialResourcePrefetchingProtocol: class {
     
+    /**
+     Provides the current download state of a requested resource
+     
+    - Parameters:
+        - sourceURL: The URL of the resource that has been requested
+       
+    - Usage:
+    ```
+    let urlString = <your URL>
+    guard let url = URL(string: urlString) else {
+        return
+    }
+    let downloadState = Celestial.shared.downloadState(for: url)
+ 
+    switch downloadState {
+    case .downloading: ...
+    }
+    ```
+     
+    - Returns:
+        An enum case representing the current download state of a requested resource
+    */
+    func downloadState(for sourceURL: URL) -> DownloadTaskState
     
+    /**
+     Begins loading the requested resource using its URL
+     
+    - Parameters:
+        - sourceURL: The URL of the resource that has been requested
+       
+    - Usage:
+    ```
+    let urlString = <your URL>
+    guard let url = URL(string: urlString) else {
+        return
+    }
+    Celestial.shared.startDownload(for: url)
+    ```
+     
+    */
+    func startDownload(for sourceURL: URL)
     
+    /**
+     Pauses the current download of the requested resource if a download was previously initiated
+     
+    - Parameters:
+        - sourceURL: The URL of the resource that has been requested
+       
+    - Usage:
+    ```
+    let urlString = <your URL>
+    guard let url = URL(string: urlString) else {
+        return
+    }
+    Celestial.shared.pauseDownload(for: url)
+    ```
+     
+    */
+    func pauseDownload(for sourceURL: URL)
     
+    /**
+     Resumes download of the requested resource if a download was previously initiated and paused
+     
+    - Parameters:
+        - sourceURL: The URL of the resource that has been requested
+       
+    - Usage:
+    ```
+    let urlString = <your URL>
+    guard let url = URL(string: urlString) else {
+        return
+    }
+    Celestial.shared.resumeDownload(for: url)
+    ```
+     
+    */
+    func resumeDownload(for sourceURL: URL)
     
+    /**
+     Cancels a current download for a requested resource if a download was previously initated
+       
+    - Parameters:
+        - sourceURL: The URL of the resource that has been requested
+     
+    - Usage:
+    ```
+    let urlString = <your URL>
+    guard let url = URL(string: urlString) else {
+        return
+    }
+    Celestial.shared.cancelDownload(for: url)
+    ```
+     
+    */
+    func cancelDownload(for sourceURL: URL)
+    
+}
+
+
+// MARK: - CelestialMemoryCacheProtocol
+
+/// Forces conformance for implementing functions related to in-memory caching
+internal protocol CelestialMemoryCacheProtocol: class {
     
     /**
      Sets the maximum number of items that can be stored in either the video or image cache.
@@ -377,7 +514,10 @@ internal protocol CelestialCacheProtocol: class {
        - imageCache: Integer value representing the number of items the Image cache should be limited to.
     
     - Usage:
-        Celestial.shared.setCacheItemLimit(videoCache: 100, imageCache: 100)
+    ```
+    Celestial.shared.setCacheItemLimit(videoCache: 100, imageCache: 100)
+    ```
+     
     */
     func setCacheItemLimit(videoCache: Int?, imageCache: Int?)
     
@@ -399,10 +539,22 @@ internal protocol CelestialCacheProtocol: class {
        - imageCache: Integer value representing the number of bytes the Image cache should be limited to.
      
     - Usage:
-        Celestial.shared.setCacheItemLimit(videoCache: Int.OneGigabyte, imageCache: Int.OneMegabyte * 100)
+    ```
+    Celestial.shared.setCacheItemLimit(videoCache: Int.OneGigabyte, imageCache: Int.OneMegabyte * 100)
+    ```
+     
     */
     func setCacheCostLimit(videoCache: Int?, imageCache: Int?)
     
+}
+
+
+
+// MARK: - CelestialMiscellaneousProtocol
+
+/// Forces conformance for implementing miscellaneous utility functions that otherwise do not fit in the other protocols,
+/// but are necessary nonetheless
+internal protocol CelestialUtilityProtocol: class {
     /**
      Sets an internal Boolean value which determines whether debug statements will be printed to console.
      For example, information regarding when the image or video cache is evicting items for memory space
@@ -413,7 +565,10 @@ internal protocol CelestialCacheProtocol: class {
         - on: Boolean value which will determine if debug statements will be printed to console.
      
     - Usage:
-        Celestial.shared.setDebugMode(on: true)
+    ```
+    Celestial.shared.setDebugMode(on: true)
+    ```
+     
     */
     func setDebugMode(on: Bool)
     
@@ -423,7 +578,10 @@ internal protocol CelestialCacheProtocol: class {
     - Warning: This is irreversible. The video and image cache will be completely empty: all videos and images thereafter will need to be redownloaded and re-cached.
     
     - Usage:
-        Celestial.shared.reset()
+    ```
+    Celestial.shared.reset()
+    ```
+     
     */
     func reset()
 }
@@ -436,13 +594,11 @@ internal protocol CelestialCacheProtocol: class {
 
 
 
-
-
-// MARK: - CacheManagerProtocol
+// MARK: - MemoryCacheManagerProtocol
 
 /// Specification for the mandatory properties that a cache manager must have.
 /// For example, the Image and Video caches must have two NSCaches, one for encoded and the other for decoded items.
-internal protocol CacheManagerProtocol: class {
+internal protocol MemoryCacheManagerProtocol: class {
     
     var encodedItemsCache: NSCache<AnyObject, AnyObject> { get }
     var decodedItemsCache: NSCache<AnyObject, AnyObject> { get }

@@ -62,6 +62,11 @@ class ViewController: UIViewController {
         let btn = UIBarButtonItem(title: "Clear Cache", style: .plain, target: self, action: #selector(clearDataSourceCache))
         return btn
     }()
+    
+    private lazy var cacheInfoButton: UIBarButtonItem = {
+        let btn = UIBarButtonItem(title: "Cache Info", style: .plain, target: self, action: #selector(getCachedInfo))
+        return btn
+    }()
 
     private lazy var imageView: URLImageView = {
         let urlString = "https://picsum.photos/400/800/?random"
@@ -82,7 +87,12 @@ class ViewController: UIViewController {
         
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.translatesAutoresizingMaskIntoConstraints = false
-        cv.backgroundColor = UIColor.systemGray3
+        if #available(iOS 13.0, *) {
+            cv.backgroundColor = UIColor.systemGray3
+        } else {
+            // Fallback on earlier versions
+            cv.backgroundColor = .gray
+        }
         cv.allowsMultipleSelection = true
         cv.prefetchDataSource = self
         cv.isPrefetchingEnabled = true
@@ -134,7 +144,7 @@ extension ViewController {
         
         Celestial.shared.setDebugMode(on: true)
         
-        navigationItem.rightBarButtonItems = [toggleDataSourceButton, clearCacheButton]
+        navigationItem.rightBarButtonItems = [toggleDataSourceButton, clearCacheButton, cacheInfoButton]
         
 //        setupURLImageView()
 //        setupCachableAVPlayerItem()
@@ -184,6 +194,13 @@ extension ViewController {
         switch expectedMediaType {
         case .image: Celestial.shared.clearAllImages()
         case .video: Celestial.shared.clearAllVideos()
+        }
+    }
+    
+    @objc private func getCachedInfo() {
+        let cacheInfo = Celestial.shared.getCacheInfo()
+        for info in cacheInfo {
+            print(info)
         }
     }
 }
@@ -320,11 +337,12 @@ extension ViewController {
     private func getRandomVideos() {
         if downloadedVideoCellModels.count == 0 {
             downloadedVideoCellModels = TestURLs.Videos.urlStrings.map { VideoCellModel(urlString: $0) }
+            cellModels = downloadedVideoCellModels
+            collectionView.reloadData()
+        } else {
+            cellModels = downloadedVideoCellModels
             collectionView.reloadData()
         }
-        
-        cellModels = downloadedVideoCellModels
-        collectionView.reloadData()
     }
 }
 
@@ -369,9 +387,8 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
         
         return cell!
     }
-    
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: collectionView.frame.size.width, height: 360.0)
+        return CGSize(width: collectionView.frame.size.width, height: 400.0)
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
@@ -410,10 +427,46 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
 extension ViewController: UICollectionViewDataSourcePrefetching {
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
         print("prefetching items at indexPaths: \(indexPaths)")
+        
+        for indexPath in indexPaths {
+            
+            let cellModel = cellModels[indexPath.item]
+            
+            guard let url = URL(string: cellModel.urlString) else {
+                fatalError()
+            }
+            
+            switch Celestial.shared.downloadState(for: url) {
+            case .none:
+                Celestial.shared.startDownload(for: url)
+            case .paused:
+                Celestial.shared.resumeDownload(for: url)
+            case .downloading, .finished:
+                // Nothing more to do
+                continue
+            }
+        }
     }
     
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
         print("canceling prefetching items at indexPaths: \(indexPaths)")
+        
+        for indexPath in indexPaths {
+            
+            let cellModel = cellModels[indexPath.item]
+            
+            guard let url = URL(string: cellModel.urlString) else {
+                fatalError()
+            }
+            
+            switch Celestial.shared.downloadState(for: url) {
+            case .none, .finished, .paused:
+                // Nothing more to do
+                continue
+            case .downloading:
+                Celestial.shared.pauseDownload(for: url)
+            }
+        }
     }
 }
 

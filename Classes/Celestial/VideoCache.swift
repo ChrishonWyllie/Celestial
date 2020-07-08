@@ -7,7 +7,7 @@
 
 import UIKit
 
-internal final class VideoCache: NSObject, CacheManagerProtocol {
+internal final class VideoCache: NSObject, MemoryCacheManagerProtocol {
     
     // MARK: - Variables
     
@@ -15,7 +15,7 @@ internal final class VideoCache: NSObject, CacheManagerProtocol {
     
     private(set) lazy var encodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
-        cache.name = "Encoded items cache"
+        cache.name = "Encoded videos cache"
         cache.countLimit = config.countLimit
         cache.delegate = self
         return cache
@@ -23,7 +23,7 @@ internal final class VideoCache: NSObject, CacheManagerProtocol {
     
     private(set) lazy var decodedItemsCache: NSCache<AnyObject, AnyObject> = {
         let cache = NSCache<AnyObject, AnyObject>()
-        cache.name = "Decoded items cache"
+        cache.name = "Decoded videos cache"
         cache.totalCostLimit = config.memoryLimit
         cache.delegate = self
         return cache
@@ -58,7 +58,7 @@ internal final class VideoCache: NSObject, CacheManagerProtocol {
 
 
 
-// MARK: - ImageCacheProtocol
+// MARK: - VideoCacheProtocol
 
 extension VideoCache: MemoryCacheProtocol {
 
@@ -74,17 +74,26 @@ extension VideoCache: MemoryCacheProtocol {
 
         // search for compressed data and decompress it.
         if let compressedMemoryCachedVideoData = encodedItemsCache.object(forKey: urlString as AnyObject) as? MemoryCachedVideoData {
-            do {
-                let decompressedVideoData = try (compressedMemoryCachedVideoData.videoData as NSData).decompressed(using: NSData.CompressionAlgorithm.lzfse)
-                let decompressedMemoryCachedVideoData = MemoryCachedVideoData(videoData: decompressedVideoData as Data,
-                                                                      originalURLMimeType: compressedMemoryCachedVideoData.originalURLMimeType,
-                                                                      originalURLFileExtension: compressedMemoryCachedVideoData.originalURLFileExtension)
-                decodedItemsCache.setObject(decompressedMemoryCachedVideoData as AnyObject, forKey: urlString as AnyObject, cost: decompressedMemoryCachedVideoData.videoData.count)
-                return decompressedMemoryCachedVideoData as MemoryCachedVideoData
-            } catch let error {
-                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting decompressed Data from cache: \(error.localizedDescription)")
-                return nil
+            
+            var cachedVideoData: Data!
+            
+            if #available(iOS 13.0, *) {
+                do {
+                    cachedVideoData = try (compressedMemoryCachedVideoData.videoData as NSData).decompressed(using: NSData.CompressionAlgorithm.lzfse) as Data
+                } catch let error {
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting decompressed Data from cache: \(error.localizedDescription)")
+                    cachedVideoData = compressedMemoryCachedVideoData.videoData
+                }
+            } else {
+                // Fallback on earlier versions
+                cachedVideoData = compressedMemoryCachedVideoData.videoData
             }
+            
+            let decompressedMemoryCachedVideoData = MemoryCachedVideoData(videoData: cachedVideoData as Data,
+                                                                  originalURLMimeType: compressedMemoryCachedVideoData.originalURLMimeType,
+                                                                  originalURLFileExtension: compressedMemoryCachedVideoData.originalURLFileExtension)
+            decodedItemsCache.setObject(decompressedMemoryCachedVideoData as AnyObject, forKey: urlString as AnyObject, cost: decompressedMemoryCachedVideoData.videoData.count)
+            return decompressedMemoryCachedVideoData as MemoryCachedVideoData
         }
 
         return nil
@@ -97,18 +106,27 @@ extension VideoCache: MemoryCacheProtocol {
             return removeItem(at: urlString)
         }
 
-        do {
-            let compressedData = try (decompressedMemoryCachedVideoData.videoData as NSData).compressed(using: NSData.CompressionAlgorithm.lzfse)
-            let compressedMemoryCachedVideoData = MemoryCachedVideoData(videoData: compressedData as Data,
-                                                                originalURLMimeType: decompressedMemoryCachedVideoData.originalURLMimeType,
-                                                                originalURLFileExtension: decompressedMemoryCachedVideoData.originalURLFileExtension)
-            lock.lock(); defer { lock.unlock() }
-            
-            encodedItemsCache.setObject(compressedMemoryCachedVideoData as AnyObject, forKey: urlString as AnyObject)
-            decodedItemsCache.setObject(decompressedMemoryCachedVideoData as AnyObject, forKey: urlString as AnyObject, cost: decompressedMemoryCachedVideoData.videoData.count)
-        } catch let error {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error storing compressed Data from cache: \(error.localizedDescription)")
+        var cachedVideoData: Data!
+        
+        if #available(iOS 13.0, *) {
+            do {
+                cachedVideoData = try (decompressedMemoryCachedVideoData.videoData as NSData).compressed(using: NSData.CompressionAlgorithm.lzfse) as Data
+            } catch let error {
+                 DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error storing compressed Data from cache: \(error.localizedDescription)")
+                cachedVideoData = decompressedMemoryCachedVideoData.videoData
+            }
+        } else {
+            // Fallback on earlier versions
+            cachedVideoData = decompressedMemoryCachedVideoData.videoData
         }
+        
+        let compressedMemoryCachedVideoData = MemoryCachedVideoData(videoData: cachedVideoData,
+                                                            originalURLMimeType: decompressedMemoryCachedVideoData.originalURLMimeType,
+                                                            originalURLFileExtension: decompressedMemoryCachedVideoData.originalURLFileExtension)
+        lock.lock(); defer { lock.unlock() }
+        
+        encodedItemsCache.setObject(compressedMemoryCachedVideoData as AnyObject, forKey: urlString as AnyObject)
+        decodedItemsCache.setObject(decompressedMemoryCachedVideoData as AnyObject, forKey: urlString as AnyObject, cost: decompressedMemoryCachedVideoData.videoData.count)
     }
 
     func removeItem(at urlString: String) {

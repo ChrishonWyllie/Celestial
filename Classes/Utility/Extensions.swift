@@ -197,20 +197,32 @@ extension AVURLAsset {
         return CGSize(width: abs(size.width), height: abs(size.height))
     }
     
-    func compressVideo(to outputURL: URL, completion: @escaping (_ exportSession: AVAssetExportSession?) -> ()) {
+    static func prepareUsableAsset(withAssetKeys assetKeys: [URLVideoPlayerView.LoadableAssetKeys],
+                                   inputURL: URL,
+                                   completion: @escaping (AVURLAsset, Error?) -> ()) {
         
-        guard let exportSession = AVAssetExportSession(asset: self, presetName: AVAssetExportPresetMediumQuality) else {
-            completion(nil)
-            return
-        }
+        let asset = AVURLAsset(url: inputURL)
+        let assetKeyValues = assetKeys.map { $0.rawValue }
         
-        try? FileManager.default.removeItem(at: outputURL)
+        var numLoadedKeys: Int = 0
         
-        exportSession.outputURL = outputURL
-        exportSession.outputFileType = AVFileType.mp4
-        exportSession.shouldOptimizeForNetworkUse = true
-        exportSession.exportAsynchronously {
-            completion(exportSession)
+        asset.loadValuesAsynchronously(forKeys: assetKeyValues) {
+            for key in assetKeys {
+                var error: NSError? = nil
+                let status = asset.statusOfValue(forKey: key.rawValue, error: &error)
+                switch status {
+                case .failed:
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error loading asset for url: \(inputURL) failed to load value for key: \(key). Error: \(String(describing: error))")
+                    completion(asset, error)
+                case .loaded:
+                    numLoadedKeys += 1
+                    if numLoadedKeys == assetKeys.count {
+                        completion(asset, nil)
+                    }
+                default:
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - asset status: \(status)")
+                }
+            }
         }
     }
 }
