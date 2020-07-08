@@ -213,18 +213,25 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     
     private func beginFreshDownload(model: DownloadModelRepresentable) {
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - starting download for url: \(model.sourceURL)")
-        // 1
-        let download = DownloadTaskRequest(downloadModel: model)
-        // 2
-        download.task = downloadsSession.downloadTask(with: model.sourceURL)
-        // 3
-        download.task?.resume()
-        // 4
-        download.downloadModel.update(downloadState: .downloading)
-        // 5
-        threadUnsafeActiveDownloads[model.sourceURL] = download
+        concurrentQueue.async(flags: .barrier) { [weak self] in
+        
+            guard let strongSelf = self else {
+                return
+            }
+            
+            // 1
+            let download = DownloadTaskRequest(downloadModel: model)
+            // 2
+            download.task = strongSelf.downloadsSession.downloadTask(with: model.sourceURL)
+            // 3
+            download.task?.resume()
+            // 4
+            download.downloadModel.update(downloadState: .downloading)
+            // 5
+            strongSelf.threadUnsafeActiveDownloads[model.sourceURL] = download
+
+        }
     }
-    
 }
 
 
