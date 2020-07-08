@@ -87,7 +87,12 @@ class ViewController: UIViewController {
         
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.translatesAutoresizingMaskIntoConstraints = false
-        cv.backgroundColor = UIColor.systemGray3
+        if #available(iOS 13.0, *) {
+            cv.backgroundColor = UIColor.systemGray3
+        } else {
+            // Fallback on earlier versions
+            cv.backgroundColor = .gray
+        }
         cv.allowsMultipleSelection = true
         cv.prefetchDataSource = self
         cv.isPrefetchingEnabled = true
