@@ -36,14 +36,14 @@ extension Celestial: CelestialVideoCachingProtocol {
     public func videoExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool {
         switch cacheLocation {
         case .inMemory:
-            return videoData(for: sourceURL.absoluteString) != nil
+            return videoData(for: sourceURL.localUniqueFileName) != nil
         case .fileSystem:
             return FileStorageManager.shared.videoExists(for: sourceURL)
         }
     }
    
     public func videoData(for sourceURLString: String) -> MemoryCachedVideoData? {
-        return VideoCache.shared.item(for: sourceURLString)
+        return VideoCache.shared.item(for: sourceURLString.convertURLToUniqueFileName())
     }
    
     public func videoURL(for sourceURL: URL) -> URL? {
@@ -51,7 +51,7 @@ extension Celestial: CelestialVideoCachingProtocol {
     }
 
     public func store(videoData: MemoryCachedVideoData?, with sourceURLString: String) {
-        VideoCache.shared.store(videoData, with: sourceURLString)
+        VideoCache.shared.store(videoData, with: sourceURLString.convertURLToUniqueFileName())
     }
    
     public func storeVideoURL(_ videoURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ()) {
@@ -59,7 +59,7 @@ extension Celestial: CelestialVideoCachingProtocol {
     }
    
     public func removeVideoData(using sourceURLString: String) {
-        VideoCache.shared.removeItem(at: sourceURLString)
+        VideoCache.shared.removeItem(at: sourceURLString.convertURLToUniqueFileName())
     }
    
     public func removeVideoURL(using sourceURL: URL) -> Bool {
@@ -81,14 +81,14 @@ extension Celestial: CelestialImageCachingProtocol {
     public func imageExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool {
         switch cacheLocation {
         case .inMemory:
-            return image(for: sourceURL.absoluteString) != nil
+            return image(for: sourceURL.localUniqueFileName) != nil
         case .fileSystem:
             return FileStorageManager.shared.imageExists(for: sourceURL)
         }
     }
     
     public func image(for sourceURLString: String) -> UIImage? {
-        return ImageCache.shared.item(for: sourceURLString)
+        return ImageCache.shared.item(for: sourceURLString.convertURLToUniqueFileName())
     }
     
     public func imageURL(for sourceURL: URL, pointSize: CGSize) -> URL? {
@@ -96,15 +96,17 @@ extension Celestial: CelestialImageCachingProtocol {
     }
     
     public func store(image: UIImage?, with sourceURLString: String) {
-        ImageCache.shared.store(image, with: sourceURLString)
+        ImageCache.shared.store(image, with: sourceURLString.convertURLToUniqueFileName())
     }
     
-    public func storeImageURL(_ imageURL: URL, withSourceURL sourceURL: URL, pointSize: CGSize) -> UIImage? {
-        return FileStorageManager.shared.cachedAndResizedImage(sourceURL: sourceURL, size: pointSize, intermediateTemporaryFileURL: imageURL)
+    public func storeImageURL(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, pointSize: CGSize, completion: @escaping (_ resizedImage: UIImage?) -> ()) {
+        FileStorageManager.shared.cachedAndResizedImage(sourceURL: sourceURL,
+                                                        size: pointSize,
+                                                        intermediateTemporaryFileURL: temporaryFileURL,
+                                                        completion: completion)
     }
-    
     public func removeImage(using sourceURLString: String) {
-        ImageCache.shared.removeItem(at: sourceURLString)
+        ImageCache.shared.removeItem(at: sourceURLString.convertURLToUniqueFileName())
     }
     
     public func removeImageURL(using sourceURL: URL) -> Bool {
@@ -181,7 +183,21 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
         case .downloading: return .currentlyDownloading
         case .paused: return .downloadPaused
         case .none: return .none
-        default: fatalError("The download is simultaneously finished but uncached")
+        default:
+            if imageExists(for: sourceURL, cacheLocation: .fileSystem) && cacheLocation == .inMemory ||
+                imageExists(for: sourceURL, cacheLocation: .inMemory) && cacheLocation == .fileSystem
+            {
+                /*
+                 Represents an unusual case:
+                 The image exists in file system, but the request for this image
+                 expects it to be in memory (local NSCache)
+                 Or vice versa
+                 In this case, return .none for the file does not exist here
+                 */
+                return .none
+            }
+            
+            fatalError("Undetermined case")
         }
     }
     
@@ -263,4 +279,5 @@ extension Celestial: CelestialUtilityProtocol {
     public func getCacheInfo() -> [String] {
         return FileStorageManager.shared.getCacheInfo().map { "\n\($0)" }
     }
+    
 }

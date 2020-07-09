@@ -316,7 +316,7 @@ internal protocol CelestialImageCachingProtocol: class {
     - Returns:
         A `UIImage` that has been resized to the desired iOS point size
     */
-    func storeImageURL(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, pointSize: CGSize) -> UIImage?
+    func storeImageURL(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, pointSize: CGSize, completion: @escaping (_ resizedImage: UIImage?) -> ())
     
     
     
