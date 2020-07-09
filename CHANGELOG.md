@@ -1,3 +1,15 @@
+## [Version 0.7.38](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.7.38) 
+### New
+* Added custom Celestial related errors to provide more information on failed tasks
+* Added URL and String extension for creating a unique local file name
+
+### Improvements
+* Improved scroll performance when downloading and displaying images in UIScrollView cells by performing UIImage resizing on another thread.
+* Provided a less error-prone method of identifying cached resources by using the original SourceURL as the key. This works for both inMemory and FileSystem stored items by reconfiguring the SourceURL to be compatible with both. Improves upon handling URLs with unexpected forward slashes.
+
+### Bug fixes
+* Downloading and displaying images in UIScrollView cells no longer hangs up the main thread
+
 ## [Version 0.7.35](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.7.35) 
 ### New
 * Downgraded minimum target from iOS 13 to iOS 11

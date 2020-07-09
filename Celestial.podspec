@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'Celestial'
-  s.version          = '0.7.35'
+  s.version          = '0.7.38'
   s.summary          = 'A Caching service for multimedia'
 
 # This description is used to generate tags and improve search results.
