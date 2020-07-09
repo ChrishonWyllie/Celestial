@@ -137,7 +137,7 @@ internal protocol FileStorageMangerProtocol {
     - Returns:
        - A image of the newly resized and cached resource
     */
-    func cachedAndResizedImage(sourceURL: URL, size: CGSize, intermediateTemporaryFileURL: URL) -> UIImage?
+    func cachedAndResizedImage(sourceURL: URL, size: CGSize, intermediateTemporaryFileURL: URL, completion: @escaping (_ resizedImage: UIImage?) -> ())
     
     /**
      Returns a url for the cached resource
@@ -194,11 +194,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     let directoryManager = FileStorageDirectoryManager()
     
-    /// Splits a url into different parts for use later
-    private struct SourceURLDecomposition {
-        let actualFileName: String
-        let fileExtension: String
-    }
+   
     
     
     
@@ -220,7 +216,8 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     // MARK: - Functions
     
     @discardableResult internal func deleteFileAt(intermediateTemporaryFileLocation location: URL) -> Bool {
-        return deleteFile(forCompleteFilePath: location.path)
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Attempting to delete file for path: \(location.path)")
+        return ((try? FileManager.default.removeItem(atPath: location.path)) != nil)
     }
     
     @discardableResult internal func deleteCachedVideo(using sourceURL: URL) -> Bool {
@@ -254,17 +251,6 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
             
             return true
         } else {
-            return false
-        }
-    }
-    
-    @discardableResult private func deleteFile(forCompleteFilePath filePath: String) -> Bool {
-        do {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Attempting to delete file for path: \(filePath)")
-            try FileManager.default.removeItem(atPath: filePath)
-            return true
-        } catch let error {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error deleting file for path: \(filePath).\n Error: \(error)")
             return false
         }
     }
@@ -310,18 +296,24 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     internal func moveToIntermediateTemporaryURL(originalTemporaryURL: URL, sourceURL: URL) throws -> URL {
         let intermediateTemporaryFileURL = createTemporaryFileURL(from: sourceURL)
+        deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
+        
+        guard ((try? originalTemporaryURL.checkResourceIsReachable()) != nil) else {
+            fatalError("The original temporary file URL from download does not exist. URL: \(originalTemporaryURL)")
+        }
+        
         try FileManager.default.moveItem(at: originalTemporaryURL, to: intermediateTemporaryFileURL)
         return intermediateTemporaryFileURL
     }
     
     internal func createTemporaryFileURL(from sourceURL: URL) -> URL {
-        let sourceURLDecomposition = decomposed(sourceURL: sourceURL)
-        let actualFileName = sourceURLDecomposition.actualFileName
-        let fileExtension = sourceURLDecomposition.fileExtension
+        
+        let localFileName = sourceURL.localUniqueFileName
+        let fileExtension = sourceURL.pathExtension
         
         let intermediateTemporaryFileURL =
             directoryManager.temporaryDirectoryURL
-                .appendingPathComponent(actualFileName)
+                .appendingPathComponent(localFileName)
                 .appendingPathExtension(fileExtension)
         
         return intermediateTemporaryFileURL
@@ -447,9 +439,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         }
     }
     
-    internal func cachedAndResizedImage(sourceURL: URL, size: CGSize, intermediateTemporaryFileURL: URL) -> UIImage? {
-        
-        var cachedAndResizedImage: UIImage?
+    internal func cachedAndResizedImage(sourceURL: URL, size: CGSize, intermediateTemporaryFileURL: URL, completion: @escaping (_ resizedImage: UIImage?) -> ()) {
         
         let sizeFormattedURL = constructFormattedURL(from: sourceURL, expectedDirectoryURL: directoryManager.imagesDirectoryURL, size: size)
         
@@ -461,32 +451,39 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
             
             // Re-create the originally downloaded image
             guard let imageFromTemporaryFileURL: UIImage = UIImage(data: imageDataFromTemporaryFileURL) else {
-                return nil
+                completion(nil)
+                deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
+                return
             }
             
             // Downsize this image
             guard let resizedImage: UIImage = imageFromTemporaryFileURL.resize(size: size) else {
-                return nil
+                completion(nil)
+                deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
+                return
             }
-            
-            cachedAndResizedImage = resizedImage
             
             // Convert downsized image back to Data
             guard let resizedImageData: Data = resizedImage.pngData() else {
-                return nil
+                completion(nil)
+                deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
+                return
             }
             
             // Finally, write this downsized image Data to the newly created permanent url
             try resizedImageData.write(to: sizeFormattedURL)
             
+            completion(resizedImage)
+            
         } catch let error {
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error caching and downsizing the downloaded image for source url: \(sourceURL). Error: \(error)")
+            
+            completion(nil)
         }
         
         // Finally delete the local intermediate file
         deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
         
-        return cachedAndResizedImage
     }
     
     internal func getCachedVideoURL(for sourceURL: URL) -> URL? {
@@ -539,8 +536,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         default:       directoryURL = directoryManager.temporaryDirectoryURL
         }
         
-        let sourceURLDecomposition = decomposed(sourceURL: sourceURL)
-        let actualFileName = sourceURLDecomposition.actualFileName
+        let localFileName = sourceURL.localUniqueFileName
         
         guard
             let directoryContents = try? FileManager.default.contentsOfDirectory(atPath: directoryURL.path)
@@ -551,7 +547,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         var fileExists: Bool = false
         
         fileExistsLoop: for storedFileName in directoryContents {
-            if storedFileName.hasPrefix(actualFileName) {
+            if storedFileName.hasPrefix(localFileName) {
                 fileExists = true
                 break fileExistsLoop
             }
@@ -565,9 +561,9 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         // size: CGSize(width: 327.0, height: 246.0)
         // image name 1: URL: https://picsum.photos/id/0/5616/3744 -> becomes -> 3744-size-327.0-246.0 (no extension)
         // image name 2: URL: https://server/url/to/your/image.png -> becomes -> image-size-327-0-246-0.png
-        let sourceURLDecomposition = decomposed(sourceURL: sourceURL)
         
-        var formattedFileName = sourceURLDecomposition.actualFileName
+        var formattedFileName = sourceURL.localUniqueFileName
+        let fileExtension = sourceURL.pathExtension
         
         if let size = size {
             let width = String(describing: size.width).replacingOccurrences(of: ".", with: "-")
@@ -577,21 +573,12 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
             formattedFileName += sizePathComponent
         }
         
-        if sourceURLDecomposition.fileExtension.count > 0 {
-            formattedFileName += ".\(sourceURLDecomposition.fileExtension)"
-        }
-        let sizeFormattedURL = expectedDirectoryURL.appendingPathComponent(formattedFileName)
+        let sizeFormattedURL = expectedDirectoryURL
+            .appendingPathComponent(formattedFileName)
+            .appendingPathExtension(fileExtension)
+        
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Constructing formatted URL: \(sizeFormattedURL)")
         return sizeFormattedURL
-    }
-    
-    private func decomposed(sourceURL: URL) -> SourceURLDecomposition {
-        // https://whatever.com/someimage.png -> someimage
-        let actualFileName = sourceURL.deletingPathExtension().lastPathComponent
-        // https://whatever.com/someimage.png -> png
-        let fileExtension = sourceURL.pathExtension
-        
-        return SourceURLDecomposition(actualFileName: actualFileName, fileExtension: fileExtension)
     }
     
     private func getInfoForDirectory(at directoryURL: URL) -> [StoredFile] {

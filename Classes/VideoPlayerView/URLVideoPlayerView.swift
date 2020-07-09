@@ -201,7 +201,7 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
             
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 guard let strongSelf = self else { return }
-                guard let memoryCachedVideoData = Celestial.shared.videoData(for: sourceURL.absoluteString) else {
+                guard let memoryCachedVideoData = Celestial.shared.videoData(for: sourceURL.localUniqueFileName) else {
                     return
                 }
                 
@@ -377,7 +377,7 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
                                                           originalURLMimeType: sourceURL.mimeType(),
                                                           originalURLFileExtension: sourceURL.pathExtension)
                     
-                    Celestial.shared.store(videoData: videoData, with: sourceURL.absoluteString)
+                    Celestial.shared.store(videoData: videoData, with: sourceURL.localUniqueFileName)
                     
                     completion(compressedVideoURL)
                     

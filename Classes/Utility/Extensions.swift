@@ -172,9 +172,20 @@ internal extension URL {
         }
         return UTTypeConformsTo(uti, kUTTypeMovie)
     }
+    
+    var localUniqueFileName: String {
+        return self.absoluteString.convertURLToUniqueFileName()
+    }
 }
 
-
+extension String {
+    func convertURLToUniqueFileName() -> String {
+        guard let _ = URL(string: self) else {
+            fatalError("\(self) is not a valid URL")
+        }
+        return self.replacingOccurrences(of: "/", with: "_")
+    }
+}
 
 
 
