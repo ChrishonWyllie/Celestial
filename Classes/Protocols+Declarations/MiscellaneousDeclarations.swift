@@ -7,6 +7,7 @@
 
 import Foundation
 import UIKit.UIImage
+import AVFoundation
 
 @objc public protocol URLCachableView: class {
     
@@ -106,6 +107,47 @@ import UIKit.UIImage
     
 }
 
+
+
+
+
+
+
+
+
+
+// MARK: - ObservableAVPlayer
+
+/// Delegate for notifying receiver of status changes for AVPlayerItem
+internal protocol ObservableAVPlayerDelegate: class {
+    
+    /**
+     Notifies receiver of `AVPlayerItem.Status`
+
+    - Parameters:
+       - player: The AVPlayer that will send delegate information to its receiver
+       - status: The new status for the player item. Switch on to determine when ready to play
+    */
+    func observablePlayer(_ player: ObservableAVPlayer, didLoadChangePlayerItem status: AVPlayerItem.Status)
+}
+
+/// Protocol that all Observable AVPlayers must conform to in order to provide relevant info to the receiver
+internal protocol ObservablePlayerProtocol {
+    /// Notifies receiver of `AVPlayerItem.Status`
+    var delegate: ObservableAVPlayerDelegate? { get }
+    
+    /// Context for adding observer
+    var playerItemContext: Int { get }
+    
+    /**
+     Required initializer
+ 
+    - Parameters:
+        - playerItem: The `AVPlayerItem` which will be observed
+        - delegate: Receiver of AVPlayerItem status updates
+    */
+    init(playerItem: AVPlayerItem, delegate: ObservableAVPlayerDelegate)
+}
 
 
 
