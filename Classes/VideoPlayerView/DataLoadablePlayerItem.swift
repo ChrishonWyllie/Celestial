@@ -24,9 +24,10 @@ class DataLoadablePlayerItem: AVPlayerItem {
             fatalError("internal inconsistency")
         }
         
-        self.mediaData = data
-        self.mediaDataMimeType = mimeType
+        mediaData = data
+        mediaDataMimeType = mimeType
         
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Playing video from cached data. Size: \(mediaData.sizeInMB)")
         
         let asset = AVURLAsset(url: fakeUrl)
         
@@ -60,8 +61,8 @@ extension DataLoadablePlayerItem: AVAssetResourceLoaderDelegate {
         
         // get all fullfilled requests
         let requestsFulfilled = Set<AVAssetResourceLoadingRequest>(pendingRequests.compactMap {
-            self.fillInContentInformationRequest($0.contentInformationRequest)
-            if self.haveEnoughDataToFulfillRequest($0.dataRequest!) {
+            fillInContentInformationRequest($0.contentInformationRequest)
+            if haveEnoughDataToFulfillRequest($0.dataRequest!) {
                 $0.finishLoading()
                 return $0
             }
@@ -69,7 +70,7 @@ extension DataLoadablePlayerItem: AVAssetResourceLoaderDelegate {
         })
     
         // remove fulfilled requests from pending requests
-        _ = requestsFulfilled.map { self.pendingRequests.remove($0) }
+        _ = requestsFulfilled.map { pendingRequests.remove($0) }
 
     }
     
