@@ -494,6 +494,37 @@ internal protocol CelestialResourcePrefetchingProtocol: class {
     */
     func cancelDownload(for sourceURL: URL)
     
+    /**
+     Begins download on multiple requested resources. Intended for use in UICollectionView/UITableView prefetch delegate functions
+       
+    - Parameters:
+        - urlStrings: The URLs of the requested resources
+     
+    - Usage:
+    ```
+    let urlStrings: [String] = [<array of your URLs>]
+    Celestial.shared.prefetchResources(at: urlStrings)
+    ```
+     
+    */
+    func prefetchResources(at urlStrings: [String])
+    
+    /**
+     Pauses (and cancels if desired) downloads on multiple requested resources. Intended for use in UICollectionView/UITableView prefetch delegate functions
+       
+    - Parameters:
+        - urlStrings: The URLs of the requested resources
+        - cancelCompletely: Completely cancels the download instead of just temporarily pausing
+     
+    - Usage:
+    ```
+    let urlStrings: [String] = [<array of your URLs>]
+    Celestial.shared.pausePrefetchingForResources(at: urlStrings, cancelCompletely: ?)
+    ```
+     
+    */
+    func pausePrefetchingForResources(at urlStrings: [String], cancelCompletely: Bool)
+    
 }
 
 

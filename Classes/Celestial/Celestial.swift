@@ -149,6 +149,56 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
         DownloadTaskManager.shared.cancelDownload(for: sourceURL)
     }
     
+    public func prefetchResources(at urlStrings: [String]) {
+        
+        handleScrollViewPrefetching(forRequestedItems: urlStrings) { [weak self] (url, downloadState) in
+            guard let strongSelf = self else { return }
+            switch downloadState {
+            case .none:
+                strongSelf.startDownload(for: url)
+            case .paused:
+                strongSelf.resumeDownload(for: url)
+            case .downloading, .finished:
+                // Nothing more to do
+                break
+            }
+        }
+    }
+    
+    public func pausePrefetchingForResources(at urlStrings: [String], cancelCompletely: Bool) {
+        
+        handleScrollViewPrefetching(forRequestedItems: urlStrings) { [weak self] (url, downloadState) in
+            guard let strongSelf = self else { return }
+            switch downloadState {
+            case .none, .finished, .paused:
+                // Nothing more to do
+                break
+            case .downloading:
+                if cancelCompletely {
+                    strongSelf.cancelDownload(for: url)
+                } else {
+                    strongSelf.pauseDownload(for: url)
+                }
+            }
+        }
+    }
+    
+    private func handleScrollViewPrefetching(forRequestedItems urlStrings: [String], performOperationOnURL: @escaping (URL, DownloadTaskState) -> ()) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let strongSelf = self else { return }
+            for urlString in urlStrings {
+            
+                guard let url = URL(string: urlString) else {
+                    fatalError("\(urlString) is not a valid URL")
+                }
+                
+                let downloadState = strongSelf.downloadState(for: url)
+                
+                performOperationOnURL(url, downloadState)
+            }
+        }
+    }
+    
     internal func resourceExistenceState(for sourceURL: URL,
                                          cacheLocation: DownloadCompletionCacheLocation,
                                          fileType: Celestial.ResourceFileType) -> ResourceExistenceState {
