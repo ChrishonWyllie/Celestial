@@ -323,10 +323,10 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
                                         intermediateTemporaryFileURL: URL,
                                         completion: @escaping (_ compressedVideoURL: URL?) -> ()) {
 
-        decreaseVideoQuality(sourceURL: sourceURL, inputURL: intermediateTemporaryFileURL) { (sizeFormattedCompressedURL) in
-            
+        decreaseVideoQuality(sourceURL: sourceURL, inputURL: intermediateTemporaryFileURL) { [weak self] (sizeFormattedCompressedURL) in
+            guard let strongSelf = self else { return }
             // Finally delete the local intermediate file
-            self.deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
+            strongSelf.deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
                         
             completion(sizeFormattedCompressedURL)
         }
@@ -592,7 +592,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         let folderSize = FileManager.default.sizeOfFolder(at: directoryURL.path)
         let formattedFolderSize = FileManager.default.format(size: folderSize)
         
-        DebugLogger.shared.addDebugMessage("\n\(String(describing: type(of: self))) - Number of items in directory: \(String(describing: directoryContents.count)). Folder size: \(formattedFolderSize)")
+        DebugLogger.shared.addDebugMessage("\n\(String(describing: type(of: self))) - Found \(String(describing: directoryContents.count))  items in directory with url: \(directoryURL). Folder size: \(formattedFolderSize)")
         
         do {
             for fileName in directoryContents {
