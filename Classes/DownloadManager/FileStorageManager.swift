@@ -64,14 +64,14 @@ internal protocol FileStorageMangerProtocol {
     var directoryManager: FileStorageDirectoryManager { get }
     
     /**
-     Deletes the intermediate temporary file that was created after the `DownloadTaskManager` completes a request
+     Deletes a file at a specified location
 
     - Parameters:
-       - intermediateTemporaryFileLocation: The temporary url of the resource that was recently downloaded
+       - location: The local URL of the file
     - Returns:
        - Boolean value of whether the file was successfully deleted
     */
-    @discardableResult func deleteFileAt(intermediateTemporaryFileLocation location: URL) -> Bool
+    @discardableResult func deleteFile(at location: URL) -> Bool
     
     /**
      Deletes the video that was created from the source URL. Will delete all copies of the video
@@ -215,7 +215,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     // MARK: - Functions
     
-    @discardableResult internal func deleteFileAt(intermediateTemporaryFileLocation location: URL) -> Bool {
+    @discardableResult internal func deleteFile(at location: URL) -> Bool {
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Attempting to delete file for path: \(location.path)")
         return ((try? FileManager.default.removeItem(atPath: location.path)) != nil)
     }
@@ -296,7 +296,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     internal func moveToIntermediateTemporaryURL(originalTemporaryURL: URL, sourceURL: URL) throws -> URL {
         let intermediateTemporaryFileURL = createTemporaryFileURL(from: sourceURL)
-        deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
+        deleteFile(at: intermediateTemporaryFileURL)
         
         guard ((try? originalTemporaryURL.checkResourceIsReachable()) != nil) else {
             fatalError("The original temporary file URL from download does not exist. URL: \(originalTemporaryURL)")
@@ -326,8 +326,9 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         decreaseVideoQuality(sourceURL: sourceURL, inputURL: intermediateTemporaryFileURL) { [weak self] (sizeFormattedCompressedURL) in
             guard let strongSelf = self else { return }
             // Finally delete the local intermediate file
-            strongSelf.deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
-                        
+            DispatchQueue.global(qos: .background).async {
+                strongSelf.deleteFile(at: intermediateTemporaryFileURL)
+            }
             completion(sizeFormattedCompressedURL)
         }
     }
@@ -452,21 +453,21 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
             // Re-create the originally downloaded image
             guard let imageFromTemporaryFileURL: UIImage = UIImage(data: imageDataFromTemporaryFileURL) else {
                 completion(nil)
-                deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
+                deleteFile(at: intermediateTemporaryFileURL)
                 return
             }
             
             // Downsize this image
             guard let resizedImage: UIImage = imageFromTemporaryFileURL.resize(size: size) else {
                 completion(nil)
-                deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
+                deleteFile(at: intermediateTemporaryFileURL)
                 return
             }
             
             // Convert downsized image back to Data
             guard let resizedImageData: Data = resizedImage.pngData() else {
                 completion(nil)
-                deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
+                deleteFile(at: intermediateTemporaryFileURL)
                 return
             }
             
@@ -482,7 +483,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         }
         
         // Finally delete the local intermediate file
-        deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
+        deleteFile(at: intermediateTemporaryFileURL)
         
     }
     
@@ -613,6 +614,30 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         return getInfoForDirectory(at: directoryManager.videosDirectoryURL) +
             getInfoForDirectory(at: directoryManager.imagesDirectoryURL)
         
+    }
+    
+    internal func getInfoForStoredResource(matchingSourceURL sourceURL: URL, fileType: Celestial.ResourceFileType) -> StoredFile {
+        var directoryURL: URL
+        
+        switch fileType {
+        case .video:   directoryURL = directoryManager.videosDirectoryURL
+        case .image:   directoryURL = directoryManager.imagesDirectoryURL
+        default:       directoryURL = directoryManager.temporaryDirectoryURL
+        }
+        
+        let cachedResourceURL = constructFormattedURL(from: sourceURL,
+                                                      expectedDirectoryURL: directoryURL,
+                                                      size: nil)
+
+        guard ((try? cachedResourceURL.checkResourceIsReachable()) != nil) else {
+            fatalError()
+        }
+        
+        guard let fileAttributes = try? FileManager.default.attributesOfItem(atPath: cachedResourceURL.path) else {
+            fatalError()
+        }
+        
+        return StoredFile(fileAttributes: fileAttributes, fileURL: cachedResourceURL)
     }
 }
 
