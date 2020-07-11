@@ -95,7 +95,9 @@ open class URLImageView: UIImageView, URLCachableView {
     
     /// Downloads an image from an external URL string
     public func loadImageFrom(urlString: String) {
-        acquireImage(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.acquireImage(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
+        }
     }
     
     private var imageCompletionHandler: (() -> ())?
@@ -105,10 +107,12 @@ open class URLImageView: UIImageView, URLCachableView {
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
         
-        acquireImage(from: urlString,
-                     progressHandler: progressHandler,
-                     completion: completion,
-                     errorHandler: errorHandler)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.acquireImage(from: urlString,
+                               progressHandler: progressHandler,
+                               completion: completion,
+                               errorHandler: errorHandler)
+        }
     }
     
     private func acquireImage(from urlString: String,
