@@ -38,8 +38,23 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
         case exportable
     }
     
+    fileprivate var playImmediatelyWhenReady: Bool = false
     
-    
+    public var isMuted: Bool {
+        set {
+            // Set local variable.
+            // Wait for player to be initialized if not already
+            _isMuted = newValue
+            if super.player != nil {
+                super.player?.isMuted = newValue
+            }
+        }
+        get {
+            // If the player doesn't exist yet, return local variable
+            return super.player?.isMuted ?? _isMuted
+        }
+    }
+    private var _isMuted: Bool = false
     
     
     
@@ -194,7 +209,7 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     
     private func setupPlayerIfVideoHasBeenCached(from sourceURL: URL) {
         
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - getting video from cache")
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - getting video from cache for url: \(sourceURL)")
         
         switch cacheLocation {
         case .inMemory:
@@ -241,31 +256,25 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     }
     
     private func setupPlayer(with playerItem: AVPlayerItem) {
-        let player = AVPlayer(playerItem: playerItem)
+        let player = ObservableAVPlayer(playerItem: playerItem, delegate: self)
+        player.isMuted = _isMuted
         super.player = player
-        delegate?.urlVideoPlayerIsReadyToPlay?(self)
+    }
+    
+    public func play() {
+        if super.player == nil {
+            // Still waiting for DataLoadablePlayerItem to finish loading
+            // or AVURLAsset to finish loading keys
+            playImmediatelyWhenReady = true
+        } else if super.player?.status == AVPlayer.Status.readyToPlay {
+            super.player?.play()
+        }
+    }
+    
+    public func pause() {
+        super.player?.pause()
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -394,5 +403,42 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
                                            completion: completion)
         }
     }
+}
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - ObservableAVPlayerDelegate
+
+extension URLVideoPlayerView: ObservableAVPlayerDelegate {
     
+    func observablePlayer(_ player: ObservableAVPlayer, didLoadChangePlayerItem status: AVPlayerItem.Status) {
+        // Switch over the status
+        switch status {
+        case .readyToPlay:
+            // Player item is ready to play.
+            
+            delegate?.urlVideoPlayerIsReadyToPlay?(self)
+            
+            if playImmediatelyWhenReady {
+                play()
+            }
+            
+        case .failed:
+            // Player item failed. See error.
+            break
+        case .unknown:
+            // Player item is not yet ready.
+            break
+        @unknown default:
+            fatalError()
+        }
+    }
 }
