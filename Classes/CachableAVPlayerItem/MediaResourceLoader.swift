@@ -61,9 +61,9 @@ internal class MediaResourceLoader: NSObject, URLSessionDelegate {
     }
     
     public func setMediaData(_ data: Data, mimeType: String) {
-        self.mediaData = data
-        self.isPlayingFromData = true
-        self.mediaDataMimeType = mimeType
+        mediaData = data
+        isPlayingFromData = true
+        mediaDataMimeType = mimeType
     }
     
     deinit {
@@ -221,8 +221,8 @@ extension MediaResourceLoader {
         
         // get all fullfilled requests
         let requestsFulfilled = Set<AVAssetResourceLoadingRequest>(pendingRequests.compactMap {
-            self.fillInContentInformationRequest($0.contentInformationRequest)
-            if self.haveEnoughDataToFulfillRequest($0.dataRequest!) {
+            fillInContentInformationRequest($0.contentInformationRequest)
+            if haveEnoughDataToFulfillRequest($0.dataRequest!) {
                 $0.finishLoading()
                 return $0
             }
