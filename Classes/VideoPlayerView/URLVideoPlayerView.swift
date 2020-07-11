@@ -149,11 +149,11 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
         
         let resourceExistenceState = Celestial.shared.resourceExistenceState(for: sourceURL,
                                                                              cacheLocation: cacheLocation,
-                                                                             fileType: .video)
+                                                                             resourceType: .video)
         
         switch resourceExistenceState {
         case .uncached:
-            guard let temporaryUncachedFileURL = FileStorageManager.shared.getTemporarilyCachedFileURL(for: sourceURL) else {
+            guard let temporaryUncachedFileURL = Celestial.shared.getTemporarilyCachedFileURL(for: sourceURL) else {
                 return
             }
             
@@ -165,11 +165,11 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
             
         case .currentlyDownloading:
             // Use thumbnail?
-            DownloadTaskManager.shared.exchangeDownloadModel(newModel: downloadModel)
+            Celestial.shared.exchangeDownloadModel(newDownloadModel: downloadModel)
             
         case .downloadPaused:
             // Use thumbnail?
-            DownloadTaskManager.shared.resumeDownload(model: downloadModel)
+            Celestial.shared.resumeDownload(downloadModel: downloadModel)
             
         case .none:
             
@@ -206,7 +206,7 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                     }
                 }
                 
-                DownloadTaskManager.shared.startDownload(model: downloadModel)
+                Celestial.shared.startDownload(downloadModel: downloadModel)
             }
         }
     }
@@ -338,14 +338,16 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
                 guard let compressedVideoURL = compressedVideoURL else {
                     return
                 }
+                
+                let cachedResource = CachedResourceReference(url: strongSelf.sourceURL!, resourceType: .video, cacheLocation: strongSelf.cacheLocation)
+                Celestial.shared.storeReferenceTo(cachedResource: cachedResource)
+                
                 strongSelf.notifyReceiverOfDownloadCompletion(videoFileURL: compressedVideoURL)
             }
             
         default:
             
-            DispatchQueue.global(qos: .background).async {
-                FileStorageManager.shared.deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
-            }
+            Celestial.shared.deleteFile(at: intermediateTemporaryFileURL)
             
             notifyReceiverOfDownloadCompletion(videoFileURL: intermediateTemporaryFileURL)
         }
@@ -373,7 +375,7 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
         switch cacheLocation {
         case .inMemory:
            
-            FileStorageManager.shared.decreaseVideoQuality(sourceURL: sourceURL,
+            Celestial.shared.decreaseVideoQuality(sourceURL: sourceURL,
                                                            inputURL: intermediateTemporaryFileURL) { (compressedVideoURL) in
                 
                 guard let compressedVideoURL = compressedVideoURL else {
