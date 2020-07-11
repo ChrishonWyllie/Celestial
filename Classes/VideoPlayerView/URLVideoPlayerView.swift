@@ -117,7 +117,9 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     // MARK: - Functions
     
     public func loadVideoFrom(urlString: String) {
-        acquireVideo(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.acquireVideo(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
+        }
     }
     
     public func loadVideoFrom(urlString: String,
@@ -125,10 +127,12 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
             
-        acquireVideo(from: urlString,
-                     progressHandler: progressHandler,
-                     completion: completion,
-                     errorHandler: errorHandler)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.acquireVideo(from: urlString,
+                               progressHandler: progressHandler,
+                               completion: completion,
+                               errorHandler: errorHandler)
+        }
     }
     
     private func acquireVideo(from urlString: String,
@@ -244,8 +248,8 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                                                             mimeType: cachedVideoURL.mimeType(),
                                                             fileExtension: cachedVideoURL.pathExtension)
                     
-                    DispatchQueue.main.async {
-                        self.setupPlayer(with: playerItem)
+                    DispatchQueue.main.async { [weak self] in
+                        self?.setupPlayer(with: playerItem)
                     }
                     
                 } catch let error {
