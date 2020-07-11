@@ -231,7 +231,7 @@ extension CachableAVPlayerItem: MediaResourceLoaderDelegate {
         let originalVideoData = MemoryCachedVideoData(videoData: mediaData,
                                                   originalURLMimeType: sourceURL.mimeType(),
                                                   originalURLFileExtension: sourceURL.pathExtension)
-        if self.cachePolicy == .allow {
+        if cachePolicy == .allow {
             Celestial.shared.store(videoData: originalVideoData, with: sourceURL.localUniqueFileName)
         }
         
