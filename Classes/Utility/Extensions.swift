@@ -174,7 +174,9 @@ internal extension URL {
     }
     
     var localUniqueFileName: String {
-        return self.absoluteString.convertURLToUniqueFileName()
+        let fileExtension = self.pathExtension
+        let uniqueFileName: String = self.deletingPathExtension().absoluteString.convertURLToUniqueFileName() + "-\(fileExtension)"
+        return uniqueFileName
     }
 }
 
