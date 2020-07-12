@@ -547,9 +547,43 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         
         var fileExists: Bool = false
         
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Checking if downloaded file exists in file system directory: \(directoryURL). Directory contents: \(directoryContents)")
+        
         fileExistsLoop: for storedFileName in directoryContents {
             if storedFileName.hasPrefix(localFileName) {
-                fileExists = true
+                
+                let completeStoredFileURL = directoryURL.appendingPathComponent(storedFileName)
+                guard ((try? completeStoredFileURL.checkResourceIsReachable()) != nil) else {
+                    fileExists = false
+                    break fileExistsLoop
+                }
+                
+                
+                do {
+                    let fileAttributes = try FileManager.default.attributesOfItem(atPath: completeStoredFileURL.path)
+                    let fileInfo = StoredFile(fileAttributes: fileAttributes, fileURL: completeStoredFileURL)
+                    
+                    // If the data for this file is 0,
+                    // there may have been an error during download/caching
+                    // Perhaps use of AVAssetExportSession interrupted from
+                    // app going to background
+                    // or otherwise.
+                    // In which case, the file exists but is empty
+                    if fileInfo.fileSize == 0 {
+                        deleteFile(at: completeStoredFileURL)
+                        fileExists = false
+                    } else {
+                        fileExists = true
+                    }
+                    
+                } catch let error {
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting contents of URL: \(completeStoredFileURL) as Data. Error: \(error)")
+                    
+                    deleteFile(at: completeStoredFileURL)
+                    fileExists = false
+                    break fileExistsLoop
+                }
+                
                 break fileExistsLoop
             }
         }
