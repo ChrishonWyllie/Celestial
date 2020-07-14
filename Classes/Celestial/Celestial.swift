@@ -590,7 +590,7 @@ extension Celestial {
         case .fileSystem:
             switch resourceType {
             case .video:
-                fileExists = videoURLFromFileCache(sourceURL: sourceURL) != nil// FileStorageManager.shared.videoExists(for: sourceURL)
+                fileExists = videoURLFromFileCache(sourceURL: sourceURL) != nil
             case .image:
                 fileExists = FileStorageManager.shared.imageExists(for: sourceURL)
             default: fatalError("Unexpected resource type: \(String(reflecting: resourceType))")
