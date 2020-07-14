@@ -29,7 +29,7 @@ internal protocol DownloadTaskRequestProtocol {
 }
 
 /// Initiates a download from a `DownloadModelRepresentable` object
-internal class DownloadTaskRequest: DownloadTaskRequestProtocol {
+internal class DownloadTaskRequest: DownloadTaskRequestProtocol, CustomStringConvertible {
     var progress: Float = 0
     var resumeData: Data?
     var task: URLSessionDownloadTask?
@@ -37,5 +37,10 @@ internal class DownloadTaskRequest: DownloadTaskRequestProtocol {
     
     required init(downloadModel: DownloadModelRepresentable) {
         self.downloadModel = downloadModel
+    }
+    
+    var description: String {
+        let printableString = "Progress: \(progress), resumeData coutn if previously paused: \(String(describing: resumeData?.count)), task: \(String(describing: task)), download model: \(downloadModel)"
+        return printableString
     }
 }
