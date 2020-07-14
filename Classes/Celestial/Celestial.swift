@@ -14,8 +14,8 @@ public final class Celestial: NSObject {
     
     internal var debugModeIsActive: Bool = false
     
-    internal var cachedResourceIdentifiers: [CachedResourceIdentifier] {
-        var identifiers: [CachedResourceIdentifier]!
+    internal var cachedResourceIdentifiers: Set<CachedResourceIdentifier> {
+        var identifiers: Set<CachedResourceIdentifier>!
         
         concurrentQueue.sync { [weak self] in
             guard let strongSelf = self else { return }
@@ -24,12 +24,13 @@ public final class Celestial: NSObject {
         return identifiers
     }
     
-    private var threadUnsafeCachedResourceIdentifiers: [CachedResourceIdentifier] = []
+    private var threadUnsafeCachedResourceIdentifiers = Set<CachedResourceIdentifier>()
     
     private let concurrentQueue = DispatchQueue(label: "com.chrishonwyllie.Celestial.CachedResourceIdentifiers.concurrentQueue", attributes: .concurrent)
     
     private let resourceIdentifiersKey = "com.chrishonwyllie.Celestial.CachedResourceIdentifiers.UserDefaults.key"
     
+    private var backgroundSessionCompletionHandler: (() -> Void)?
     
     
     
@@ -142,7 +143,9 @@ extension Celestial: CelestialImageCachingProtocol {
         
         FileStorageManager.shared.cachedAndResizedImage(sourceURL: sourceURL, size: pointSize, intermediateTemporaryFileURL: temporaryFileURL, completion: { [weak self] (cachedImageURL) in
             
-            let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL, resourceType: .image, cacheLocation: .fileSystem)
+            let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
+                                                              resourceType: .image,
+                                                              cacheLocation: .fileSystem)
             self?.storeReferenceTo(cachedResource: resourceIdentifier)
             
             completion(cachedImageURL)
@@ -255,6 +258,8 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
             let resourceExistenceState = determineResourceExistenceState(forSourceURL: sourceURL,
                                                                          ifCacheLocationIsKnown: nil,
                                                                          ifResourceTypeIsKnown: nil)
+            
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Handling prefetch for url: \(sourceURL), resource existence state: \(String(reflecting: resourceExistenceState))")
             
             performSomeOpertionUsingURL(sourceURL, resourceExistenceState)
         }
@@ -379,7 +384,7 @@ extension Celestial {
             return
         }
         
-        threadUnsafeCachedResourceIdentifiers.append(cachedResource)
+        threadUnsafeCachedResourceIdentifiers.insert(cachedResource)
         
         do {
             let encodedData = try PropertyListEncoder().encode(threadUnsafeCachedResourceIdentifiers)
@@ -393,7 +398,7 @@ extension Celestial {
         
         guard
             let cachedResourcesData = UserDefaults.standard.value(forKey: resourceIdentifiersKey) as? Data,
-            let locallyStoredCachedResourceReferences = try? PropertyListDecoder().decode(Array<CachedResourceIdentifier>.self, from: cachedResourcesData) else {
+            let locallyStoredCachedResourceReferences = try? PropertyListDecoder().decode(Set<CachedResourceIdentifier>.self, from: cachedResourcesData) else {
                 
             threadUnsafeCachedResourceIdentifiers = []
             return
@@ -408,11 +413,17 @@ extension Celestial {
         DispatchQueue.global(qos: .background).async { [weak self] in
             guard let strongSelf = self else { return }
             guard
-                strongSelf.cachedResourceIdentifiers.count > 0,
-                let arrayElementIndex = strongSelf.cachedResourceIdentifiers.firstIndex(where: { $0.sourceURL == sourceURL }) else {
+                strongSelf.cachedResourceIdentifiers.count > 0 else {
                 return
             }
-            strongSelf.threadUnsafeCachedResourceIdentifiers.remove(at: Int(arrayElementIndex))
+            
+            guard let resourceIdentifierToRemove = strongSelf.threadUnsafeCachedResourceIdentifiers.filter({ (identifier) -> Bool in
+                return identifier.sourceURL == sourceURL
+            }).first else {
+                return
+            }
+            
+            strongSelf.threadUnsafeCachedResourceIdentifiers.remove(resourceIdentifierToRemove)
             strongSelf.saveResourceIdentifiersInUserDefaults()
         }
     }
@@ -434,7 +445,15 @@ extension Celestial {
             guard strongSelf.threadUnsafeCachedResourceIdentifiers.count > 0 else {
                 return
             }
-            strongSelf.threadUnsafeCachedResourceIdentifiers.removeAll(where: { $0.resourceType == resourceType })
+            
+            let resourceIdentifiersToRemove = strongSelf.threadUnsafeCachedResourceIdentifiers.filter({ (identifier) -> Bool in
+                return identifier.resourceType == resourceType
+            })
+            
+            for identifier in resourceIdentifiersToRemove {
+                strongSelf.threadUnsafeCachedResourceIdentifiers.remove(identifier)
+            }
+            
             strongSelf.saveResourceIdentifiersInUserDefaults()
         }
     }
@@ -451,10 +470,14 @@ extension Celestial {
     internal func resourceIdentifier(for sourceURL: URL) -> CachedResourceIdentifier? {
         let cachedResourceReferencesMatchingURL = cachedResourceIdentifiers.filter({ $0.sourceURL == sourceURL })
         
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Checking for CachedResourceIdentifier matching url: \(sourceURL). Resource identifiers: \(cachedResourceIdentifiers)")
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Filtering for CachedResourceIdentifier matching url: \(sourceURL). Resource identifiers:")
+        
+        for identifier in cachedResourceIdentifiers {
+            DebugLogger.shared.addDebugMessage("\(identifier)")
+        }
         
         if cachedResourceReferencesMatchingURL.count > 1 {
-            fatalError("Internal inconsistency. There can only be 0 (non-existent) or 1 identifier for a single URL: \(sourceURL)")
+            fatalError("Internal inconsistency. There can only be 0 (non-existent) or 1 identifier for a single URL: \(sourceURL). Found \(cachedResourceReferencesMatchingURL.count) matching results: \(cachedResourceReferencesMatchingURL)")
         }
         
         return cachedResourceReferencesMatchingURL.first
@@ -501,7 +524,19 @@ extension Celestial {
                                          ifCacheLocationIsKnown cacheLocation: ResourceCacheLocation?,
                                          ifResourceTypeIsKnown resourceType: ResourceFileType?) -> ResourceExistenceState {
         
-        if let cacheLocation = cacheLocation, let resourceType = resourceType {
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Determining resource existence state for source url: \(sourceURL)")
+        
+        if cacheLocation == nil || resourceType == nil {
+            if videoExists(for: sourceURL, cacheLocation: .inMemory)
+                || videoExists(for: sourceURL, cacheLocation: .fileSystem)
+                || imageExists(for: sourceURL, cacheLocation: .inMemory)
+                || imageExists(for: sourceURL, cacheLocation: .fileSystem)
+            {
+                return .cached
+            } else {
+                return .none
+            }
+        } else if let cacheLocation = cacheLocation, let resourceType = resourceType {
             if cachedResourceAndIdentifierExists(for: sourceURL, resourceType: resourceType, cacheLocation: cacheLocation) {
                 return .cached
             } else {
@@ -515,9 +550,15 @@ extension Celestial {
             case .paused: return .downloadPaused
             case .downloading: return .currentlyDownloading
             case .finished:
-                if imageExists(for: sourceURL, cacheLocation: .fileSystem) && cacheLocation == .inMemory ||
-                    imageExists(for: sourceURL, cacheLocation: .inMemory) && cacheLocation == .fileSystem
+                
+                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Determining resource existence state for source url: \(sourceURL)")
+                
+                if videoExists(for: sourceURL, cacheLocation: .fileSystem) && cacheLocation == .inMemory
+                    || videoExists(for: sourceURL, cacheLocation: .inMemory) && cacheLocation == .fileSystem
+                    || imageExists(for: sourceURL, cacheLocation: .fileSystem) && cacheLocation == .inMemory
+                    || imageExists(for: sourceURL, cacheLocation: .inMemory) && cacheLocation == .fileSystem
                 {
+                    
                     /*
                      Represents an unusual case:
                      The image exists in file system, but the request for this image
@@ -539,26 +580,30 @@ extension Celestial {
         
         switch cacheLocation {
         case .inMemory:
-            if resourceType == .video {
+            switch resourceType {
+            case .video:
                 fileExists = videoFromMemoryCache(sourceURLString: sourceURL.absoluteString) != nil
-            } else {
+            case .image:
                 fileExists = imageFromMemoryCache(sourceURLString: sourceURL.absoluteString) != nil
+            default: fatalError("Unexpected resource type: \(String(reflecting: resourceType))")
             }
         case .fileSystem:
-            if resourceType == .video {
-                fileExists = FileStorageManager.shared.videoExists(for: sourceURL)
-            } else {
+            switch resourceType {
+            case .video:
+                fileExists = videoURLFromFileCache(sourceURL: sourceURL) != nil// FileStorageManager.shared.videoExists(for: sourceURL)
+            case .image:
                 fileExists = FileStorageManager.shared.imageExists(for: sourceURL)
+            default: fatalError("Unexpected resource type: \(String(reflecting: resourceType))")
             }
         }
         
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - source url: \(sourceURL). local unique identifier: \(sourceURL.localUniqueFileName)")
-        
-        if identifierExists != fileExists {
+        if identifierExists == false && fileExists == true {
             let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL, resourceType: resourceType, cacheLocation: cacheLocation)
             storeReferenceTo(cachedResource: resourceIdentifier)
             identifierExists = true
         }
+        
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Checking if cached resource exists for source url: \(sourceURL). local unique identifier: \(sourceURL.localUniqueFileName). identifier exists: \(identifierExists). file exists: \(fileExists)")
         
         return identifierExists && fileExists
     }
