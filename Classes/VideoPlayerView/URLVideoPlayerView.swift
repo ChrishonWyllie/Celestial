@@ -222,7 +222,7 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
             
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 guard let strongSelf = self else { return }
-                guard let memoryCachedVideoData = Celestial.shared.videoData(for: sourceURL.localUniqueFileName) else {
+                guard let memoryCachedVideoData = Celestial.shared.videoFromMemoryCache(sourceURLString: sourceURL.absoluteString) else {
                     return
                 }
                 
@@ -237,7 +237,7 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
             
         case .fileSystem:
             
-            guard let cachedVideoURL = Celestial.shared.videoURL(for: sourceURL) else {
+            guard let cachedVideoURL = Celestial.shared.videoURLFromFileCache(sourceURL: sourceURL) else {
                 return
             }
             
@@ -408,7 +408,7 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
                                                           originalURLMimeType: sourceURL.mimeType(),
                                                           originalURLFileExtension: sourceURL.pathExtension)
                     
-                    Celestial.shared.store(videoData: videoData, with: sourceURL.localUniqueFileName)
+                    Celestial.shared.storeVideoInMemoryCache(videoData: videoData, sourceURLString: sourceURL.absoluteString)
                     
                     completion(compressedVideoURL)
                     
@@ -420,9 +420,9 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
             
         case .fileSystem:
            
-            Celestial.shared.storeVideoURL(intermediateTemporaryFileURL,
-                                           withSourceURL: sourceURL,
-                                           completion: completion)
+            Celestial.shared.storeDownloadedVideoToFileCache(intermediateTemporaryFileURL,
+                                                             withSourceURL: sourceURL,
+                                                             completion: completion)
         }
     }
 }

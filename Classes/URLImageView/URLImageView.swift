@@ -131,9 +131,9 @@ open class URLImageView: UIImageView, URLCachableView {
         
         downloadModel = GenericDownloadModel(sourceURL: sourceURL, delegate: self)
         
-        let resourceExistenceState = Celestial.shared.resourceExistenceState(for: sourceURL,
-                                                                             cacheLocation: cacheLocation,
-                                                                             resourceType: .image)
+        let resourceExistenceState = Celestial.shared.determineResourceExistenceState(forSourceURL: sourceURL,
+                                                                                      ifCacheLocationIsKnown: cacheLocation,
+                                                                                      ifResourceTypeIsKnown: .image)
         
         switch resourceExistenceState {
         case .uncached:
@@ -194,13 +194,13 @@ open class URLImageView: UIImageView, URLCachableView {
         
         switch cacheLocation {
         case .inMemory:
-            if let cachedImage = Celestial.shared.image(for: sourceURL.localUniqueFileName) {
+            if let cachedImage = Celestial.shared.imageFromMemoryCache(sourceURLString: sourceURL.absoluteString) {
                 useImageOnMainThread(cachedImage, completion: completion)
             } else {
                 completion?()
             }
         case .fileSystem:
-            guard let cachedImageURL = Celestial.shared.imageURL(for: sourceURL, pointSize: imageSize) else {
+            guard let cachedImageURL = Celestial.shared.imageURLFromFileCache(sourceURL: sourceURL, pointSize: imageSize) else {
                 completion?()
                 return
             }
@@ -292,9 +292,6 @@ extension URLImageView: CachableDownloadModelDelegate {
                 
                 strongSelf.getCachedAndResized(intermediateTemporaryFileURL: intermediateTemporaryFileURL, desiredImageSize: desiredImageSize) { (resizedImage, error) in
                     
-                    let cachedResource = CachedResourceReference(url: strongSelf.sourceURL!, resourceType: .image, cacheLocation: strongSelf.cacheLocation)
-                    Celestial.shared.storeReferenceTo(cachedResource: cachedResource)
-                    
                     strongSelf.handleDisplayOf(resizedImage: resizedImage, error: error)
                 }
                 
@@ -318,25 +315,24 @@ extension URLImageView: CachableDownloadModelDelegate {
         }
         
         switch cacheLocation {
-            case .inMemory:
-               
-                getResizedImage(from: intermediateTemporaryFileURL, desiredImageSize: desiredImageSize) { (resizedImage, error) in
-                    if let resizedImage = resizedImage {
-                        Celestial.shared.store(image: resizedImage, with: originalSourceURL.localUniqueFileName)
-                    }
-                    completion(resizedImage, error)
+        case .inMemory:
+           
+            getResizedImage(from: intermediateTemporaryFileURL, desiredImageSize: desiredImageSize) { (resizedImage, error) in
+                if let resizedImage = resizedImage {
+                    Celestial.shared.storeImageInMemoryCache(image: resizedImage, sourceURLString: originalSourceURL.absoluteString)
                 }
-                
-            case .fileSystem:
-                
-                Celestial.shared.storeImageURL(intermediateTemporaryFileURL,
-                                               withSourceURL: originalSourceURL,
-                                               pointSize: desiredImageSize,
-                                               completion: { (resizedImage) in
-                                                
-                    completion(resizedImage, nil)
-                })
-               
+                completion(resizedImage, error)
+            }
+            
+        case .fileSystem:
+            
+            Celestial.shared.storeDownloadedImageToFileCache(intermediateTemporaryFileURL,
+                                                             withSourceURL: originalSourceURL,
+                                                             pointSize: desiredImageSize,
+                                                             completion: { (resizedImage) in
+                                            
+                completion(resizedImage, nil)
+            }) 
         }
     }
     

@@ -55,15 +55,15 @@ extension Celestial: CelestialVideoCachingProtocol {
         return cachedResourceAndIdentifierExists(for: sourceURL, resourceType: .video, cacheLocation: cacheLocation)
     }
    
-    public func videoData(for sourceURLString: String) -> MemoryCachedVideoData? {
+    public func videoFromMemoryCache(sourceURLString: String) -> MemoryCachedVideoData? {
         return VideoCache.shared.item(for: sourceURLString.convertURLToUniqueFileName())
     }
    
-    public func videoURL(for sourceURL: URL) -> URL? {
+    public func videoURLFromFileCache(sourceURL: URL) -> URL? {
         return FileStorageManager.shared.getCachedVideoURL(for: sourceURL)
     }
 
-    public func store(videoData: MemoryCachedVideoData?, with sourceURLString: String) {
+    public func storeVideoInMemoryCache(videoData: MemoryCachedVideoData?, sourceURLString: String) {
         guard let sourceURL = URL(string: sourceURLString) else {
             fatalError("\(sourceURLString) is not a valid URL")
         }
@@ -74,8 +74,7 @@ extension Celestial: CelestialVideoCachingProtocol {
         VideoCache.shared.store(videoData, with: sourceURLString.convertURLToUniqueFileName())
     }
    
-    public func storeVideoURL(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ()) {
-        
+    public func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ()) {
         FileStorageManager.shared.cachedAndResizedVideo(sourceURL: sourceURL, intermediateTemporaryFileURL: temporaryFileURL, completion: { [weak self] (cachedVideoURL) in
             
             let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
@@ -86,13 +85,13 @@ extension Celestial: CelestialVideoCachingProtocol {
             completion(cachedVideoURL)
         })
     }
-   
-    public func removeVideoData(using sourceURLString: String) {
+    
+    public func removeVideoFromMemoryCache(sourceURLString: String) {
         VideoCache.shared.removeItem(at: sourceURLString.convertURLToUniqueFileName())
         removeResourceIdentifier(for: sourceURLString)
     }
    
-    public func removeVideoURL(using sourceURLString: String) -> Bool {
+    public func removeVideoFromFileCache(sourceURLString: String) -> Bool {
         guard let sourceURL = URL(string: sourceURLString) else {
             fatalError("\(sourceURLString) is not a valid URL")
         }
@@ -120,15 +119,15 @@ extension Celestial: CelestialImageCachingProtocol {
         return cachedResourceAndIdentifierExists(for: sourceURL, resourceType: .image, cacheLocation: cacheLocation)
     }
     
-    public func image(for sourceURLString: String) -> UIImage? {
-        return ImageCache.shared.item(for: sourceURLString.convertURLToUniqueFileName())
+    public func imageFromMemoryCache(sourceURLString: String) -> UIImage? {
+       return ImageCache.shared.item(for: sourceURLString.convertURLToUniqueFileName())
     }
     
-    public func imageURL(for sourceURL: URL, pointSize: CGSize) -> URL? {
+    public func imageURLFromFileCache(sourceURL: URL, pointSize: CGSize) -> URL? {
         return FileStorageManager.shared.getCachedImageURL(for: sourceURL, size: pointSize)
     }
     
-    public func store(image: UIImage?, with sourceURLString: String) {
+    public func storeImageInMemoryCache(image: UIImage?, sourceURLString: String) {
         guard let sourceURL = URL(string: sourceURLString) else {
             fatalError("\(sourceURLString) is not a valid URL")
         }
@@ -139,7 +138,7 @@ extension Celestial: CelestialImageCachingProtocol {
         ImageCache.shared.store(image, with: sourceURLString.convertURLToUniqueFileName())
     }
     
-    public func storeImageURL(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, pointSize: CGSize, completion: @escaping (_ resizedImage: UIImage?) -> ()) {
+    public func storeDownloadedImageToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, pointSize: CGSize, completion: @escaping (UIImage?) -> ()) {
         
         FileStorageManager.shared.cachedAndResizedImage(sourceURL: sourceURL, size: pointSize, intermediateTemporaryFileURL: temporaryFileURL, completion: { [weak self] (cachedImageURL) in
             
@@ -149,12 +148,14 @@ extension Celestial: CelestialImageCachingProtocol {
             completion(cachedImageURL)
         })
     }
-    public func removeImage(using sourceURLString: String) {
+    
+    public func removeImageFromMemoryCache(sourceURLString: String) {
         ImageCache.shared.removeItem(at: sourceURLString)
         removeResourceIdentifier(for: sourceURLString)
     }
     
-    public func removeImageURL(using sourceURLString: String) -> Bool {
+    public func removeImageFromFileCache(sourceURLString: String) -> Bool {
+        
         guard let sourceURL = URL(string: sourceURLString) else {
             fatalError("\(sourceURLString) is not a valid URL")
         }
@@ -538,9 +539,17 @@ extension Celestial {
         
         switch cacheLocation {
         case .inMemory:
-            fileExists = videoData(for: sourceURL.localUniqueFileName) != nil
+            if resourceType == .video {
+                fileExists = videoFromMemoryCache(sourceURLString: sourceURL.absoluteString) != nil
+            } else {
+                fileExists = imageFromMemoryCache(sourceURLString: sourceURL.absoluteString) != nil
+            }
         case .fileSystem:
-            fileExists = FileStorageManager.shared.videoExists(for: sourceURL)
+            if resourceType == .video {
+                fileExists = FileStorageManager.shared.videoExists(for: sourceURL)
+            } else {
+                fileExists = FileStorageManager.shared.imageExists(for: sourceURL)
+            }
         }
         
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - source url: \(sourceURL). local unique identifier: \(sourceURL.localUniqueFileName)")
