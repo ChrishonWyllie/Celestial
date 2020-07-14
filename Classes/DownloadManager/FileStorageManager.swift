@@ -101,7 +101,7 @@ internal protocol FileStorageMangerProtocol {
     - Parameters:
        - fileType: Determines which directory will be cleared. (Images, Videos, all)
     */
-    func clearCache(fileType: Celestial.ResourceFileType)
+    func clearCache(fileType: ResourceFileType)
     
     /**
      Moves the temporary file created from a download task to an intermediate location
@@ -255,7 +255,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         }
     }
     
-    internal func clearCache(fileType: Celestial.ResourceFileType) {
+    internal func clearCache(fileType: ResourceFileType) {
         DispatchQueue.global(qos: .background).async { [weak self] in
             guard let strongSelf = self else { return }
             switch fileType {
@@ -488,11 +488,17 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     }
     
     internal func getCachedVideoURL(for sourceURL: URL) -> URL? {
-        let downloadedFileURL = constructFormattedURL(from: sourceURL,
-                                                      expectedDirectoryURL: directoryManager.videosDirectoryURL,
-                                                      size: nil)
+        
+        guard let storedFileInfo = getInfoForStoredResource(matchingSourceURL: sourceURL, fileType: .video) else {
+            return nil
+        }
+        
+        if storedFileInfo.fileSize == 0 {
+            deleteFile(at: storedFileInfo.fileURL)
+            return nil
+        }
 
-        return ((try? downloadedFileURL.checkResourceIsReachable()) ?? false) ? downloadedFileURL : nil
+        return storedFileInfo.fileURL
     }
     
     internal func getCachedImageURL(for sourceURL: URL, size: CGSize) -> URL? {
@@ -527,7 +533,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     
     
-    private func downloadedFileExists(for sourceURL: URL, fileType: Celestial.ResourceFileType) -> Bool {
+    private func downloadedFileExists(for sourceURL: URL, fileType: ResourceFileType) -> Bool {
         
         var directoryURL: URL
         
@@ -650,7 +656,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         
     }
     
-    internal func getInfoForStoredResource(matchingSourceURL sourceURL: URL, fileType: Celestial.ResourceFileType) -> StoredFile {
+    internal func getInfoForStoredResource(matchingSourceURL sourceURL: URL, fileType: ResourceFileType) -> StoredFile? {
         var directoryURL: URL
         
         switch fileType {
@@ -664,11 +670,11 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
                                                       size: nil)
 
         guard ((try? cachedResourceURL.checkResourceIsReachable()) != nil) else {
-            fatalError()
+            return nil
         }
         
         guard let fileAttributes = try? FileManager.default.attributesOfItem(atPath: cachedResourceURL.path) else {
-            fatalError()
+            return nil
         }
         
         return StoredFile(fileAttributes: fileAttributes, fileURL: cachedResourceURL)
