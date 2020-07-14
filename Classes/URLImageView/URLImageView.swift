@@ -182,6 +182,8 @@ open class URLImageView: UIImageView, URLCachableView {
                 }
             }
             
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - No resource exists or is currently downloading for url: \(sourceURL). Will start new download")
+            
             Celestial.shared.startDownload(downloadModel: downloadModel)
         }
     }
