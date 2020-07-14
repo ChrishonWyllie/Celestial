@@ -145,11 +145,13 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
         }
         self.sourceURL = sourceURL
         
+        reset()
+        
         downloadModel = GenericDownloadModel(sourceURL: sourceURL, delegate: self)
         
-        let resourceExistenceState = Celestial.shared.resourceExistenceState(for: sourceURL,
-                                                                             cacheLocation: cacheLocation,
-                                                                             resourceType: .video)
+        let resourceExistenceState = Celestial.shared.determineResourceExistenceState(forSourceURL: sourceURL,
+                                                                                      ifCacheLocationIsKnown: cacheLocation,
+                                                                                      ifResourceTypeIsKnown: .video)
         
         switch resourceExistenceState {
         case .uncached:
@@ -244,6 +246,15 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                 do {
                     let cachedVideoData = try Data(contentsOf: cachedVideoURL)
                     
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Initializing DataLoadablePlayerItem with cached video url: \(cachedVideoURL). Media data size in MB: \(cachedVideoData.sizeInMB)")
+                    
+                    if cachedVideoData.count == 0 {
+                        let cacheInfo = Celestial.shared.getCacheInfo()
+                        for info in cacheInfo {
+                            print(info)
+                        }
+                    }
+                    
                     let playerItem = DataLoadablePlayerItem(data: cachedVideoData,
                                                             mimeType: cachedVideoURL.mimeType(),
                                                             fileExtension: cachedVideoURL.pathExtension)
@@ -277,6 +288,15 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     
     public func pause() {
         super.player?.pause()
+    }
+    
+    public func reset() {
+        DispatchQueue.main.async { [weak self] in
+            guard let strongSelf = self else { return }
+            (strongSelf.player as? ObservableAVPlayer)?.reset()
+            strongSelf.player?.pause()
+            strongSelf.player = nil
+        }
     }
 }
 
@@ -339,9 +359,6 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
                     return
                 }
                 
-                let cachedResource = CachedResourceReference(url: strongSelf.sourceURL!, resourceType: .video, cacheLocation: strongSelf.cacheLocation)
-                Celestial.shared.storeReferenceTo(cachedResource: cachedResource)
-                
                 strongSelf.notifyReceiverOfDownloadCompletion(videoFileURL: compressedVideoURL)
             }
             
@@ -375,8 +392,7 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
         switch cacheLocation {
         case .inMemory:
            
-            Celestial.shared.decreaseVideoQuality(sourceURL: sourceURL,
-                                                           inputURL: intermediateTemporaryFileURL) { (compressedVideoURL) in
+            Celestial.shared.decreaseVideoQuality(sourceURL: sourceURL, inputURL: intermediateTemporaryFileURL) { (compressedVideoURL) in
                 
                 guard let compressedVideoURL = compressedVideoURL else {
                     completion(nil)
