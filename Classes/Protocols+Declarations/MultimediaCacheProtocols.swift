@@ -111,7 +111,7 @@ internal protocol CelestialVideoCachingProtocol: class {
      Caches the specified video url
 
     - Parameters:
-       - videoURL: The url of the video to be cached. This video URL must not be an external url. It must already exist on file, such as in a temporary directory after a `URLSessionDownloadTask` completes
+       - temporaryFileURL: The temporary URL of the image after the `URLSessionDownloadTask` has completed.
        - sourceURL: The url of the resource that has been requested
        - completion: Executes completion block with a URL pointing to a compressed video
      
@@ -125,7 +125,7 @@ internal protocol CelestialVideoCachingProtocol: class {
     ```
      
     */
-    func storeVideoURL(_ videoURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ())
+    func storeVideoURL(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ())
     
     
     
@@ -160,18 +160,18 @@ internal protocol CelestialVideoCachingProtocol: class {
     - Warning: This is irreversible. The cache will no longer contain a value for this key, thus requiring the video to be redownloaded and re-cached.
      
     - Parameters:
-       - sourceURL: The url of the resource that has been requested
+       - sourceURLString: The URL of the resource that has been requested
      
     - Usage:
     ```
-    let sourceURL = <Your URL>
-    Celestial.shared.removeVideoURL(using: sourceURL)
+    let urlString = <URL to your video>
+    Celestial.shared.removeVideoURL(using: urlString)
     ```
      
     - Returns:
         A Boolean value of whether all videos represented by the sourceURL has been deleted
     */
-    func removeVideoURL(using sourceURL: URL) -> Bool
+    func removeVideoURL(using sourceURLString: String) -> Bool
     
     
     
@@ -301,7 +301,7 @@ internal protocol CelestialImageCachingProtocol: class {
      Caches the downloaded image URL
 
     - Parameters:
-       - imageURL: The local URL of the image to be cached to file system
+       - temporaryFileURL: The temporary URL of the image after the `URLSessionDownloadTask` has completed.
        - sourceURL: The URL of the requested resource
        - pointSize: The iOS point size of the image. Will be used to store and retrieve the same image at different sizes
     
@@ -354,22 +354,18 @@ internal protocol CelestialImageCachingProtocol: class {
     - Warning: This is irreversible. The cache will no longer contain a value for this key, thus requiring the image to be redownloaded and re-cached.
      
     - Parameters:
-       - sourceURL: The URL of the resource that has been requested
+       - sourceURLString: The URL of the resource that has been requested
     
     - Usage:
     ```
-    let urlString = <your URL>
-    guard let url = URL(string: urlString) else {
-        return
-    }
-    
-    Celestial.shared.removeImageURL(using: url)
+    let urlString = <URL to your image>
+    Celestial.shared.removeImageURL(using: urlString)
     ```
      
     - Returns:
         A Boolean value of whether all videos represented by the sourceURL has been deleted
     */
-    func removeImageURL(using sourceURL: URL) -> Bool
+    func removeImageURL(using sourceURLString: String) -> Bool
     
     
     
