@@ -272,8 +272,8 @@ internal struct CachedResourceIdentifier: Codable, Equatable, Hashable, CustomSt
     let cacheLocation: ResourceCacheLocation
     
     var description: String {
-        let description = "Source URL: \(sourceURL), resourceType: \(resourceType.rawValue), cacheLocation: \(cacheLocation)"
-        return description
+        let printableString = "Source URL: \(sourceURL), resourceType: \(String(reflecting: resourceType)), cacheLocation: \(String(reflecting: cacheLocation))"
+        return printableString
     }
     
     /// Initializes CachedResourceIdentifier object to be used later to determine if the actual file exists and can be retrieved
@@ -306,6 +306,14 @@ internal struct CachedResourceIdentifier: Codable, Equatable, Hashable, CustomSt
         case sourceURL
         case resourceType
         case cacheLocation
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(sourceURL.absoluteString)
+    }
+
+    static func ==(lhs: CachedResourceIdentifier, rhs: CachedResourceIdentifier) -> Bool {
+        return lhs.sourceURL.absoluteString == rhs.sourceURL.absoluteString
     }
 }
 
