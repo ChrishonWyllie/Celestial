@@ -307,6 +307,7 @@ extension Celestial: CelestialUtilityProtocol {
     }
        
     public func reset() {
+        DownloadTaskManager.shared.cancelAllDownloads()
         clearAllResourceIdentifiers()
         clearAllImages()
         clearAllVideos()
@@ -316,6 +317,39 @@ extension Celestial: CelestialUtilityProtocol {
         return FileStorageManager.shared.getCacheInfo().map { "\n\($0)" }
     }
     
+    
+    
+    
+    
+    
+    internal func exchangeDownloadModel(newDownloadModel: GenericDownloadModel) {
+        DownloadTaskManager.shared.exchangeDownloadModel(newModel: newDownloadModel)
+    }
+    
+    internal func resumeDownload(downloadModel: GenericDownloadModel) {
+        DownloadTaskManager.shared.resumeDownload(model: downloadModel)
+    }
+    
+    internal func startDownload(downloadModel: GenericDownloadModel) {
+        DownloadTaskManager.shared.startDownload(model: downloadModel)
+    }
+    
+    internal func deleteFile(at location: URL, deleteReferenceForSourceURL url: URL? = nil) {
+        if let sourceURL = url {
+            removeResourceIdentifier(for: sourceURL.absoluteString)
+        }
+        DispatchQueue.global(qos: .background).async {
+            FileStorageManager.shared.deleteFile(at: location)
+        }
+    }
+    
+    internal func getTemporarilyCachedFileURL(for sourceURL: URL) -> URL? {
+        return FileStorageManager.shared.getTemporarilyCachedFileURL(for: sourceURL)
+    }
+    
+    internal func decreaseVideoQuality(sourceURL: URL, inputURL: URL, completion: @escaping (_ lowerQualityVideoURL: URL?) -> ()) {
+        FileStorageManager.shared.decreaseVideoQuality(sourceURL: sourceURL, inputURL: inputURL, completion: completion)
+    }
 }
 
 
