@@ -571,7 +571,7 @@ internal protocol CelestialMemoryCacheProtocol: class {
     ```
      
     */
-    func setCacheCostLimit(videoCache: Int?, imageCache: Int?)
+    func setMemoryCacheCostLimits(videoCache: Int?, imageCache: Int?)
     
 }
 
