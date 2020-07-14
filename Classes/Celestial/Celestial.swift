@@ -270,7 +270,7 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
 
 extension Celestial: CelestialMemoryCacheProtocol {
     
-    func setCacheItemLimit(videoCache: Int?, imageCache: Int?) {
+    func setMemoryCacheItemLimits(videoCache: Int? = nil, imageCache: Int? = nil) {
         if let videoCacheLimit = videoCache {
             VideoCache.shared.setCacheItemLimit(videoCacheLimit)
         }
@@ -279,7 +279,7 @@ extension Celestial: CelestialMemoryCacheProtocol {
         }
     }
     
-    public func setCacheCostLimit(videoCache: Int?, imageCache: Int?) {
+    public func setMemoryCacheCostLimits(videoCache: Int? = nil, imageCache: Int? = nil) {
         if let videoCacheLimit = videoCache {
             VideoCache.shared.setCacheCostLimit(numMegabytes: videoCacheLimit)
         }

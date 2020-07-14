@@ -542,11 +542,11 @@ internal protocol CelestialMemoryCacheProtocol: class {
     
     - Usage:
     ```
-    Celestial.shared.setCacheItemLimit(videoCache: 100, imageCache: 100)
+    Celestial.shared.setMemoryCacheItemLimits(videoCache: 100, imageCache: 100)
     ```
      
     */
-    func setCacheItemLimit(videoCache: Int?, imageCache: Int?)
+    func setMemoryCacheItemLimits(videoCache: Int?, imageCache: Int?)
     
     
     
@@ -567,7 +567,7 @@ internal protocol CelestialMemoryCacheProtocol: class {
      
     - Usage:
     ```
-    Celestial.shared.setCacheItemLimit(videoCache: Int.OneGigabyte, imageCache: Int.OneMegabyte * 100)
+    Celestial.shared.setMemoryCacheCostLimits(videoCache: Int.OneGigabyte, imageCache: Int.OneMegabyte * 100)
     ```
      
     */
