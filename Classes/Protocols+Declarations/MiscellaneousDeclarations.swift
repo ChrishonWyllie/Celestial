@@ -206,6 +206,86 @@ enum CLSError: Error {
 
 
 
+/// Determines what state a resource is in
+/// Whether it has been cached, exists in a temporary uncached state, .etc
+internal enum ResourceExistenceState: Int {
+    /// The resource has completed downloading but remains in a temporary
+    /// cache in the file system until URLCachableView decides what to do with it
+    case uncached = 0
+    /// The resource has completed downloading and is cached to either memory or file system
+    case cached
+    /// The resource is currently being downloaded
+    case currentlyDownloading
+    /// The download task for the resource has been paused
+    case downloadPaused
+    /// There are no pending downloads for the resource, nor does it exist anywhere. Must begin new download
+    case none
+}
+
+/// File type of the resource. Used for proper identification and storage location
+internal enum ResourceFileType: Int {
+    case video = 0
+    case image
+    case temporary
+    case all
+}
+
+/// Struct for identifying if a resource exists in cache, whether in memory or in file system
+internal struct CachedResourceIdentifier: Codable, Equatable, Hashable, CustomStringConvertible {
+    
+    /// The URL pointing to the external resource
+    let sourceURL: URL
+    /// The file type of the resource
+    let resourceType: ResourceFileType
+    /// The location that the cached resource exists in: in local memory, in file system, .etc
+    let cacheLocation: DownloadCompletionCacheLocation
+    
+    var description: String {
+        let description = "Source URL: \(sourceURL), resourceType: \(resourceType.rawValue), cacheLocation: \(cacheLocation)"
+        return description
+    }
+    
+    /// Initializes CachedResourceIdentifier object to be used later to determine if the actual file exists and can be retrieved
+    init(sourceURL: URL, resourceType: ResourceFileType, cacheLocation: DownloadCompletionCacheLocation) {
+        self.sourceURL = sourceURL
+        self.resourceType = resourceType
+        self.cacheLocation = cacheLocation
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        sourceURL = try container.decode(URL.self, forKey: .sourceURL)
+        let resourceTypeRawValue = try container.decode(Int.self, forKey: .resourceType)
+        resourceType = ResourceFileType(rawValue: resourceTypeRawValue)!
+        
+        let cacheLocationRawValue = try container.decode(Int.self, forKey: .cacheLocation)
+        cacheLocation = DownloadCompletionCacheLocation(rawValue: cacheLocationRawValue)!
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(sourceURL, forKey: .sourceURL)
+        try container.encode(resourceType.rawValue, forKey: .resourceType)
+        try container.encode(cacheLocation.rawValue, forKey: .cacheLocation)
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case sourceURL
+        case resourceType
+        case cacheLocation
+    }
+}
+
+
+
+
+
+
+
+
+
 
 
 
