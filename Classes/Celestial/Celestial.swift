@@ -204,125 +204,59 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
     
     public func prefetchResources(at urlStrings: [String]) {
         
-        handleScrollViewPrefetching(forRequestedItems: urlStrings) { [weak self] (url, downloadState) in
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let strongSelf = self else { return }
-            switch downloadState {
-            case .none:
-                strongSelf.startDownload(for: url)
-            case .paused:
-                strongSelf.resumeDownload(for: url)
-            case .downloading, .finished:
-                // Nothing more to do
-                break
+            
+            strongSelf.handleScrollViewPrefetching(forRequestedItems: urlStrings) { (url, resourceExistenceState) in
+                
+                switch resourceExistenceState {
+                case .none:
+                    strongSelf.startDownload(for: url)
+                case .downloadPaused:
+                    strongSelf.resumeDownload(for: url)
+                case .currentlyDownloading, .cached, .uncached:
+                    // Nothing more to do
+                    break
+                }
             }
         }
     }
     
     public func pausePrefetchingForResources(at urlStrings: [String], cancelCompletely: Bool) {
         
-        handleScrollViewPrefetching(forRequestedItems: urlStrings) { [weak self] (url, downloadState) in
-            guard let strongSelf = self else { return }
-            switch downloadState {
-            case .none, .finished, .paused:
-                // Nothing more to do
-                break
-            case .downloading:
-                if cancelCompletely {
-                    strongSelf.cancelDownload(for: url)
-                } else {
-                    strongSelf.pauseDownload(for: url)
-                }
-            }
-        }
-    }
-    
-    private func handleScrollViewPrefetching(forRequestedItems urlStrings: [String], performOperationOnURL: @escaping (URL, DownloadTaskState) -> ()) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let strongSelf = self else { return }
-            for urlString in urlStrings {
             
-                guard let url = URL(string: urlString) else {
-                    fatalError("\(urlString) is not a valid URL")
+            strongSelf.handleScrollViewPrefetching(forRequestedItems: urlStrings) { (url, resourceExistenceState) in
+                
+                switch resourceExistenceState {
+                case .none, .downloadPaused, .cached, .uncached:
+                    // Nothing more to do
+                    break
+                case .currentlyDownloading:
+                    if cancelCompletely {
+                        strongSelf.cancelDownload(for: url)
+                    } else {
+                        strongSelf.pauseDownload(for: url)
+                    }
                 }
-                
-                let downloadState = strongSelf.downloadState(for: url)
-                
-                performOperationOnURL(url, downloadState)
             }
         }
     }
     
-    internal func resourceExistenceState(for sourceURL: URL,
-                                         cacheLocation: DownloadCompletionCacheLocation,
-                                         fileType: Celestial.ResourceFileType) -> ResourceExistenceState {
-        switch fileType {
-        case .video:
-            
-            if FileStorageManager.shared.uncachedFileExists(for: sourceURL)
-                && FileStorageManager.shared.videoExists(for: sourceURL) == false {
-                return .uncached
-            }
-            
-            if videoExists(for: sourceURL, cacheLocation: cacheLocation) {
-                return .cached
-            }
-            
-        case .image:
-            
-            if FileStorageManager.shared.uncachedFileExists(for: sourceURL)
-                && FileStorageManager.shared.imageExists(for: sourceURL) == false {
-                return .uncached
-            }
-            
-            if imageExists(for: sourceURL, cacheLocation: cacheLocation) {
-                return .cached
-            }
-            
-        default:
-            fatalError("Unsupported file type: \(fileType)")
-        }
+    private func handleScrollViewPrefetching(forRequestedItems urlStrings: [String], performSomeOpertionUsingURL: @escaping (URL, ResourceExistenceState) -> ()) {
+        for sourceURLString in urlStrings {
         
-        switch downloadState(for: sourceURL) {
-        case .downloading: return .currentlyDownloading
-        case .paused: return .downloadPaused
-        case .none: return .none
-        default:
-            if imageExists(for: sourceURL, cacheLocation: .fileSystem) && cacheLocation == .inMemory ||
-                imageExists(for: sourceURL, cacheLocation: .inMemory) && cacheLocation == .fileSystem
-            {
-                /*
-                 Represents an unusual case:
-                 The image exists in file system, but the request for this image
-                 expects it to be in memory (local NSCache)
-                 Or vice versa
-                 In this case, return .none for the file does not exist here
-                 */
-                return .none
+            guard let sourceURL = URL(string: sourceURLString) else {
+                fatalError("\(sourceURLString) is not a valid URL")
             }
+            
+            let resourceExistenceState = determineResourceExistenceState(forSourceURL: sourceURL,
+                                                                         ifCacheLocationIsKnown: nil,
+                                                                         ifResourceTypeIsKnown: nil)
+            
+            performSomeOpertionUsingURL(sourceURL, resourceExistenceState)
         }
-    }
-    
-    /// Determines what state a resource is in
-    /// Whether it has been cached, exists in a temporary uncached state, currently
-    internal enum ResourceExistenceState: Int {
-        /// The resource has completed downloading but remains in a temporary
-        /// cache in the file system until URLCachableView decides what to do with it
-        case uncached = 0
-        /// The resource has completed downloading and is cached to either memory or file system
-        case cached
-        /// The resource is currently being downloaded
-        case currentlyDownloading
-        /// The download task for the resource has been paused
-        case downloadPaused
-        /// There are no pending downloads for the resource, nor does it exist anywhere. Must begin new download
-        case none
-    }
-
-    internal enum ResourceFileType {
-        case video
-        case image
-        case temporary
-        case all
     }
 }
 
@@ -404,18 +338,6 @@ extension Celestial: CelestialUtilityProtocol {
 
 extension Celestial {
     
-    private func loadCachedResourceIdentifiers() {
-        
-        guard
-            let cachedResourcesData = UserDefaults.standard.value(forKey: resourceIdentifiersKey) as? Data,
-            let locallyStoredCachedResourceReferences = try? PropertyListDecoder().decode(Array<CachedResourceIdentifier>.self, from: cachedResourcesData) else {
-                
-            threadUnsafeCachedResourceIdentifiers = []
-            return
-        }
-        threadUnsafeCachedResourceIdentifiers = locallyStoredCachedResourceReferences
-    }
-    
     internal func storeReferenceTo(cachedResource: CachedResourceIdentifier) {
         
         guard threadUnsafeCachedResourceIdentifiers.contains(cachedResource) == false else {
@@ -430,6 +352,18 @@ extension Celestial {
         } catch let error {
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error encoding resource identifiers array to data. Error: \(error)")
         }
+    }
+    
+    private func loadCachedResourceIdentifiers() {
+        
+        guard
+            let cachedResourcesData = UserDefaults.standard.value(forKey: resourceIdentifiersKey) as? Data,
+            let locallyStoredCachedResourceReferences = try? PropertyListDecoder().decode(Array<CachedResourceIdentifier>.self, from: cachedResourcesData) else {
+                
+            threadUnsafeCachedResourceIdentifiers = []
+            return
+        }
+        threadUnsafeCachedResourceIdentifiers = locallyStoredCachedResourceReferences
     }
     
     internal func removeResourceIdentifier(for sourceURLString: String) {
