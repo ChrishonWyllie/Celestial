@@ -51,7 +51,7 @@ public final class Celestial: NSObject {
 
 extension Celestial: CelestialVideoCachingProtocol {
     
-    public func videoExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool {
+    public func videoExists(for sourceURL: URL, cacheLocation: ResourceCacheLocation) -> Bool {
         return cachedResourceAndIdentifierExists(for: sourceURL, resourceType: .video, cacheLocation: cacheLocation)
     }
    
@@ -115,7 +115,7 @@ extension Celestial: CelestialVideoCachingProtocol {
 
 extension Celestial: CelestialImageCachingProtocol {
     
-    public func imageExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool {
+    public func imageExists(for sourceURL: URL, cacheLocation: ResourceCacheLocation) -> Bool {
         return cachedResourceAndIdentifierExists(for: sourceURL, resourceType: .image, cacheLocation: cacheLocation)
     }
     
@@ -498,7 +498,7 @@ extension Celestial {
     }
     
     func determineResourceExistenceState(forSourceURL sourceURL: URL,
-                                         ifCacheLocationIsKnown cacheLocation: DownloadCompletionCacheLocation?,
+                                         ifCacheLocationIsKnown cacheLocation: ResourceCacheLocation?,
                                          ifResourceTypeIsKnown resourceType: ResourceFileType?) -> ResourceExistenceState {
         
         if let cacheLocation = cacheLocation, let resourceType = resourceType {
@@ -533,7 +533,7 @@ extension Celestial {
         }
     }
     
-    private func cachedResourceAndIdentifierExists(for sourceURL: URL, resourceType: ResourceFileType, cacheLocation: DownloadCompletionCacheLocation) -> Bool {
+    private func cachedResourceAndIdentifierExists(for sourceURL: URL, resourceType: ResourceFileType, cacheLocation: ResourceCacheLocation) -> Bool {
         var identifierExists = resourceIdentifierExists(for: sourceURL)
         var fileExists: Bool = false
         

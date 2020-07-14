@@ -20,7 +20,7 @@ open class URLImageView: UIImageView, URLCachableView {
     
     public private(set) var sourceURL: URL?
     
-    public private(set) var cacheLocation: DownloadCompletionCacheLocation = .fileSystem
+    public private(set) var cacheLocation: ResourceCacheLocation = .fileSystem
     
     private var downloadModel: GenericDownloadModel!
     
@@ -44,19 +44,19 @@ open class URLImageView: UIImageView, URLCachableView {
     public convenience init(delegate: URLCachableViewDelegate?,
                             sourceURLString: String,
                             cachePolicy: MultimediaCachePolicy = .allow,
-                            cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
+                            cacheLocation: ResourceCacheLocation = .fileSystem) {
         self.init(delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
         loadImageFrom(urlString: sourceURLString)
     }
     
     public convenience init(delegate: URLCachableViewDelegate?,
                             cachePolicy: MultimediaCachePolicy = .allow,
-                            cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
+                            cacheLocation: ResourceCacheLocation = .fileSystem) {
         self.init(frame: .zero, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
         self.delegate = delegate
     }
     
-    public required init(frame: CGRect, cachePolicy: MultimediaCachePolicy, cacheLocation: DownloadCompletionCacheLocation) {
+    public required init(frame: CGRect, cachePolicy: MultimediaCachePolicy, cacheLocation: ResourceCacheLocation) {
         super.init(frame: frame)
         
         if translatesAutoresizingMaskIntoConstraints == true && frame != .zero {

@@ -18,7 +18,7 @@ import AVFoundation
     var cachePolicy: MultimediaCachePolicy { get }
     
     /// Determines where a downloaded resource will be stored if `cachePolicy == .allow`
-    var cacheLocation: DownloadCompletionCacheLocation { get }
+    var cacheLocation: ResourceCacheLocation { get }
     
     /**
      Initializes a download model to begin a download and link its status with a receiver
@@ -28,7 +28,7 @@ import AVFoundation
        - cachePolicy: Used to notify receiver of download state events such as completion, progress and errors
        - cacheLocation: Determines where a downloaded resource will be stored if `cachePolicy == .allow`
     */
-    init(frame: CGRect, cachePolicy: MultimediaCachePolicy, cacheLocation: DownloadCompletionCacheLocation)
+    init(frame: CGRect, cachePolicy: MultimediaCachePolicy, cacheLocation: ResourceCacheLocation)
 }
 
 /// Delegate for notifying receiver of events related to current download of a requested resource
@@ -206,6 +206,37 @@ enum CLSError: Error {
 
 
 
+
+/// Represents current state of a download of a resource from an external URL
+public enum DownloadTaskState {
+    /// First state of a download before it begins
+    case none
+    /// Download has been temporarily paused. May be resumed
+    case paused
+    /// Download is currently in progress
+    case downloading
+    /// Download has finished and stored to a temporary URL, waiting to be cached if desired
+    case finished
+}
+
+/// Determines where cached files will be stored if `cachePolicy == .allow`
+@objc public enum ResourceCacheLocation: Int {
+    /// Downloaded resources will be stored in local `NSCache`
+    case inMemory = 0
+    /// Downloaded resources will be stored in local file system
+    case fileSystem
+}
+
+
+
+
+
+
+
+
+
+
+
 /// Determines what state a resource is in
 /// Whether it has been cached, exists in a temporary uncached state, .etc
 internal enum ResourceExistenceState: Int {
@@ -238,7 +269,7 @@ internal struct CachedResourceIdentifier: Codable, Equatable, Hashable, CustomSt
     /// The file type of the resource
     let resourceType: ResourceFileType
     /// The location that the cached resource exists in: in local memory, in file system, .etc
-    let cacheLocation: DownloadCompletionCacheLocation
+    let cacheLocation: ResourceCacheLocation
     
     var description: String {
         let description = "Source URL: \(sourceURL), resourceType: \(resourceType.rawValue), cacheLocation: \(cacheLocation)"
@@ -246,7 +277,7 @@ internal struct CachedResourceIdentifier: Codable, Equatable, Hashable, CustomSt
     }
     
     /// Initializes CachedResourceIdentifier object to be used later to determine if the actual file exists and can be retrieved
-    init(sourceURL: URL, resourceType: ResourceFileType, cacheLocation: DownloadCompletionCacheLocation) {
+    init(sourceURL: URL, resourceType: ResourceFileType, cacheLocation: ResourceCacheLocation) {
         self.sourceURL = sourceURL
         self.resourceType = resourceType
         self.cacheLocation = cacheLocation
@@ -260,7 +291,7 @@ internal struct CachedResourceIdentifier: Codable, Equatable, Hashable, CustomSt
         resourceType = ResourceFileType(rawValue: resourceTypeRawValue)!
         
         let cacheLocationRawValue = try container.decode(Int.self, forKey: .cacheLocation)
-        cacheLocation = DownloadCompletionCacheLocation(rawValue: cacheLocationRawValue)!
+        cacheLocation = ResourceCacheLocation(rawValue: cacheLocationRawValue)!
     }
     
     func encode(to encoder: Encoder) throws {

@@ -31,7 +31,7 @@ internal protocol CelestialVideoCachingProtocol: class {
     - Returns:
        - A boolean value of whether the requested resource has been previously cached
     */
-    func videoExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool
+    func videoExists(for sourceURL: URL, cacheLocation: ResourceCacheLocation) -> Bool
     
     
     
@@ -215,7 +215,7 @@ internal protocol CelestialImageCachingProtocol: class {
     - Returns:
        - A boolean value of whether the requested resource has been previously cached
     */
-    func imageExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool
+    func imageExists(for sourceURL: URL, cacheLocation: ResourceCacheLocation) -> Bool
     
     
     

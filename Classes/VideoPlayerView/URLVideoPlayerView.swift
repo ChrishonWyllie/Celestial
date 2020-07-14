@@ -24,7 +24,7 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     
     public private(set) var sourceURL: URL?
     
-    public private(set) var cacheLocation: DownloadCompletionCacheLocation = .fileSystem
+    public private(set) var cacheLocation: ResourceCacheLocation = .fileSystem
    
     private var downloadModel: GenericDownloadModel!
     
@@ -66,28 +66,28 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     public convenience init(delegate: URLVideoPlayerViewDelegate?,
                             sourceURLString: String,
                             cachePolicy: MultimediaCachePolicy = .allow,
-                            cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
+                            cacheLocation: ResourceCacheLocation = .fileSystem) {
         self.init(delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
         loadVideoFrom(urlString: sourceURLString)
     }
     
     public convenience init(delegate: URLVideoPlayerViewDelegate?,
                             cachePolicy: MultimediaCachePolicy = .allow,
-                            cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
+                            cacheLocation: ResourceCacheLocation = .fileSystem) {
         self.init(frame: .zero, delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
     }
     
     public convenience init(frame: CGRect,
                             delegate: URLVideoPlayerViewDelegate?,
                             cachePolicy: MultimediaCachePolicy,
-                            cacheLocation: DownloadCompletionCacheLocation) {
+                            cacheLocation: ResourceCacheLocation) {
         self.init(frame: frame, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
         self.delegate = delegate
     }
     
     public required init(frame: CGRect,
                          cachePolicy: MultimediaCachePolicy,
-                         cacheLocation: DownloadCompletionCacheLocation) {
+                         cacheLocation: ResourceCacheLocation) {
         super.init(frame: frame)
         self.cachePolicy = cachePolicy
         self.cacheLocation = cacheLocation

@@ -41,26 +41,6 @@ internal protocol CachableDownloadModelDelegate: class {
     func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, downloadProgress progress: Float, humanReadableProgress: String)
 }
 
-/// Represents current state of a download of a resource from an external URL
-public enum DownloadTaskState {
-    /// First state of a download before it begins
-    case none
-    /// Download has been temporarily paused. May be resumed
-    case paused
-    /// Download is currently in progress
-    case downloading
-    /// Download has finished and stored to a temporary URL, waiting to be cached if desired
-    case finished
-}
-
-/// Determines where cached files will be stored if `cachePolicy == .allow`
-@objc public enum DownloadCompletionCacheLocation: Int {
-    /// Downloaded resources will be stored in local `NSCache`
-    case inMemory = 0
-    /// Downloaded resources will be stored in local file system
-    case fileSystem
-}
-
 /// Model used to initiate a download and link the state of the download with its receiver.
 /// May be used to notify of updates such as progress, errors and completion
 internal protocol DownloadModelRepresentable: class {
@@ -94,9 +74,9 @@ internal protocol DownloadModelRepresentable: class {
 /// Model used to initiate a download and link the state of the download with its receiver.
 /// May be used to notify of updates such as progress, errors and completion
 internal class GenericDownloadModel: DownloadModelRepresentable, CustomStringConvertible {
-    var sourceURL: URL
+    private(set) var sourceURL: URL
+    private(set) var downloadState: DownloadTaskState = .none
     weak var delegate: CachableDownloadModelDelegate?
-    var downloadState: DownloadTaskState = .none
     
     required init(sourceURL: URL, delegate: CachableDownloadModelDelegate?) {
         self.sourceURL = sourceURL
