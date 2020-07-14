@@ -608,3 +608,33 @@ extension Celestial {
         return identifierExists && fileExists
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - BackgroundSession
+
+extension Celestial {
+    
+    public func handleBackgroundSession(identifier: String, completionHandler: @escaping () -> Void) {
+        guard identifier == DownloadTaskManager.backgroundDownloadSessionIdentifier else {
+            return
+        }
+        backgroundSessionCompletionHandler = completionHandler
+    }
+    
+    internal func completeBackgroundSession() {
+        backgroundSessionCompletionHandler?()
+        backgroundSessionCompletionHandler = nil
+    }
+}
