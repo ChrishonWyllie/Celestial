@@ -227,10 +227,8 @@ enum CLSError: Error {
 
 /// Singleton for managing all downloads of resources from external URLs
 protocol DownloadTaskManagerProtocol {
-    /// Dictionary of currently active or paused downloads.
-    /// Key: the URL of the requested resource
-    /// Value: the `DownloadTaskRequest` for the request resource
-    var activeDownloads: [URL: DownloadTaskRequest] { get }
+    /// Keeps track of active downloads
+    var activeDownloadsContext: DownloadManagerContext { get }
     
     /// Session for downloads
     var downloadsSession: URLSession { get }
