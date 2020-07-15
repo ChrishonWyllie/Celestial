@@ -24,9 +24,9 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     
     public private(set) var sourceURL: URL?
     
-    public private(set) var cacheLocation: DownloadCompletionCacheLocation = .fileSystem
+    public private(set) var cacheLocation: ResourceCacheLocation = .fileSystem
    
-    private var downloadModel: GenericDownloadModel!
+    private var downloadTaskRequest: DownloadTaskRequest!
     
     private var downloadTaskHandler: DownloadTaskHandler<URL>?
     
@@ -66,28 +66,28 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     public convenience init(delegate: URLVideoPlayerViewDelegate?,
                             sourceURLString: String,
                             cachePolicy: MultimediaCachePolicy = .allow,
-                            cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
+                            cacheLocation: ResourceCacheLocation = .fileSystem) {
         self.init(delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
         loadVideoFrom(urlString: sourceURLString)
     }
     
     public convenience init(delegate: URLVideoPlayerViewDelegate?,
                             cachePolicy: MultimediaCachePolicy = .allow,
-                            cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
+                            cacheLocation: ResourceCacheLocation = .fileSystem) {
         self.init(frame: .zero, delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
     }
     
     public convenience init(frame: CGRect,
                             delegate: URLVideoPlayerViewDelegate?,
                             cachePolicy: MultimediaCachePolicy,
-                            cacheLocation: DownloadCompletionCacheLocation) {
+                            cacheLocation: ResourceCacheLocation) {
         self.init(frame: frame, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
         self.delegate = delegate
     }
     
     public required init(frame: CGRect,
                          cachePolicy: MultimediaCachePolicy,
-                         cacheLocation: DownloadCompletionCacheLocation) {
+                         cacheLocation: ResourceCacheLocation) {
         super.init(frame: frame)
         self.cachePolicy = cachePolicy
         self.cacheLocation = cacheLocation
@@ -147,7 +147,7 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
         
         reset()
         
-        downloadModel = GenericDownloadModel(sourceURL: sourceURL, delegate: self)
+        downloadTaskRequest = DownloadTaskRequest(sourceURL: sourceURL, delegate: self)
         
         let resourceExistenceState = Celestial.shared.determineResourceExistenceState(forSourceURL: sourceURL,
                                                                                       ifCacheLocationIsKnown: cacheLocation,
@@ -167,11 +167,11 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
             
         case .currentlyDownloading:
             // Use thumbnail?
-            Celestial.shared.exchangeDownloadModel(newDownloadModel: downloadModel)
+            Celestial.shared.mergeExistingDownloadTask(with: downloadTaskRequest)
             
         case .downloadPaused:
             // Use thumbnail?
-            Celestial.shared.resumeDownload(downloadModel: downloadModel)
+            Celestial.shared.resumeDownload(downloadTaskRequest: downloadTaskRequest)
             
         case .none:
             
@@ -208,7 +208,9 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                     }
                 }
                 
-                Celestial.shared.startDownload(downloadModel: downloadModel)
+                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - No resource exists or is currently downloading for url: \(sourceURL). Will start new download")
+                
+                Celestial.shared.startDownload(downloadTaskRequest: downloadTaskRequest)
             }
         }
     }
@@ -222,7 +224,7 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
             
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 guard let strongSelf = self else { return }
-                guard let memoryCachedVideoData = Celestial.shared.videoData(for: sourceURL.localUniqueFileName) else {
+                guard let memoryCachedVideoData = Celestial.shared.videoFromMemoryCache(sourceURLString: sourceURL.absoluteString) else {
                     return
                 }
                 
@@ -237,7 +239,7 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
             
         case .fileSystem:
             
-            guard let cachedVideoURL = Celestial.shared.videoURL(for: sourceURL) else {
+            guard let cachedVideoURL = Celestial.shared.videoURLFromFileCache(sourceURL: sourceURL) else {
                 return
             }
             
@@ -408,7 +410,7 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
                                                           originalURLMimeType: sourceURL.mimeType(),
                                                           originalURLFileExtension: sourceURL.pathExtension)
                     
-                    Celestial.shared.store(videoData: videoData, with: sourceURL.localUniqueFileName)
+                    Celestial.shared.storeVideoInMemoryCache(videoData: videoData, sourceURLString: sourceURL.absoluteString)
                     
                     completion(compressedVideoURL)
                     
@@ -420,9 +422,9 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
             
         case .fileSystem:
            
-            Celestial.shared.storeVideoURL(intermediateTemporaryFileURL,
-                                           withSourceURL: sourceURL,
-                                           completion: completion)
+            Celestial.shared.storeDownloadedVideoToFileCache(intermediateTemporaryFileURL,
+                                                             withSourceURL: sourceURL,
+                                                             completion: completion)
         }
     }
 }
