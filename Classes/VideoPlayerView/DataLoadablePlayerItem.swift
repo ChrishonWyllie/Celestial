@@ -27,8 +27,6 @@ class DataLoadablePlayerItem: AVPlayerItem {
         mediaData = data
         mediaDataMimeType = mimeType
         
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Playing video from cached data. Size: \(mediaData.sizeInMB)")
-        
         let asset = AVURLAsset(url: fakeUrl)
         
         let assetKeys: [String] = [URLVideoPlayerView.LoadableAssetKeys.playable, .hasProtectedContent].map { $0.rawValue }
