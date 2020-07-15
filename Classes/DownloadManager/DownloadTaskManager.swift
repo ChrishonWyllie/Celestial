@@ -14,9 +14,6 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     
     internal let activeDownloadsContext = DownloadManagerContext()
     
-    private let concurrentQueue = DispatchQueue(label: "com.chrishonwyllie.Celestial.DownloadTaskManager.downloadTaskQueue",
-                                                attributes: .concurrent)
-    
     internal static let backgroundDownloadSessionIdentifier: String = "com.chrishonwyllie.Celestial.DownloadTaskManager.URLSession.background.identifier"
     private(set) lazy var downloadsSession: URLSession = {
         let identifier = DownloadTaskManager.backgroundDownloadSessionIdentifier
