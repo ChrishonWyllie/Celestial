@@ -308,7 +308,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     internal func createTemporaryFileURL(from sourceURL: URL) -> URL {
         
-        let localFileName = sourceURL.localUniqueFileName
+        let localFileName = sourceURL.localUniqueFileName()
         let fileExtension = sourceURL.pathExtension
         
         let intermediateTemporaryFileURL =
@@ -545,7 +545,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
         default:       directoryURL = directoryManager.temporaryDirectoryURL
         }
         
-        let localFileName = sourceURL.localUniqueFileName
+        let localFileName = sourceURL.localUniqueFileName()
         
         if fileType == .video {
             // TODO
@@ -628,7 +628,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
         // image name 1: URL: https://picsum.photos/id/0/5616/3744 -> becomes -> 3744-size-327.0-246.0 (no extension)
         // image name 2: URL: https://server/url/to/your/image.png -> becomes -> image-size-327-0-246-0.png
         
-        var formattedFileName = sourceURL.localUniqueFileName
+        var formattedFileName = sourceURL.localUniqueFileName()
         let fileExtension = sourceURL.pathExtension
         
         if let size = size {

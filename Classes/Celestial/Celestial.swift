@@ -603,7 +603,7 @@ extension Celestial {
             identifierExists = true
         }
         
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Checking if cached resource exists for source url: \(sourceURL). local unique identifier: \(sourceURL.localUniqueFileName). identifier exists: \(identifierExists). file exists: \(fileExists)")
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Checking if cached resource exists for source url: \(sourceURL). local unique identifier: \(sourceURL.localUniqueFileName()). identifier exists: \(identifierExists). file exists: \(fileExists)")
         
         return identifierExists && fileExists
     }
