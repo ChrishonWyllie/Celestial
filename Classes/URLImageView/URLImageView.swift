@@ -20,9 +20,9 @@ open class URLImageView: UIImageView, URLCachableView {
     
     public private(set) var sourceURL: URL?
     
-    public private(set) var cacheLocation: DownloadCompletionCacheLocation = .fileSystem
+    public private(set) var cacheLocation: ResourceCacheLocation = .fileSystem
     
-    private var downloadModel: GenericDownloadModel!
+    private var downloadTaskRequest: DownloadTaskRequest!
     
     private var downloadTaskHandler: DownloadTaskHandler<UIImage>?
     
@@ -44,19 +44,19 @@ open class URLImageView: UIImageView, URLCachableView {
     public convenience init(delegate: URLCachableViewDelegate?,
                             sourceURLString: String,
                             cachePolicy: MultimediaCachePolicy = .allow,
-                            cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
+                            cacheLocation: ResourceCacheLocation = .fileSystem) {
         self.init(delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
         loadImageFrom(urlString: sourceURLString)
     }
     
     public convenience init(delegate: URLCachableViewDelegate?,
                             cachePolicy: MultimediaCachePolicy = .allow,
-                            cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
+                            cacheLocation: ResourceCacheLocation = .fileSystem) {
         self.init(frame: .zero, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
         self.delegate = delegate
     }
     
-    public required init(frame: CGRect, cachePolicy: MultimediaCachePolicy, cacheLocation: DownloadCompletionCacheLocation) {
+    public required init(frame: CGRect, cachePolicy: MultimediaCachePolicy, cacheLocation: ResourceCacheLocation) {
         super.init(frame: frame)
         
         if translatesAutoresizingMaskIntoConstraints == true && frame != .zero {
@@ -95,7 +95,9 @@ open class URLImageView: UIImageView, URLCachableView {
     
     /// Downloads an image from an external URL string
     public func loadImageFrom(urlString: String) {
-        acquireImage(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.acquireImage(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
+        }
     }
     
     private var imageCompletionHandler: (() -> ())?
@@ -105,33 +107,37 @@ open class URLImageView: UIImageView, URLCachableView {
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
         
-        acquireImage(from: urlString,
-                     progressHandler: progressHandler,
-                     completion: completion,
-                     errorHandler: errorHandler)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.acquireImage(from: urlString,
+                               progressHandler: progressHandler,
+                               completion: completion,
+                               errorHandler: errorHandler)
+        }
     }
     
     private func acquireImage(from urlString: String,
                               progressHandler: DownloadTaskProgressHandler?,
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
-        image = nil
         
-        // Store a reference to the urlString, so that we can save in Cache when download completes
+        DispatchQueue.main.async { [weak self] in
+            self?.image = nil
+        }
+        
         guard let sourceURL = URL(string: urlString) else {
             return
         }
         self.sourceURL = sourceURL
         
-        downloadModel = GenericDownloadModel(sourceURL: sourceURL, delegate: self)
+        downloadTaskRequest = DownloadTaskRequest(sourceURL: sourceURL, delegate: self)
         
-        let resourceExistenceState = Celestial.shared.resourceExistenceState(for: sourceURL,
-                                                                             cacheLocation: cacheLocation,
-                                                                             fileType: .image)
+        let resourceExistenceState = Celestial.shared.determineResourceExistenceState(forSourceURL: sourceURL,
+                                                                                      ifCacheLocationIsKnown: cacheLocation,
+                                                                                      ifResourceTypeIsKnown: .image)
         
         switch resourceExistenceState {
         case .uncached:
-            guard let temporaryUncachedFileURL = FileStorageManager.shared.getTemporarilyCachedFileURL(for: sourceURL) else {
+            guard let temporaryUncachedFileURL = Celestial.shared.getTemporarilyCachedFileURL(for: sourceURL) else {
                 return
             }
             
@@ -155,11 +161,11 @@ open class URLImageView: UIImageView, URLCachableView {
         case .currentlyDownloading:
             // Use thumbnail?
             fallbackOnDefaultImageIfExists()
-            DownloadTaskManager.shared.exchangeDownloadModel(newModel: downloadModel)
+            Celestial.shared.mergeExistingDownloadTask(with: downloadTaskRequest)
             
         case .downloadPaused:
             // Use thumbnail?
-            DownloadTaskManager.shared.resumeDownload(model: downloadModel)
+            Celestial.shared.resumeDownload(downloadTaskRequest: downloadTaskRequest)
             
         case .none:
             
@@ -176,7 +182,9 @@ open class URLImageView: UIImageView, URLCachableView {
                 }
             }
             
-            DownloadTaskManager.shared.startDownload(model: downloadModel)
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - No resource exists or is currently downloading for url: \(sourceURL). Will start new download")
+            
+            Celestial.shared.startDownload(downloadTaskRequest: downloadTaskRequest)
         }
     }
     
@@ -188,13 +196,13 @@ open class URLImageView: UIImageView, URLCachableView {
         
         switch cacheLocation {
         case .inMemory:
-            if let cachedImage = Celestial.shared.image(for: sourceURL.localUniqueFileName) {
+            if let cachedImage = Celestial.shared.imageFromMemoryCache(sourceURLString: sourceURL.absoluteString) {
                 useImageOnMainThread(cachedImage, completion: completion)
             } else {
                 completion?()
             }
         case .fileSystem:
-            guard let cachedImageURL = Celestial.shared.imageURL(for: sourceURL, pointSize: imageSize) else {
+            guard let cachedImageURL = Celestial.shared.imageURLFromFileCache(sourceURL: sourceURL, pointSize: imageSize) else {
                 completion?()
                 return
             }
@@ -227,8 +235,10 @@ open class URLImageView: UIImageView, URLCachableView {
     }
     
     private func fallbackOnDefaultImageIfExists() {
-        if let defaultImage = defaultImage {
-            image = defaultImage
+        DispatchQueue.main.async { [weak self] in
+            if let defaultImage = self?.defaultImage {
+                self?.image = defaultImage
+            }
         }
     }
     
@@ -283,6 +293,7 @@ extension URLImageView: CachableDownloadModelDelegate {
             case .allow:
                 
                 strongSelf.getCachedAndResized(intermediateTemporaryFileURL: intermediateTemporaryFileURL, desiredImageSize: desiredImageSize) { (resizedImage, error) in
+                    
                     strongSelf.handleDisplayOf(resizedImage: resizedImage, error: error)
                 }
                 
@@ -291,11 +302,62 @@ extension URLImageView: CachableDownloadModelDelegate {
                 strongSelf.getResizedImage(from: intermediateTemporaryFileURL, desiredImageSize: desiredImageSize) { (resizedImage, error) in
                     strongSelf.handleDisplayOf(resizedImage: resizedImage, error: error)
                     
-                    DispatchQueue.global(qos: .background).async {
-                        FileStorageManager.shared.deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
-                    }
+                    Celestial.shared.deleteFile(at: intermediateTemporaryFileURL)
                 }
             }
+        }
+    }
+    
+    private func getCachedAndResized(intermediateTemporaryFileURL: URL, desiredImageSize: CGSize, completion: @escaping (_ resizedImage: UIImage?, _ error: Error?) -> ()) {
+        
+        guard let originalSourceURL = sourceURL else {
+            let error = CLSError.invalidSourceURLError("The sourceURL does not exist")
+            completion(nil, error)
+            return
+        }
+        
+        switch cacheLocation {
+        case .inMemory:
+           
+            getResizedImage(from: intermediateTemporaryFileURL, desiredImageSize: desiredImageSize) { (resizedImage, error) in
+                if let resizedImage = resizedImage {
+                    Celestial.shared.storeImageInMemoryCache(image: resizedImage, sourceURLString: originalSourceURL.absoluteString)
+                }
+                completion(resizedImage, error)
+            }
+            
+        case .fileSystem:
+            
+            Celestial.shared.storeDownloadedImageToFileCache(intermediateTemporaryFileURL,
+                                                             withSourceURL: originalSourceURL,
+                                                             pointSize: desiredImageSize,
+                                                             completion: { (resizedImage) in
+                                            
+                completion(resizedImage, nil)
+            }) 
+        }
+    }
+    
+    private func getResizedImage(from localTemporaryFileURL: URL, desiredImageSize: CGSize, completion: @escaping (_ resizedImage: UIImage?, _ error: Error?) -> ()) {
+        
+        do {
+            let data = try Data(contentsOf: localTemporaryFileURL)
+            guard let originallySizedDownloadedImage = UIImage(data: data) else {
+                let error = CLSError.urlToDataError("Could not crete Data from contents of URL: \(localTemporaryFileURL)")
+                completion(nil, error)
+                return
+            }
+           
+            // Often, the downloaded image is high resolution, and thus very large
+                 // in both memory and pixel size.
+                 // Create a thumbnail that is the size of the URLImageView that downloaded
+                 // it (self).
+            let resizedImage = originallySizedDownloadedImage.resize(size: desiredImageSize) ?? originallySizedDownloadedImage
+            
+            completion(resizedImage, nil)
+        } catch let error {
+            
+            completion(nil, error)
         }
     }
     
@@ -318,60 +380,6 @@ extension URLImageView: CachableDownloadModelDelegate {
             useImageOnMainThread(resizedAndPossiblyCachedImage)
             
             delegate?.urlCachableView?(self, didFinishDownloading: resizedAndPossiblyCachedImage)
-        }
-    }
-    
-    private func getCachedAndResized(intermediateTemporaryFileURL: URL, desiredImageSize: CGSize, completion: @escaping (_ resizedImage: UIImage?, _ error: Error?) -> ()) {
-        
-        guard let originalSourceURL = sourceURL else {
-            let error = CLSError.invalidSourceURLError("The sourceURL does not exist")
-            completion(nil, error)
-            return
-        }
-        
-        switch cacheLocation {
-            case .inMemory:
-               
-                getResizedImage(from: intermediateTemporaryFileURL, desiredImageSize: desiredImageSize) { (resizedImage, error) in
-                    if let resizedImage = resizedImage {
-                        Celestial.shared.store(image: resizedImage, with: originalSourceURL.localUniqueFileName)
-                    }
-                    completion(resizedImage, error)
-                }
-                
-            case .fileSystem:
-                
-                Celestial.shared.storeImageURL(intermediateTemporaryFileURL,
-                                               withSourceURL: originalSourceURL,
-                                               pointSize: desiredImageSize,
-                                               completion: { (resizedImage) in
-                                                
-                    completion(resizedImage, nil)
-                })
-               
-        }
-    }
-    
-    private func getResizedImage(from localTemporaryFileURL: URL, desiredImageSize: CGSize, completion: @escaping (_ resizedImage: UIImage?, _ error: Error?) -> ()) {
-        
-        do {
-            let data = try Data(contentsOf: localTemporaryFileURL)
-            guard let untouchedDownloadedImage = UIImage(data: data) else {
-                let error = CLSError.urlToDataError("Could not crete Data from contents of URL: \(localTemporaryFileURL)")
-                completion(nil, error)
-                return
-            }
-           
-            // Often, the downloaded image is high resolution, and thus very large
-                 // in both memory and pixel size.
-                 // Create a thumbnail that is the size of the URLImageView that downloaded
-                 // it (self).
-            let resizedImage = untouchedDownloadedImage.resize(size: desiredImageSize) ?? untouchedDownloadedImage
-            
-            completion(resizedImage, nil)
-        } catch let error {
-            
-            completion(nil, error)
         }
     }
 }

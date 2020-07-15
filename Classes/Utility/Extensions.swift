@@ -167,14 +167,19 @@ internal extension URL {
     /// Returns a boolean value for if the file at the specified URL is a video
     var containsVideo: Bool {
         let mimeType = self.mimeType()
-        guard  let uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType as CFString, nil)?.takeRetainedValue() else {
+        guard let uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType as CFString, nil)?.takeRetainedValue() else {
             return false
         }
         return UTTypeConformsTo(uti, kUTTypeMovie)
     }
     
-    var localUniqueFileName: String {
-        return self.absoluteString.convertURLToUniqueFileName()
+    func localUniqueFileName(concatenateFileExtension: Bool? = false) -> String {
+        let fileExtension = self.pathExtension
+        var uniqueFileName: String = self.deletingPathExtension().absoluteString.convertURLToUniqueFileName()
+        if concatenateFileExtension == true {
+            uniqueFileName += "-\(fileExtension)"
+        }
+        return uniqueFileName
     }
 }
 

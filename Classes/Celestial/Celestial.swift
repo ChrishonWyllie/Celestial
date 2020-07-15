@@ -14,6 +14,10 @@ public final class Celestial: NSObject {
     
     internal var debugModeIsActive: Bool = false
     
+    internal let cachedResourceContext = CachedResourceIdentifierContext()
+    
+    private var backgroundSessionCompletionHandler: (() -> Void)?
+    
     
     
     
@@ -21,6 +25,7 @@ public final class Celestial: NSObject {
     
     private override init() {
         super.init()
+        
     }
 }
 
@@ -33,42 +38,61 @@ public final class Celestial: NSObject {
 
 extension Celestial: CelestialVideoCachingProtocol {
     
-    public func videoExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool {
-        switch cacheLocation {
-        case .inMemory:
-            return videoData(for: sourceURL.localUniqueFileName) != nil
-        case .fileSystem:
-            return FileStorageManager.shared.videoExists(for: sourceURL)
-        }
+    public func videoExists(for sourceURL: URL, cacheLocation: ResourceCacheLocation) -> Bool {
+        return cachedResourceAndIdentifierExists(for: sourceURL, resourceType: .video, cacheLocation: cacheLocation)
     }
    
-    public func videoData(for sourceURLString: String) -> MemoryCachedVideoData? {
+    public func videoFromMemoryCache(sourceURLString: String) -> MemoryCachedVideoData? {
         return VideoCache.shared.item(for: sourceURLString.convertURLToUniqueFileName())
     }
    
-    public func videoURL(for sourceURL: URL) -> URL? {
+    public func videoURLFromFileCache(sourceURL: URL) -> URL? {
         return FileStorageManager.shared.getCachedVideoURL(for: sourceURL)
     }
 
-    public func store(videoData: MemoryCachedVideoData?, with sourceURLString: String) {
+    public func storeVideoInMemoryCache(videoData: MemoryCachedVideoData?, sourceURLString: String) {
+        guard let sourceURL = URL(string: sourceURLString) else {
+            fatalError("\(sourceURLString) is not a valid URL")
+        }
+        let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
+                                                          resourceType: .video,
+                                                          cacheLocation: .inMemory)
+        cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
         VideoCache.shared.store(videoData, with: sourceURLString.convertURLToUniqueFileName())
     }
    
-    public func storeVideoURL(_ videoURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ()) {
-        FileStorageManager.shared.cachedAndResizedVideo(sourceURL: sourceURL, intermediateTemporaryFileURL: videoURL, completion: completion)
+    public func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ()) {
+        FileStorageManager.shared.cachedAndResizedVideo(sourceURL: sourceURL, intermediateTemporaryFileURL: temporaryFileURL, completion: { [weak self] (cachedVideoURL) in
+            
+            let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
+                                                              resourceType: .video,
+                                                              cacheLocation: .fileSystem)
+            self?.cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
+            
+            completion(cachedVideoURL)
+        })
     }
-   
-    public func removeVideoData(using sourceURLString: String) {
+    
+    public func removeVideoFromMemoryCache(sourceURLString: String) {
         VideoCache.shared.removeItem(at: sourceURLString.convertURLToUniqueFileName())
+        cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
     }
    
-    public func removeVideoURL(using sourceURL: URL) -> Bool {
-        return FileStorageManager.shared.deleteCachedVideo(using: sourceURL)
+    public func removeVideoFromFileCache(sourceURLString: String) -> Bool {
+        guard let sourceURL = URL(string: sourceURLString) else {
+            fatalError("\(sourceURLString) is not a valid URL")
+        }
+        let successfullyDeletedResource = FileStorageManager.shared.deleteCachedVideo(using: sourceURL)
+        if successfullyDeletedResource {
+            cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
+        }
+        return successfullyDeletedResource
     }
    
     public func clearAllVideos() {
+        cachedResourceContext.clearResourceIdentifiers(withResourceType: .video)
         VideoCache.shared.clearAllItems()
-        FileStorageManager.shared.clearCache(fileType: Celestial.ResourceFileType.video)
+        FileStorageManager.shared.clearCache(fileType: ResourceFileType.video)
     }
 }
 
@@ -78,44 +102,63 @@ extension Celestial: CelestialVideoCachingProtocol {
 
 extension Celestial: CelestialImageCachingProtocol {
     
-    public func imageExists(for sourceURL: URL, cacheLocation: DownloadCompletionCacheLocation) -> Bool {
-        switch cacheLocation {
-        case .inMemory:
-            return image(for: sourceURL.localUniqueFileName) != nil
-        case .fileSystem:
-            return FileStorageManager.shared.imageExists(for: sourceURL)
-        }
+    public func imageExists(for sourceURL: URL, cacheLocation: ResourceCacheLocation) -> Bool {
+        return cachedResourceAndIdentifierExists(for: sourceURL, resourceType: .image, cacheLocation: cacheLocation)
     }
     
-    public func image(for sourceURLString: String) -> UIImage? {
-        return ImageCache.shared.item(for: sourceURLString.convertURLToUniqueFileName())
+    public func imageFromMemoryCache(sourceURLString: String) -> UIImage? {
+       return ImageCache.shared.item(for: sourceURLString.convertURLToUniqueFileName())
     }
     
-    public func imageURL(for sourceURL: URL, pointSize: CGSize) -> URL? {
+    public func imageURLFromFileCache(sourceURL: URL, pointSize: CGSize) -> URL? {
         return FileStorageManager.shared.getCachedImageURL(for: sourceURL, size: pointSize)
     }
     
-    public func store(image: UIImage?, with sourceURLString: String) {
+    public func storeImageInMemoryCache(image: UIImage?, sourceURLString: String) {
+        guard let sourceURL = URL(string: sourceURLString) else {
+            fatalError("\(sourceURLString) is not a valid URL")
+        }
+        let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
+                                                          resourceType: .image,
+                                                          cacheLocation: .inMemory)
+        cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
         ImageCache.shared.store(image, with: sourceURLString.convertURLToUniqueFileName())
     }
     
-    public func storeImageURL(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, pointSize: CGSize, completion: @escaping (_ resizedImage: UIImage?) -> ()) {
-        FileStorageManager.shared.cachedAndResizedImage(sourceURL: sourceURL,
-                                                        size: pointSize,
-                                                        intermediateTemporaryFileURL: temporaryFileURL,
-                                                        completion: completion)
-    }
-    public func removeImage(using sourceURLString: String) {
-        ImageCache.shared.removeItem(at: sourceURLString.convertURLToUniqueFileName())
+    public func storeDownloadedImageToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, pointSize: CGSize, completion: @escaping (UIImage?) -> ()) {
+        
+        FileStorageManager.shared.cachedAndResizedImage(sourceURL: sourceURL, size: pointSize, intermediateTemporaryFileURL: temporaryFileURL, completion: { [weak self] (cachedImageURL) in
+            
+            let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
+                                                              resourceType: .image,
+                                                              cacheLocation: .fileSystem)
+            self?.cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
+            
+            completion(cachedImageURL)
+        })
     }
     
-    public func removeImageURL(using sourceURL: URL) -> Bool {
-        return FileStorageManager.shared.deleteCachedImage(using: sourceURL)
+    public func removeImageFromMemoryCache(sourceURLString: String) {
+        ImageCache.shared.removeItem(at: sourceURLString)
+        cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
+    }
+    
+    public func removeImageFromFileCache(sourceURLString: String) -> Bool {
+        
+        guard let sourceURL = URL(string: sourceURLString) else {
+            fatalError("\(sourceURLString) is not a valid URL")
+        }
+        let successfullyDeletedResource = FileStorageManager.shared.deleteCachedImage(using: sourceURL)
+        if successfullyDeletedResource {
+            cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
+        }
+        return successfullyDeletedResource
     }
     
     public func clearAllImages() {
+        cachedResourceContext.clearResourceIdentifiers(withResourceType: .image)
         ImageCache.shared.clearAllItems()
-        FileStorageManager.shared.clearCache(fileType: Celestial.ResourceFileType.image)
+        FileStorageManager.shared.clearCache(fileType: ResourceFileType.image)
     }
 }
 
@@ -127,101 +170,85 @@ extension Celestial: CelestialImageCachingProtocol {
 extension Celestial: CelestialResourcePrefetchingProtocol {
     
     public func downloadState(for sourceURL: URL) -> DownloadTaskState {
-        return DownloadTaskManager.shared.downloadState(for: sourceURL)
+        return DownloadTaskManager.shared.downloadState(forSourceURL: sourceURL)
     }
     
     public func startDownload(for sourceURL: URL) {
-        // downloadModel will be exchanged with non-nil delegate when view
+        // downloadTaskRequest will be exchanged with non-nil delegate when view
         // calls load(urlString:)
-        let downloadModel = GenericDownloadModel(sourceURL: sourceURL, delegate: nil)
-        DownloadTaskManager.shared.startDownload(model: downloadModel)
+        let downloadTaskRequest = DownloadTaskRequest(sourceURL: sourceURL, delegate: nil)
+        DownloadTaskManager.shared.startDownload(downloadTaskRequest: downloadTaskRequest)
     }
     
     public func pauseDownload(for sourceURL: URL) {
-        DownloadTaskManager.shared.pauseDownload(for: sourceURL)
+        DownloadTaskManager.shared.pauseDownload(forSourceURL: sourceURL)
     }
     
     public func resumeDownload(for sourceURL: URL) {
-        DownloadTaskManager.shared.resumeDownload(for: sourceURL)
+        DownloadTaskManager.shared.resumeDownload(forSourceURL: sourceURL)
     }
     
     public func cancelDownload(for sourceURL: URL) {
-        DownloadTaskManager.shared.cancelDownload(for: sourceURL)
+        DownloadTaskManager.shared.cancelDownload(forSourceURL: sourceURL)
     }
     
-    internal func resourceExistenceState(for sourceURL: URL,
-                                         cacheLocation: DownloadCompletionCacheLocation,
-                                         fileType: Celestial.ResourceFileType) -> ResourceExistenceState {
-        switch fileType {
-        case .video:
-            
-            if FileStorageManager.shared.uncachedFileExists(for: sourceURL)
-                && FileStorageManager.shared.videoExists(for: sourceURL) == false {
-                return .uncached
-            }
-            
-            if videoExists(for: sourceURL, cacheLocation: cacheLocation) {
-                return .cached
-            }
-            
-        case .image:
-            
-            if FileStorageManager.shared.uncachedFileExists(for: sourceURL)
-                && FileStorageManager.shared.imageExists(for: sourceURL) == false {
-                return .uncached
-            }
-            
-            if imageExists(for: sourceURL, cacheLocation: cacheLocation) {
-                return .cached
-            }
-            
-        default:
-            fatalError("Unsupported file type: \(fileType)")
-        }
+    public func prefetchResources(at urlStrings: [String]) {
         
-        switch downloadState(for: sourceURL) {
-        case .downloading: return .currentlyDownloading
-        case .paused: return .downloadPaused
-        case .none: return .none
-        default:
-            if imageExists(for: sourceURL, cacheLocation: .fileSystem) && cacheLocation == .inMemory ||
-                imageExists(for: sourceURL, cacheLocation: .inMemory) && cacheLocation == .fileSystem
-            {
-                /*
-                 Represents an unusual case:
-                 The image exists in file system, but the request for this image
-                 expects it to be in memory (local NSCache)
-                 Or vice versa
-                 In this case, return .none for the file does not exist here
-                 */
-                return .none
-            }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let strongSelf = self else { return }
             
-            fatalError("Undetermined case")
+            strongSelf.handleScrollViewPrefetching(forRequestedItems: urlStrings) { (url, resourceExistenceState) in
+                
+                switch resourceExistenceState {
+                case .none:
+                    strongSelf.startDownload(for: url)
+                case .downloadPaused:
+                    strongSelf.resumeDownload(for: url)
+                case .currentlyDownloading, .cached, .uncached:
+                    // Nothing more to do
+                    break
+                }
+            }
         }
     }
     
-    /// Determines what state a resource is in
-    /// Whether it has been cached, exists in a temporary uncached state, currently
-    internal enum ResourceExistenceState: Int {
-        /// The resource has completed downloading but remains in a temporary
-        /// cache in the file system until URLCachableView decides what to do with it
-        case uncached = 0
-        /// The resource has completed downloading and is cached to either memory or file system
-        case cached
-        /// The resource is currently being downloaded
-        case currentlyDownloading
-        /// The download task for the resource has been paused
-        case downloadPaused
-        /// There are no pending downloads for the resource, nor does it exist anywhere. Must begin new download
-        case none
+    public func pausePrefetchingForResources(at urlStrings: [String], cancelCompletely: Bool) {
+        
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.handleScrollViewPrefetching(forRequestedItems: urlStrings) { (url, resourceExistenceState) in
+                
+                switch resourceExistenceState {
+                case .none, .downloadPaused, .cached, .uncached:
+                    // Nothing more to do
+                    break
+                case .currentlyDownloading:
+                    if cancelCompletely {
+                        strongSelf.cancelDownload(for: url)
+                    } else {
+                        strongSelf.pauseDownload(for: url)
+                    }
+                }
+            }
+        }
     }
-
-    internal enum ResourceFileType {
-        case video
-        case image
-        case temporary
-        case all
+    
+    private func handleScrollViewPrefetching(forRequestedItems urlStrings: [String], performSomeOpertionUsingURL: @escaping (URL, ResourceExistenceState) -> ()) {
+        for sourceURLString in urlStrings {
+        
+            guard let sourceURL = URL(string: sourceURLString) else {
+                fatalError("\(sourceURLString) is not a valid URL")
+            }
+            
+            let resourceExistenceState = determineResourceExistenceState(forSourceURL: sourceURL,
+                                                                         ifCacheLocationIsKnown: nil,
+                                                                         ifResourceTypeIsKnown: nil)
+            
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Handling prefetch for url: \(sourceURL), resource existence state: \(String(reflecting: resourceExistenceState))")
+            
+            performSomeOpertionUsingURL(sourceURL, resourceExistenceState)
+        }
     }
 }
 
@@ -235,7 +262,7 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
 
 extension Celestial: CelestialMemoryCacheProtocol {
     
-    func setCacheItemLimit(videoCache: Int?, imageCache: Int?) {
+    func setMemoryCacheItemLimits(videoCache: Int? = nil, imageCache: Int? = nil) {
         if let videoCacheLimit = videoCache {
             VideoCache.shared.setCacheItemLimit(videoCacheLimit)
         }
@@ -244,7 +271,7 @@ extension Celestial: CelestialMemoryCacheProtocol {
         }
     }
     
-    public func setCacheCostLimit(videoCache: Int?, imageCache: Int?) {
+    public func setMemoryCacheCostLimits(videoCache: Int? = nil, imageCache: Int? = nil) {
         if let videoCacheLimit = videoCache {
             VideoCache.shared.setCacheCostLimit(numMegabytes: videoCacheLimit)
         }
@@ -272,6 +299,8 @@ extension Celestial: CelestialUtilityProtocol {
     }
        
     public func reset() {
+        DownloadTaskManager.shared.cancelAllDownloads()
+        cachedResourceContext.clearAllResourceIdentifiers()
         clearAllImages()
         clearAllVideos()
     }
@@ -280,4 +309,177 @@ extension Celestial: CelestialUtilityProtocol {
         return FileStorageManager.shared.getCacheInfo().map { "\n\($0)" }
     }
     
+    
+    
+    
+    
+    
+    internal func mergeExistingDownloadTask(with newDownloadTask: DownloadTaskRequest) {
+        DownloadTaskManager.shared.mergeExistingDownloadTask(with: newDownloadTask)
+    }
+    
+    internal func resumeDownload(downloadTaskRequest: DownloadTaskRequest) {
+        DownloadTaskManager.shared.resumeDownload(downloadTaskRequest: downloadTaskRequest)
+    }
+    
+    internal func startDownload(downloadTaskRequest: DownloadTaskRequest) {
+        DownloadTaskManager.shared.startDownload(downloadTaskRequest: downloadTaskRequest)
+    }
+    
+    internal func deleteFile(at location: URL, deleteReferenceForSourceURL url: URL? = nil) {
+        if let sourceURL = url {
+            cachedResourceContext.removeResourceIdentifier(for: sourceURL.absoluteString)
+        }
+        DispatchQueue.global(qos: .background).async {
+            FileStorageManager.shared.deleteFile(at: location)
+        }
+    }
+    
+    internal func getTemporarilyCachedFileURL(for sourceURL: URL) -> URL? {
+        return FileStorageManager.shared.getTemporarilyCachedFileURL(for: sourceURL)
+    }
+    
+    internal func decreaseVideoQuality(sourceURL: URL, inputURL: URL, completion: @escaping (_ lowerQualityVideoURL: URL?) -> ()) {
+        FileStorageManager.shared.decreaseVideoQuality(sourceURL: sourceURL, inputURL: inputURL, completion: completion)
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - CachedResourceIdentifier
+
+extension Celestial {
+    
+    func determineResourceExistenceState(forSourceURL sourceURL: URL,
+                                         ifCacheLocationIsKnown cacheLocation: ResourceCacheLocation?,
+                                         ifResourceTypeIsKnown resourceType: ResourceFileType?) -> ResourceExistenceState {
+        
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Determining resource existence state for source url: \(sourceURL)")
+        
+        if cacheLocation == nil || resourceType == nil {
+            if videoExists(for: sourceURL, cacheLocation: .inMemory)
+                || videoExists(for: sourceURL, cacheLocation: .fileSystem)
+                || imageExists(for: sourceURL, cacheLocation: .inMemory)
+                || imageExists(for: sourceURL, cacheLocation: .fileSystem)
+            {
+                return .cached
+            } else {
+                return .none
+            }
+        } else if let cacheLocation = cacheLocation, let resourceType = resourceType {
+            if cachedResourceAndIdentifierExists(for: sourceURL, resourceType: resourceType, cacheLocation: cacheLocation) {
+                return .cached
+            } else {
+                return .none
+            }
+        } else if FileStorageManager.shared.uncachedFileExists(for: sourceURL) {
+            return .uncached
+        } else {
+            switch downloadState(for: sourceURL) {
+            case .none: return .none
+            case .paused: return .downloadPaused
+            case .downloading: return .currentlyDownloading
+            case .finished:
+                
+                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Determining resource existence state for source url: \(sourceURL)")
+                
+                if videoExists(for: sourceURL, cacheLocation: .fileSystem) && cacheLocation == .inMemory
+                    || videoExists(for: sourceURL, cacheLocation: .inMemory) && cacheLocation == .fileSystem
+                    || imageExists(for: sourceURL, cacheLocation: .fileSystem) && cacheLocation == .inMemory
+                    || imageExists(for: sourceURL, cacheLocation: .inMemory) && cacheLocation == .fileSystem
+                {
+                    
+                    /*
+                     Represents an unusual case:
+                     The image exists in file system, but the request for this image
+                     expects it to be in memory (local NSCache)
+                     Or vice versa
+                     In this case, return .none for the file does not exist here
+                     */
+                    return .none
+                }
+                
+                fatalError("Unknown existence state for resource at source URL: \(sourceURL)")
+            }
+        }
+    }
+    
+    private func cachedResourceAndIdentifierExists(for sourceURL: URL, resourceType: ResourceFileType, cacheLocation: ResourceCacheLocation) -> Bool {
+        var identifierExists = cachedResourceContext.resourceIdentifierExists(for: sourceURL)
+        var fileExists: Bool = false
+        
+        switch cacheLocation {
+        case .inMemory:
+            switch resourceType {
+            case .video:
+                fileExists = videoFromMemoryCache(sourceURLString: sourceURL.absoluteString) != nil
+            case .image:
+                fileExists = imageFromMemoryCache(sourceURLString: sourceURL.absoluteString) != nil
+            default: fatalError("Unexpected resource type: \(String(reflecting: resourceType))")
+            }
+        case .fileSystem:
+            switch resourceType {
+            case .video:
+                fileExists = videoURLFromFileCache(sourceURL: sourceURL) != nil
+            case .image:
+                fileExists = FileStorageManager.shared.imageExists(for: sourceURL)
+            default: fatalError("Unexpected resource type: \(String(reflecting: resourceType))")
+            }
+        }
+        
+        if identifierExists == false && fileExists == true {
+            let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL, resourceType: resourceType, cacheLocation: cacheLocation)
+            cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
+            identifierExists = true
+        }
+        
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Checking if cached resource exists for source url: \(sourceURL). local unique identifier: \(sourceURL.localUniqueFileName()). identifier exists: \(identifierExists). file exists: \(fileExists)")
+        
+        return identifierExists && fileExists
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - BackgroundSession
+
+extension Celestial {
+    
+    public func handleBackgroundSession(identifier: String, completionHandler: @escaping () -> Void) {
+        guard identifier == DownloadTaskManager.backgroundDownloadSessionIdentifier else {
+            print("Found another identifier: \(identifier)")
+            return
+        }
+        backgroundSessionCompletionHandler = completionHandler
+    }
+    
+    internal func completeBackgroundSession() {
+        backgroundSessionCompletionHandler?()
+        backgroundSessionCompletionHandler = nil
+    }
 }
