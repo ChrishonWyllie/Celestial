@@ -236,6 +236,21 @@ protocol DownloadTaskManagerProtocol {
     var downloadsSession: URLSession { get }
     
     /**
+     Cancels all running and/or paused downloads
+     */
+    func cancelAllDownloads()
+    
+    /**
+     Pauses all running downloads
+    */
+    func pauseAllDownloads()
+    
+    /**
+     Resumes all paused downloads
+    */
+    func resumeAllDownloads()
+    
+    /**
      Cancels an active download
 
     - Parameters:
