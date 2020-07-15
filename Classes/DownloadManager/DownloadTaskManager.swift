@@ -137,7 +137,54 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     
     
     
+    internal func cancelAllDownloads() {
+        performActionOnAllCurrentDownloadTasks { [weak self] (downloadTask) in
+            guard let strongSelf = self else { return }
+            guard let sourceURL = downloadTask.originalRequest?.url else {
+                return
+            }
+            strongSelf.cancelDownload(for: sourceURL)
+        }
+    }
     
+    internal func pauseAllDownloads() {
+        performActionOnAllCurrentDownloadTasks { [weak self] (downloadTask) in
+            guard let strongSelf = self else { return }
+            guard let sourceURL = downloadTask.originalRequest?.url else {
+                return
+            }
+            strongSelf.pauseDownload(for: sourceURL)
+        }
+    }
+    
+    internal func resumeAllDownloads() {
+        performActionOnAllCurrentDownloadTasks { [weak self] (downloadTask) in
+            guard let strongSelf = self else { return }
+            guard let sourceURL = downloadTask.originalRequest?.url else {
+                return
+            }
+            strongSelf.resumeDownload(for: sourceURL)
+        }
+    }
+    
+    private func performActionOnAllCurrentDownloadTasks(completion: @escaping (URLSessionDownloadTask) -> ()) {
+        DispatchQueue.global(qos: .background).async { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.downloadsSession.getTasksWithCompletionHandler { (dataTasks: [URLSessionDataTask], uploadTasks: [URLSessionUploadTask], downloadTasks:  [URLSessionDownloadTask]) in
+                
+                if downloadTasks.count == 0 {
+                    return
+                }
+                
+                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: strongSelf))) - Performing action on \(downloadTasks.count) downloadTasks")
+                
+                for task in downloadTasks {
+                    completion(task)
+                }
+            }
+        }
+    }
     
     internal func cancelDownload(for url: URL) {
         guard let download = downloadTaskRequest(forSourceURL: url) else {
