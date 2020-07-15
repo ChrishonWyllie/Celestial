@@ -1,3 +1,37 @@
+## [Version 0.8.0](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.0) 
+### New
+* Created `CachedResourceIdentifierContext` to separate concerns of identifying resources
+* Created `DownloadManagerContext` to separate concerns of identifying pending downloads
+* Added functions for cancelling, pausing and resuming all available download tasks
+* Implemented `didCompleteWithError` function for handling when downloads fail with error or finish without creating file URL
+* Implemented URLSession background function to handle when downloads complete while app is in background
+* Added a reset function to `URLVideoPlayerView` to perform clean up and revert to initial state
+* Created internal `CachedResourceIdentifier` struct to keep track of cached resources and their location, whether in memory or file system.
+* Added utility function for getting info on files cached to the file system such as file size
+* Added functions for handling prefetch APIs such as pre-starting resources, cancelling and pausing downloads of external resources
+* Created the `ObservableAVPlayer` class to observe when a player reaches readyToPlayStatus. The URLVideoPlayer is then notified
+* Added functions to `URLVideoPlayerView` for playing video instead of accessing the player directly
+
+### Improvements
+* Cleaner code in `Celestial` class
+* Cleaner code in `DownloadTaskManager` class
+* Deprecated the `GenericDownloadModel` class in favor using only the `DownloadTaskRequest`, results in cleaner code
+* Addressed Data race (reader/writers issue) by using synchronous and barrier requests 
+* Downloads may complete while app is in background
+* Improved on searching for videos in file storage by not using prefix/suffix during search. Videos are not saved by size/resolution at this time.
+* Renamed functions to be more obvious with their purpose. 
+* Moved a variety of structs, enums and protocols to more generic places, improving code readability
+* Addressed risk of reference cycles
+* Moved most functions for beginning downloads, etc. off the main thread and onto the background and userInitiated threads where applicable
+* Proper observation of when a video is ready to play
+* Playing videos with `URLVideoPlayerView’s` play function will observe when the player has been initialized and ready to play. Results in being able to essentially “play a video when it is ready”
+
+### Bug fixes
+* Fixed Data race (reader/writers issue)
+* Fixed issue where `localUniqueFileName` would unexpectedly contain its own file extension in the file name
+* Addressed reference cycles by specifying weak self in various closures
+* Fixed issue where the play() function could be called on a `URLVideoPlayerView’s` `AVPlayer` before it exists, resulting in a blank view.
+
 ## [Version 0.7.38](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.7.38) 
 ### New
 * Added custom Celestial related errors to provide more information on failed tasks
