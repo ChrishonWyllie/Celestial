@@ -24,9 +24,9 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     
     public private(set) var sourceURL: URL?
     
-    public private(set) var cacheLocation: DownloadCompletionCacheLocation = .fileSystem
+    public private(set) var cacheLocation: ResourceCacheLocation = .fileSystem
    
-    private var downloadModel: GenericDownloadModel!
+    private var downloadTaskRequest: DownloadTaskRequest!
     
     private var downloadTaskHandler: DownloadTaskHandler<URL>?
     
@@ -38,8 +38,23 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
         case exportable
     }
     
+    fileprivate var playImmediatelyWhenReady: Bool = false
     
-    
+    public var isMuted: Bool {
+        set {
+            // Set local variable.
+            // Wait for player to be initialized if not already
+            _isMuted = newValue
+            if super.player != nil {
+                super.player?.isMuted = newValue
+            }
+        }
+        get {
+            // If the player doesn't exist yet, return local variable
+            return super.player?.isMuted ?? _isMuted
+        }
+    }
+    private var _isMuted: Bool = false
     
     
     
@@ -51,28 +66,28 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     public convenience init(delegate: URLVideoPlayerViewDelegate?,
                             sourceURLString: String,
                             cachePolicy: MultimediaCachePolicy = .allow,
-                            cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
+                            cacheLocation: ResourceCacheLocation = .fileSystem) {
         self.init(delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
         loadVideoFrom(urlString: sourceURLString)
     }
     
     public convenience init(delegate: URLVideoPlayerViewDelegate?,
                             cachePolicy: MultimediaCachePolicy = .allow,
-                            cacheLocation: DownloadCompletionCacheLocation = .fileSystem) {
+                            cacheLocation: ResourceCacheLocation = .fileSystem) {
         self.init(frame: .zero, delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
     }
     
     public convenience init(frame: CGRect,
                             delegate: URLVideoPlayerViewDelegate?,
                             cachePolicy: MultimediaCachePolicy,
-                            cacheLocation: DownloadCompletionCacheLocation) {
+                            cacheLocation: ResourceCacheLocation) {
         self.init(frame: frame, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
         self.delegate = delegate
     }
     
     public required init(frame: CGRect,
                          cachePolicy: MultimediaCachePolicy,
-                         cacheLocation: DownloadCompletionCacheLocation) {
+                         cacheLocation: ResourceCacheLocation) {
         super.init(frame: frame)
         self.cachePolicy = cachePolicy
         self.cacheLocation = cacheLocation
@@ -102,7 +117,9 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     // MARK: - Functions
     
     public func loadVideoFrom(urlString: String) {
-        acquireVideo(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.acquireVideo(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
+        }
     }
     
     public func loadVideoFrom(urlString: String,
@@ -110,10 +127,12 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
             
-        acquireVideo(from: urlString,
-                     progressHandler: progressHandler,
-                     completion: completion,
-                     errorHandler: errorHandler)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.acquireVideo(from: urlString,
+                               progressHandler: progressHandler,
+                               completion: completion,
+                               errorHandler: errorHandler)
+        }
     }
     
     private func acquireVideo(from urlString: String,
@@ -126,15 +145,17 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
         }
         self.sourceURL = sourceURL
         
-        downloadModel = GenericDownloadModel(sourceURL: sourceURL, delegate: self)
+        reset()
         
-        let resourceExistenceState = Celestial.shared.resourceExistenceState(for: sourceURL,
-                                                                             cacheLocation: cacheLocation,
-                                                                             fileType: .video)
+        downloadTaskRequest = DownloadTaskRequest(sourceURL: sourceURL, delegate: self)
+        
+        let resourceExistenceState = Celestial.shared.determineResourceExistenceState(forSourceURL: sourceURL,
+                                                                                      ifCacheLocationIsKnown: cacheLocation,
+                                                                                      ifResourceTypeIsKnown: .video)
         
         switch resourceExistenceState {
         case .uncached:
-            guard let temporaryUncachedFileURL = FileStorageManager.shared.getTemporarilyCachedFileURL(for: sourceURL) else {
+            guard let temporaryUncachedFileURL = Celestial.shared.getTemporarilyCachedFileURL(for: sourceURL) else {
                 return
             }
             
@@ -146,11 +167,11 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
             
         case .currentlyDownloading:
             // Use thumbnail?
-            DownloadTaskManager.shared.exchangeDownloadModel(newModel: downloadModel)
+            Celestial.shared.mergeExistingDownloadTask(with: downloadTaskRequest)
             
         case .downloadPaused:
             // Use thumbnail?
-            DownloadTaskManager.shared.resumeDownload(model: downloadModel)
+            Celestial.shared.resumeDownload(downloadTaskRequest: downloadTaskRequest)
             
         case .none:
             
@@ -187,21 +208,23 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                     }
                 }
                 
-                DownloadTaskManager.shared.startDownload(model: downloadModel)
+                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - No resource exists or is currently downloading for url: \(sourceURL). Will start new download")
+                
+                Celestial.shared.startDownload(downloadTaskRequest: downloadTaskRequest)
             }
         }
     }
     
     private func setupPlayerIfVideoHasBeenCached(from sourceURL: URL) {
         
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - getting video from cache")
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - getting video from cache for url: \(sourceURL)")
         
         switch cacheLocation {
         case .inMemory:
             
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 guard let strongSelf = self else { return }
-                guard let memoryCachedVideoData = Celestial.shared.videoData(for: sourceURL.localUniqueFileName) else {
+                guard let memoryCachedVideoData = Celestial.shared.videoFromMemoryCache(sourceURLString: sourceURL.absoluteString) else {
                     return
                 }
                 
@@ -216,7 +239,7 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
             
         case .fileSystem:
             
-            guard let cachedVideoURL = Celestial.shared.videoURL(for: sourceURL) else {
+            guard let cachedVideoURL = Celestial.shared.videoURLFromFileCache(sourceURL: sourceURL) else {
                 return
             }
             
@@ -225,12 +248,21 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                 do {
                     let cachedVideoData = try Data(contentsOf: cachedVideoURL)
                     
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Initializing DataLoadablePlayerItem with cached video url: \(cachedVideoURL). Media data size in MB: \(cachedVideoData.sizeInMB)")
+                    
+                    if cachedVideoData.count == 0 {
+                        let cacheInfo = Celestial.shared.getCacheInfo()
+                        for info in cacheInfo {
+                            print(info)
+                        }
+                    }
+                    
                     let playerItem = DataLoadablePlayerItem(data: cachedVideoData,
                                                             mimeType: cachedVideoURL.mimeType(),
                                                             fileExtension: cachedVideoURL.pathExtension)
                     
-                    DispatchQueue.main.async {
-                        self.setupPlayer(with: playerItem)
+                    DispatchQueue.main.async { [weak self] in
+                        self?.setupPlayer(with: playerItem)
                     }
                     
                 } catch let error {
@@ -241,31 +273,34 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     }
     
     private func setupPlayer(with playerItem: AVPlayerItem) {
-        let player = AVPlayer(playerItem: playerItem)
+        let player = ObservableAVPlayer(playerItem: playerItem, delegate: self)
+        player.isMuted = _isMuted
         super.player = player
-        delegate?.urlVideoPlayerIsReadyToPlay?(self)
+    }
+    
+    public func play() {
+        if super.player == nil {
+            // Still waiting for DataLoadablePlayerItem to finish loading
+            // or AVURLAsset to finish loading keys
+            playImmediatelyWhenReady = true
+        } else if super.player?.status == AVPlayer.Status.readyToPlay {
+            super.player?.play()
+        }
+    }
+    
+    public func pause() {
+        super.player?.pause()
+    }
+    
+    public func reset() {
+        DispatchQueue.main.async { [weak self] in
+            guard let strongSelf = self else { return }
+            (strongSelf.player as? ObservableAVPlayer)?.reset()
+            strongSelf.player?.pause()
+            strongSelf.player = nil
+        }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -325,14 +360,13 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
                 guard let compressedVideoURL = compressedVideoURL else {
                     return
                 }
+                
                 strongSelf.notifyReceiverOfDownloadCompletion(videoFileURL: compressedVideoURL)
             }
             
         default:
             
-            DispatchQueue.global(qos: .background).async {
-                FileStorageManager.shared.deleteFileAt(intermediateTemporaryFileLocation: intermediateTemporaryFileURL)
-            }
+            Celestial.shared.deleteFile(at: intermediateTemporaryFileURL)
             
             notifyReceiverOfDownloadCompletion(videoFileURL: intermediateTemporaryFileURL)
         }
@@ -360,8 +394,7 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
         switch cacheLocation {
         case .inMemory:
            
-            FileStorageManager.shared.decreaseVideoQuality(sourceURL: sourceURL,
-                                                           inputURL: intermediateTemporaryFileURL) { (compressedVideoURL) in
+            Celestial.shared.decreaseVideoQuality(sourceURL: sourceURL, inputURL: intermediateTemporaryFileURL) { (compressedVideoURL) in
                 
                 guard let compressedVideoURL = compressedVideoURL else {
                     completion(nil)
@@ -377,7 +410,7 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
                                                           originalURLMimeType: sourceURL.mimeType(),
                                                           originalURLFileExtension: sourceURL.pathExtension)
                     
-                    Celestial.shared.store(videoData: videoData, with: sourceURL.localUniqueFileName)
+                    Celestial.shared.storeVideoInMemoryCache(videoData: videoData, sourceURLString: sourceURL.absoluteString)
                     
                     completion(compressedVideoURL)
                     
@@ -389,10 +422,47 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
             
         case .fileSystem:
            
-            Celestial.shared.storeVideoURL(intermediateTemporaryFileURL,
-                                           withSourceURL: sourceURL,
-                                           completion: completion)
+            Celestial.shared.storeDownloadedVideoToFileCache(intermediateTemporaryFileURL,
+                                                             withSourceURL: sourceURL,
+                                                             completion: completion)
         }
     }
+}
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - ObservableAVPlayerDelegate
+
+extension URLVideoPlayerView: ObservableAVPlayerDelegate {
     
+    func observablePlayer(_ player: ObservableAVPlayer, didLoadChangePlayerItem status: AVPlayerItem.Status) {
+        // Switch over the status
+        switch status {
+        case .readyToPlay:
+            // Player item is ready to play.
+            
+            delegate?.urlVideoPlayerIsReadyToPlay?(self)
+            
+            if playImmediatelyWhenReady {
+                play()
+            }
+            
+        case .failed:
+            // Player item failed. See error.
+            break
+        case .unknown:
+            // Player item is not yet ready.
+            break
+        @unknown default:
+            fatalError()
+        }
+    }
 }

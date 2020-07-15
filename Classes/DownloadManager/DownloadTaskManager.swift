@@ -8,118 +8,15 @@
 import Foundation
 
 /// Singleton for managing all downloads of resources from external URLs
-protocol DownloadTaskManagerProtocol {
-    /// Dictionary of currently active or paused downloads.
-    /// Key: the URL of the requested resource
-    /// Value: the `DownloadTaskRequest` for the request resource
-    var activeDownloads: [URL: DownloadTaskRequest] { get }
-    
-    /// Session for downloads
-    var downloadsSession: URLSession { get }
-    
-    /**
-     Cancels an active download
-
-    - Parameters:
-       - url: The URL of the resource
-    */
-    func cancelDownload(for url: URL)
-    
-    /**
-     Cancels an active download
-
-    - Parameters:
-       - model: The DownloadModel object that originally initiated the download.
-    */
-    func cancelDownload(model: DownloadModelRepresentable)
-    
-    /**
-     Pauses an active download. May be resumed
-
-    - Parameters:
-       - url: The URL of the resource
-    */
-    func pauseDownload(for url: URL)
-    
-    /**
-     Pauses an active download. May be resumed
-
-    - Parameters:
-       - model: The DownloadModel object that originally initiated the download.
-    */
-    func pauseDownload(model: DownloadModelRepresentable)
-    
-    /**
-     Resumes a previously paused download
-
-    - Parameters:
-       - url: The URL of the resource
-    */
-    func resumeDownload(for url: URL)
-    
-    /**
-     Resumes a previously paused download
-
-    - Parameters:
-       - model: The DownloadModel object that originally initiated the download. However in cases where the original model was deinitialized, a re-initiated model will still resume the same download
-    */
-    func resumeDownload(model: DownloadModelRepresentable)
-    
-    /**
-     Begins a download for a requested resource. May be paused, resumed or cancelled
-
-    - Parameters:
-       - model: The DownloadModel object used to initiate the download.
-    */
-    func startDownload(model: DownloadModelRepresentable)
-    
-    
-    
-    
-    
-    /**
-     Returns the download state for a given url
-     
-    - Parameters:
-        - url: The url of the requested resource
-    - Returns:
-        - The `DownloadTaskState` for the given url
-     */
-    func downloadState(for url: URL) -> DownloadTaskState
-    
-    /**
-     Returns a Float value from 0.0 to 1.0 of a download if it exists and is currently in progress
-
-    - Parameters:
-       - url: The url of the resource
-    - Returns:
-       - Float value of download progress
-    */
-    func getDownloadProgress(for url: URL) -> Float?
-    
-}
-
-/// Singleton for managing all downloads of resources from external URLs
 class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     
     internal static let shared = DownloadTaskManager()
     
-    var activeDownloads: [URL : DownloadTaskRequest] {
-        var downloads: [URL : DownloadTaskRequest]!
-        
-        concurrentQueue.sync {
-            downloads = self.threadUnsafeActiveDownloads
-        }
-        return downloads
-    }
+    internal let activeDownloadsContext = DownloadManagerContext()
     
-    private var threadUnsafeActiveDownloads: [URL : DownloadTaskRequest] = [:]
-    
-    private let concurrentQueue = DispatchQueue(label: "com.chrishonwyllie.Celestial.downloadTaskQueue",
-                                                attributes: .concurrent)
-    
+    internal static let backgroundDownloadSessionIdentifier: String = "com.chrishonwyllie.Celestial.DownloadTaskManager.URLSession.background.identifier"
     private(set) lazy var downloadsSession: URLSession = {
-        let identifier = "com.chrishonwyllie.Celestial.backgroundSession"
+        let identifier = DownloadTaskManager.backgroundDownloadSessionIdentifier
         let configuration = URLSessionConfiguration.background(withIdentifier: identifier)
         return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
     }()
@@ -145,92 +42,151 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     
     
     
+    internal func cancelAllDownloads() {
+        performActionOnAllCurrentDownloadTasks { [weak self] (downloadTask) in
+            guard let strongSelf = self else { return }
+            guard let sourceURL = downloadTask.originalRequest?.url else {
+                return
+            }
+            strongSelf.cancelDownload(forSourceURL: sourceURL)
+        }
+    }
     
+    internal func pauseAllDownloads() {
+        performActionOnAllCurrentDownloadTasks { [weak self] (downloadTask) in
+            guard let strongSelf = self else { return }
+            guard let sourceURL = downloadTask.originalRequest?.url else {
+                return
+            }
+            strongSelf.pauseDownload(forSourceURL: sourceURL)
+        }
+    }
     
-    internal func cancelDownload(for url: URL) {
-        guard let download = activeDownloads[url] else {
+    internal func resumeAllDownloads() {
+        performActionOnAllCurrentDownloadTasks { [weak self] (downloadTask) in
+            guard let strongSelf = self else { return }
+            guard let sourceURL = downloadTask.originalRequest?.url else {
+                return
+            }
+            strongSelf.resumeDownload(forSourceURL: sourceURL)
+        }
+    }
+    
+    private func performActionOnAllCurrentDownloadTasks(completion: @escaping (URLSessionDownloadTask) -> ()) {
+        DispatchQueue.global(qos: .background).async { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.downloadsSession.getTasksWithCompletionHandler { (dataTasks: [URLSessionDataTask], uploadTasks: [URLSessionUploadTask], downloadTasks:  [URLSessionDownloadTask]) in
+                
+                if downloadTasks.count == 0 {
+                    return
+                }
+                
+                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: strongSelf))) - Performing action on \(downloadTasks.count) downloadTasks")
+                
+                for task in downloadTasks {
+                    completion(task)
+                }
+            }
+        }
+    }
+    
+    internal func cancelDownload(forSourceURL sourceURL: URL) {
+        guard let downloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: sourceURL) else {
             return
         }
-        download.task?.cancel()
+        downloadTaskRequest.task?.cancel()
 
-        threadUnsafeActiveDownloads[url] = nil
+        activeDownloadsContext.removeDownloadTaskRequest(forSourceURL: sourceURL)
     }
-    internal func cancelDownload(model: DownloadModelRepresentable) {
-        cancelDownload(for: model.sourceURL)
+    internal func cancelDownload(downloadTaskRequest: DownloadTaskRequest) {
+        cancelDownload(forSourceURL: downloadTaskRequest.sourceURL)
     }
     
-    internal func pauseDownload(for url: URL) {
-        guard let download = activeDownloads[url] else {
+    internal func pauseDownload(forSourceURL sourceURL: URL) {
+        guard let downloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: sourceURL) else {
             return
         }
         
-        guard download.downloadModel.downloadState == .downloading else {
+        guard downloadTaskRequest.downloadState == .downloading else {
             return
         }
         
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - pausing download for url: \(url)")
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - pausing download for url: \(sourceURL) - local file name: \(sourceURL.localUniqueFileName())")
         
-        download.task?.cancel(byProducingResumeData: { data in
-            download.resumeData = data
+        downloadTaskRequest.task?.cancel(byProducingResumeData: { [weak self] resumeDataOrNil in
+            guard let resumeData = resumeDataOrNil else {
+                return
+            }
+            downloadTaskRequest.storeResumableData(resumeData)
+            downloadTaskRequest.update(downloadState: .paused)
+            self?.activeDownloadsContext.save(downloadTaskRequest: downloadTaskRequest)
         })
-
-        download.downloadModel.update(downloadState: .paused)
     }
-    internal func pauseDownload(model: DownloadModelRepresentable) {
-        pauseDownload(for: model.sourceURL)
+    internal func pauseDownload(downloadTaskRequest: DownloadTaskRequest) {
+        pauseDownload(forSourceURL: downloadTaskRequest.sourceURL)
     }
     
-    internal func resumeDownload(for url: URL) {
-        guard let download = activeDownloads[url] else {
+    internal func resumeDownload(forSourceURL sourceURL: URL) {
+        guard let downloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: sourceURL) else {
             return
         }
-             
-        if let resumeData = download.resumeData {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - resuming download for url from resume data: \(url)")
-            download.task = downloadsSession.downloadTask(withResumeData: resumeData)
-        } else {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - resuming download for url (from scratch): \(url)")
-            download.task = downloadsSession.downloadTask(with: url)
-        }
-             
-        download.task?.resume()
-        download.downloadModel.update(downloadState: .downloading)
-    }
-    internal func resumeDownload(model: DownloadModelRepresentable) {
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - using new download: \(String(describing: model.delegate))")
-        exchangeDownloadModel(newModel: model)
-        resumeDownload(for: model.sourceURL)
-    }
-    
-    internal func startDownload(model: DownloadModelRepresentable) {
-        if let _ = activeDownloads[model.sourceURL] {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Attempted to start a download, but an active download already exists")
-            resumeDownload(model: model)
-            return
-        }
-        beginFreshDownload(model: model)
-    }
-    
-    private func beginFreshDownload(model: DownloadModelRepresentable) {
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - starting download for url: \(model.sourceURL)")
-        concurrentQueue.async(flags: .barrier) { [weak self] in
         
-            guard let strongSelf = self else {
+        guard downloadTaskRequest.task?.state != .running else {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Download for url: \(sourceURL) is already running. Will perform no further action")
+            return
+        }
+        
+        if let resumeData = downloadTaskRequest.resumeData {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - resuming download for url from resume data: \(sourceURL)")
+            let resumableDownloadTask = downloadsSession.downloadTask(withResumeData: resumeData)
+            downloadTaskRequest.prepareForDownload(task: resumableDownloadTask)
+        } else {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - resuming download for url (from scratch): \(sourceURL)")
+            let newDownloadTask = downloadsSession.downloadTask(with: sourceURL)
+            downloadTaskRequest.prepareForDownload(task: newDownloadTask)
+        }
+             
+        downloadTaskRequest.task?.resume()
+        downloadTaskRequest.update(downloadState: .downloading)
+        
+        activeDownloadsContext.save(downloadTaskRequest: downloadTaskRequest)
+    }
+    internal func resumeDownload(downloadTaskRequest: DownloadTaskRequest) {
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - using new download: \(String(describing: downloadTaskRequest.delegate))")
+        mergeExistingDownloadTask(with: downloadTaskRequest)
+        resumeDownload(forSourceURL: downloadTaskRequest.sourceURL)
+    }
+    
+    internal func startDownload(downloadTaskRequest: DownloadTaskRequest) {
+        if let existingDownloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: downloadTaskRequest.sourceURL) {
+            
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Attempted to start a download for url: \(downloadTaskRequest.sourceURL), but an active download already exists: \(existingDownloadTaskRequest). Will resume if not already running")
+            
+            guard existingDownloadTaskRequest.task?.state != .running else {
+                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Download for url: \(downloadTaskRequest.sourceURL) is already running. Will perform no further action")
+                mergeExistingDownloadTask(with: downloadTaskRequest)
                 return
             }
             
-            // 1
-            let download = DownloadTaskRequest(downloadModel: model)
-            // 2
-            download.task = strongSelf.downloadsSession.downloadTask(with: model.sourceURL)
-            // 3
-            download.task?.resume()
-            // 4
-            download.downloadModel.update(downloadState: .downloading)
-            // 5
-            strongSelf.threadUnsafeActiveDownloads[model.sourceURL] = download
-
+            resumeDownload(downloadTaskRequest: downloadTaskRequest)
+            
+        } else {
+            beginFresh(downloadTaskRequest: downloadTaskRequest)
         }
+    }
+
+    private func beginFresh(downloadTaskRequest: DownloadTaskRequest) {
+        
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - starting download for url: \(downloadTaskRequest.sourceURL) - local file name: \(downloadTaskRequest.sourceURL.localUniqueFileName())")
+        
+        let newDownloadTask = downloadsSession.downloadTask(with: downloadTaskRequest.sourceURL)
+        downloadTaskRequest.prepareForDownload(task: newDownloadTask)
+        downloadTaskRequest.task?.resume()
+        downloadTaskRequest.update(downloadState: .downloading)
+        activeDownloadsContext.save(downloadTaskRequest: downloadTaskRequest)
+        
+//        MediaPendingOperations.shared.startDownload(for: model)
     }
 }
 
@@ -243,43 +199,58 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
 
 extension DownloadTaskManager {
     
-    internal func downloadState(for url: URL) -> DownloadTaskState {
-        guard let download = activeDownloads[url] else {
+    internal func downloadState(forSourceURL sourceURL: URL) -> DownloadTaskState {
+        guard let downloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: sourceURL) else {
             
-            if FileStorageManager.shared.uncachedFileExists(for: url) ||
-                FileStorageManager.shared.videoExists(for: url) ||
-                FileStorageManager.shared.imageExists(for: url) {
+            if FileStorageManager.shared.uncachedFileExists(for: sourceURL) ||
+                FileStorageManager.shared.videoExists(for: sourceURL) ||
+                FileStorageManager.shared.imageExists(for: sourceURL) {
                 return .finished
             } else {
                 return .none
             }
         }
-        return download.downloadModel.downloadState
+        return downloadTaskRequest.downloadState
     }
     
-    internal func getDownloadProgress(for url: URL) -> Float? {
-        guard let download = activeDownloads[url] else {
+    internal func getDownloadProgress(forSourceURL sourceURL: URL) -> Float? {
+        guard let downloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: sourceURL) else {
             return nil
         }
-        return download.progress
+        return downloadTaskRequest.progress
     }
     
-    internal func exchangeDownloadModel(newModel: DownloadModelRepresentable) {
+    internal func mergeExistingDownloadTask(with newDownloadTask: DownloadTaskRequest) {
         
-        guard let currentlyActiveDownload = activeDownloads[newModel.sourceURL] else {
-            fatalError("Attempting to exchange non-existen download model. This download task either does not exist or recently finished")
+        guard let existingDownloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: newDownloadTask.sourceURL) else {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error attempting to exchange non-existent download model for url: \(newDownloadTask.sourceURL). This download task either does not exist or recently finished")
+            return
+        }
+        
+        if existingDownloadTaskRequest.delegate != nil {
+            // No reason to exchange
+            return
         }
         
         // Update delegate
-        if let nonNullDelegate = newModel.delegate {
-            currentlyActiveDownload.downloadModel.delegate = nonNullDelegate
+        if let nonNullDelegate = newDownloadTask.delegate {
+            existingDownloadTaskRequest.delegate = nonNullDelegate
         }
         
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Exchanging GenericCellModel with new model containing delegate: \(String(describing: newModel.delegate)). url: \(newModel.sourceURL)")
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Exchanging GenericCellModel with new model containing delegate: \(String(describing: newDownloadTask.delegate)). url: \(newDownloadTask.sourceURL)")
         
-        newModel.update(downloadState: currentlyActiveDownload.downloadModel.downloadState)
+        newDownloadTask.update(downloadState: existingDownloadTaskRequest.downloadState)
     }
 }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -290,42 +261,49 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
     
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         
+        guard FileManager.default.fileExists(atPath: location.path) else {
+            return
+        }
+        
         guard let sourceURL = downloadTask.originalRequest?.url else {
             return
         }
         
+        let rangeOfNonErrorStatusCodes = 200...299
         guard let httpResponse = downloadTask.response as? HTTPURLResponse,
-            (200...299).contains(httpResponse.statusCode) else {
+            (rangeOfNonErrorStatusCodes).contains(httpResponse.statusCode) else {
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error after download task completion. Incorrect response code")
-            threadUnsafeActiveDownloads[sourceURL] = nil
+            
+            activeDownloadsContext.removeDownloadTaskRequest(forSourceURL: sourceURL)
             return
         }
         
-        guard let download = activeDownloads[sourceURL] else {
+        guard let downloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: sourceURL) else {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - No download exists for url: \(sourceURL)")
             return
         }
         
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - finished download for url: \(sourceURL)")
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - finished download for url: \(sourceURL) - local file name: \(sourceURL.localUniqueFileName()). DownloadTask: \(downloadTask). Temporary file location: \(location)")
         
-        threadUnsafeActiveDownloads[sourceURL] = nil
+        activeDownloadsContext.removeDownloadTaskRequest(forSourceURL: sourceURL)
         
-        moveToIntermediateTemporaryFile(originalTemporaryURL: location, download: download)
+        moveToIntermediateTemporaryFile(originalTemporaryURL: location, downloadTaskRequest: downloadTaskRequest)
     }
     
-    private func moveToIntermediateTemporaryFile(originalTemporaryURL: URL, download: DownloadTaskRequest) {
+    private func moveToIntermediateTemporaryFile(originalTemporaryURL: URL, downloadTaskRequest: DownloadTaskRequest) {
         do {
-            let intermediateTemporaryFileURL = try FileStorageManager.shared.moveToIntermediateTemporaryURL(originalTemporaryURL: originalTemporaryURL, sourceURL: download.downloadModel.sourceURL)
+            let intermediateTemporaryFileURL = try FileStorageManager.shared.moveToIntermediateTemporaryURL(originalTemporaryURL: originalTemporaryURL, sourceURL: downloadTaskRequest.sourceURL)
             
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Moved to intermediate temporary file url: \(intermediateTemporaryFileURL)")
             
-            download.downloadModel.update(downloadState: .finished)
+            downloadTaskRequest.update(downloadState: .finished)
             
             // Notify delegate
-            download.downloadModel.delegate?.cachable(download, didFinishDownloadingTo: intermediateTemporaryFileURL)
+            downloadTaskRequest.delegate?.cachable(downloadTaskRequest, didFinishDownloadingTo: intermediateTemporaryFileURL)
             
         } catch let error {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Could not copy file to disk: \(error)")
-            download.downloadModel.delegate?.cachable(download, downloadFailedWith: error)
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error moving downloaded file to temporary file url: \(error)")
+            downloadTaskRequest.delegate?.cachable(downloadTaskRequest, downloadFailedWith: error)
         }
     }
     
@@ -337,48 +315,75 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
             return
         }
         
-        guard let download = activeDownloads[sourceURL] else {
+        guard let downloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: sourceURL) else {
             return
         }
         
         let (downloadProgress, humanReadableDownloadProgress) = Utility.shared.getDownloadProgress(totalBytesWritten: totalBytesWritten, totalBytesExpectedToWrite: totalBytesExpectedToWrite)
         
-        download.progress = downloadProgress
+        downloadTaskRequest.setProgress(downloadProgress)
         
         // Notify delegate
-        if download.downloadModel.delegate == nil {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - delegate nil for download object: \(download.downloadModel)")
+        if downloadTaskRequest.delegate == nil {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - delegate nil for download object: \(String(describing: downloadTaskRequest.delegate))")
         }
-        download.downloadModel.delegate?.cachable(download, downloadProgress: downloadProgress, humanReadableProgress: humanReadableDownloadProgress)
+        downloadTaskRequest.delegate?.cachable(downloadTaskRequest, downloadProgress: downloadProgress, humanReadableProgress: humanReadableDownloadProgress)
     }
     
-//    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-//
-//        guard let download = activeDownloads[sourceURL] else {
-//            return
-//        }
-//        if let error = error {
-//
-//        }
-//    }
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
 
+        guard let error = error else {
+            if let sourceURL = task.originalRequest?.url {
+                activeDownloadsContext.removeDownloadTaskRequest(forSourceURL: sourceURL)
+            }
+            return
+        }
+        
+        let userInfo = (error as NSError).userInfo
+        
+        if let resumeData = userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+            
+            // If cannot retrieve download for this sourceURL,
+            // perhaps store the resume data in documents directory
+            // until a new download is created with this sourceURL?
+            guard let sourceURL = task.originalRequest?.url else {
+                return
+            }
+            
+            guard let downloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: sourceURL) else {
+                return
+            }
+            
+            downloadTaskRequest.storeResumableData(resumeData)
+            //
+            downloadTaskRequest.update(downloadState: .paused)
+        }
+    }
+    
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didResumeAtOffset fileOffset: Int64, expectedTotalBytes: Int64) {
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Resuming download")
+    }
 }
 
 
 
 
 
-//extension DownloadTaskManager: URLSessionDelegate {
-//    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-//        DispatchQueue.main.async {
-//
-//            if let appDelegate = UIApplication.shared.delegate as? AppDelegate,
-//                let completionHandler = appDelegate.backgroundSessionCompletionHandler {
-//                appDelegate.backgroundSessionCompletionHandler = nil
-//                completionHandler()
-//            }
-//        }
-//    }
-//}
 
 
+
+
+
+
+
+// MARK: - URLSessionDelegate
+
+extension DownloadTaskManager: URLSessionDelegate {
+    
+    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        DispatchQueue.main.async {
+            Celestial.shared.completeBackgroundSession()
+        }
+    }
+    
+}

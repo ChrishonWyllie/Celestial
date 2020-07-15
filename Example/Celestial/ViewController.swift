@@ -173,7 +173,7 @@ extension ViewController {
         if expectedMediaType == .video {
             if let visibleCells = collectionView.visibleCells as? [VideoCell] {
                 visibleCells.forEach { (cell) in
-                    cell.playerView.player?.pause()
+                    cell.playerView.pause()
                 }
             }
         }
@@ -191,10 +191,7 @@ extension ViewController {
     }
 
     @objc private func clearDataSourceCache() {
-        switch expectedMediaType {
-        case .image: Celestial.shared.clearAllImages()
-        case .video: Celestial.shared.clearAllVideos()
-        }
+        Celestial.shared.reset()
     }
     
     @objc private func getCachedInfo() {
@@ -317,7 +314,7 @@ extension ViewController {
                 playerLayer.removeFromSuperlayer()
                 self.player = nil
 
-                if let _ = Celestial.shared.videoData(for: urlString) {
+                if let _ = Celestial.shared.videoFromMemoryCache(sourceURLString: urlString) {
                     
                     // At this point, the video will already be cached
                     let playerItem2 = CachableAVPlayerItem(url: url, delegate: self)
@@ -393,7 +390,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
         guard let videoCell = (cell as? VideoCell) else { return }
-        videoCell.playerView.player?.play()
+        videoCell.playerView.play()
         
         
 //        let visibleCells = collectionView.visibleCells
@@ -409,17 +406,17 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     
     func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
         guard let videoCell = cell as? VideoCell else { return }
-        videoCell.playerView.player?.pause()
+        videoCell.playerView.pause()
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         guard let videoCell = (collectionView.cellForItem(at: indexPath) as? VideoCell) else { return }
-        videoCell.playerView.player!.play()
+        videoCell.playerView.play()
     }
     
     func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
         guard let videoCell = (collectionView.cellForItem(at: indexPath) as? VideoCell) else { return }
-        videoCell.playerView.player?.pause()
+        videoCell.playerView.pause()
     }
     
 }
@@ -428,45 +425,23 @@ extension ViewController: UICollectionViewDataSourcePrefetching {
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
         print("prefetching items at indexPaths: \(indexPaths)")
         
-        for indexPath in indexPaths {
-            
-            let cellModel = cellModels[indexPath.item]
-            
-            guard let url = URL(string: cellModel.urlString) else {
-                fatalError()
-            }
-            
-            switch Celestial.shared.downloadState(for: url) {
-            case .none:
-                Celestial.shared.startDownload(for: url)
-            case .paused:
-                Celestial.shared.resumeDownload(for: url)
-            case .downloading, .finished:
-                // Nothing more to do
-                continue
-            }
-        }
+        let min = indexPaths.min()!
+        let max = indexPaths.max()!
+        let prefetchedModels = Array(cellModels[min.item...max.item])
+        let urlStrings = prefetchedModels.map { $0.urlString }
+        print("Prefetching for indexPath items: \(Array(min.item...max.item))")
+        Celestial.shared.prefetchResources(at: urlStrings)
     }
     
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
         print("canceling prefetching items at indexPaths: \(indexPaths)")
         
-        for indexPath in indexPaths {
-            
-            let cellModel = cellModels[indexPath.item]
-            
-            guard let url = URL(string: cellModel.urlString) else {
-                fatalError()
-            }
-            
-            switch Celestial.shared.downloadState(for: url) {
-            case .none, .finished, .paused:
-                // Nothing more to do
-                continue
-            case .downloading:
-                Celestial.shared.pauseDownload(for: url)
-            }
-        }
+        let min = indexPaths.min()!
+        let max = indexPaths.max()!
+        let cancelledPrefetchedModels = Array(cellModels[min.item...max.item])
+        let urlStrings = cancelledPrefetchedModels.map { $0.urlString }
+        print("Cancelling prefetching for indexPath items: \(Array(min.item...max.item))")
+        Celestial.shared.pausePrefetchingForResources(at: urlStrings, cancelCompletely: false)
     }
 }
 
