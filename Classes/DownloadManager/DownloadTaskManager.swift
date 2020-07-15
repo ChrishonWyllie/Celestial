@@ -399,16 +399,39 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
         download.downloadModel.delegate?.cachable(download, downloadProgress: downloadProgress, humanReadableProgress: humanReadableDownloadProgress)
     }
     
-//    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-//
-//        guard let download = activeDownloads[sourceURL] else {
-//            return
-//        }
-//        if let error = error {
-//
-//        }
-//    }
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
 
+        guard let error = error else {
+            if let sourceURL = task.originalRequest?.url {
+                removeDownloadTaskRequest(forSourceURL: sourceURL)
+            }
+            return
+        }
+        
+        let userInfo = (error as NSError).userInfo
+        
+        if let resumeData = userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+            
+            // If cannot retrieve download for this sourceURL,
+            // perhaps store the resume data in documents directory
+            // until a new download is created with this sourceURL?
+            guard let sourceURL = task.originalRequest?.url else {
+                return
+            }
+            
+            guard let download = downloadTaskRequest(forSourceURL: sourceURL) else {
+                return
+            }
+            
+            download.resumeData = resumeData
+            //
+            download.downloadModel.update(downloadState: .paused)
+        }
+    }
+    
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didResumeAtOffset fileOffset: Int64, expectedTotalBytes: Int64) {
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Resuming download")
+    }
 }
 
 
