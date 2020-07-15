@@ -115,11 +115,12 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     
     private var threadUnsafeActiveDownloads: [URL : DownloadTaskRequest] = [:]
     
-    private let concurrentQueue = DispatchQueue(label: "com.chrishonwyllie.Celestial.downloadTaskQueue",
+    private let concurrentQueue = DispatchQueue(label: "com.chrishonwyllie.Celestial.DownloadTaskManager.downloadTaskQueue",
                                                 attributes: .concurrent)
     
+    internal static let backgroundDownloadSessionIdentifier: String = "com.chrishonwyllie.Celestial.DownloadTaskManager.URLSession.background.identifier"
     private(set) lazy var downloadsSession: URLSession = {
-        let identifier = "com.chrishonwyllie.Celestial.backgroundSession"
+        let identifier = DownloadTaskManager.backgroundDownloadSessionIdentifier
         let configuration = URLSessionConfiguration.background(withIdentifier: identifier)
         return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
     }()
@@ -368,17 +369,21 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
 
 
 
-//extension DownloadTaskManager: URLSessionDelegate {
-//    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-//        DispatchQueue.main.async {
-//
-//            if let appDelegate = UIApplication.shared.delegate as? AppDelegate,
-//                let completionHandler = appDelegate.backgroundSessionCompletionHandler {
-//                appDelegate.backgroundSessionCompletionHandler = nil
-//                completionHandler()
-//            }
-//        }
-//    }
-//}
 
 
+
+
+
+
+
+// MARK: - URLSessionDelegate
+
+extension DownloadTaskManager: URLSessionDelegate {
+    
+    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        DispatchQueue.main.async {
+            Celestial.shared.completeBackgroundSession()
+        }
+    }
+    
+}
