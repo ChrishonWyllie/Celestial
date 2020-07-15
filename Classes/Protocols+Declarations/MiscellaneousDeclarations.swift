@@ -460,6 +460,50 @@ internal struct CachedResourceIdentifier: Codable, Equatable, Hashable, CustomSt
 
 
 
+
+/// Delegate for notifying receiver of progress, completion and possible errors
+/// of a resource located at a external URL
+internal protocol CachableDownloadModelDelegate: class {
+    
+    /**
+     Notifies receiver that media has been finished downloading to a temporary file location.
+
+    - Parameters:
+       - downloadTaskRequest: The DownloadTaskRequest object that finished the download. Note, this object has been invalidated after completion.
+       - intermediateTemporaryFileURL: The temporary url pointing to the downloaded resource after it is moved to a retrievable URL
+    */
+    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, didFinishDownloadingTo intermediateTemporaryFileURL: URL)
+    
+    /**
+     Notifies receiver that the download has failed.
+
+    - Parameters:
+       - downloadTaskRequest: The DownloadTaskRequest object that finished the download. Note, this object has been invalidated after completion.
+       - error: Error encour
+    */
+    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, downloadFailedWith error: Error)
+    
+    /**
+     Notifies receiver of download progress.
+
+    - Parameters:
+       - downloadTaskRequest: The DownloadTaskRequest object that finished the download. Note, this object has been invalidated after completion.
+       - progress: The current progress of the download from 0.0 to 1.0
+       - humanReadableProgress: A easily readable version of the progress. For convenience
+    */
+    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, downloadProgress progress: Float, humanReadableProgress: String)
+}
+
+
+
+
+
+
+
+
+
+
+
 public struct TestURLs {
     
     public struct Videos {
