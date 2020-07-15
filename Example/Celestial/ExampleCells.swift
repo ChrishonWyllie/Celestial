@@ -54,6 +54,12 @@ class ExampleCell: UICollectionViewCell {
         titleLabel.text = someCellModel.urlString
     }
     
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        progressView.progress = 0
+        progressLabel.text = ""
+    }
+    
     open func setupUIElements() {
         addSubview(containerView)
         
@@ -125,13 +131,18 @@ class VideoCell: ExampleCell {
         let v = URLVideoPlayerView(delegate: self, cacheLocation: .fileSystem)
         v.translatesAutoresizingMaskIntoConstraints = false
         v.playerLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
+//        v.isMuted = true
         return v
     }()
     
     
     
     
-    
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        playerView.reset()
+        resetLoopObserver()
+    }
     
     override func setupUIElements() {
         super.setupUIElements()
@@ -172,47 +183,48 @@ class VideoCell: ExampleCell {
 //            self.updateError()
 //        }
         
-        if playtimeObserver != nil {
-            NotificationCenter.default.removeObserver(playtimeObserver!)
-            playtimeObserver = nil
-        }
+        resetLoopObserver()
      
     }
     
     private func observeDidPlayToEndTime() {
         
-        let playerItem = (playerView.player?.currentItem)!
+        let playerItem = (playerView.player!.currentItem)
         
         NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime,
                                                                   object: playerItem,
                                                                   queue: .main,
                                                                   using: { [weak self] (notification) in
             guard let strongSelf = self else { return }
-            strongSelf.playerView.player?.seek(to: CMTime.zero)
-            strongSelf.playerView.player?.play()
+            strongSelf.playerView.player!.seek(to: CMTime.zero)
+            strongSelf.playerView.player!.play()
         })
     }
     
-    
+    private func resetLoopObserver() {
+        if playtimeObserver != nil {
+            NotificationCenter.default.removeObserver(playtimeObserver!)
+            playtimeObserver = nil
+        }
+    }
 }
 
 extension VideoCell: URLVideoPlayerViewDelegate {
     
     func urlVideoPlayerIsReadyToPlay(_ view: URLVideoPlayerView) {
-        view.player?.play()
         observeDidPlayToEndTime()
     }
     
     func urlCachableView(_ view: URLCachableView, didFinishDownloading media: Any) {
-        updateCompletion()
+        super.updateCompletion()
     }
    
     func urlCachableView(_ view: URLCachableView, downloadFailedWith error: Error) {
-        updateError()
+        super.updateError()
     }
    
     func urlCachableView(_ view: URLCachableView, downloadProgress progress: Float, humanReadableProgress: String) {
-        updateProgress(progress, humanReadableProgress: humanReadableProgress)
+        super.updateProgress(progress, humanReadableProgress: humanReadableProgress)
     }
     
 }
