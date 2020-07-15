@@ -59,7 +59,7 @@ open class CachableAVPlayerItem: AVPlayerItem {
         
         var asset: AVURLAsset
         
-        if let originalVideoData = Celestial.shared.videoData(for: url.localUniqueFileName) {
+        if let originalVideoData = Celestial.shared.videoFromMemoryCache(sourceURLString: url.absoluteString) {
             let fakeURLString = cachableAVPlayerItemScheme + "://whatever/file.\(originalVideoData.originalURLFileExtension)"
             guard let fakeUrl = URL(string: fakeURLString) else {
                 fatalError("internal inconsistency")
@@ -232,7 +232,7 @@ extension CachableAVPlayerItem: MediaResourceLoaderDelegate {
                                                   originalURLMimeType: sourceURL.mimeType(),
                                                   originalURLFileExtension: sourceURL.pathExtension)
         if cachePolicy == .allow {
-            Celestial.shared.store(videoData: originalVideoData, with: sourceURL.localUniqueFileName)
+            Celestial.shared.storeVideoInMemoryCache(videoData: originalVideoData, sourceURLString: sourceURL.absoluteString)
         }
         
         delegate?.playerItem(self, didFinishDownloading: mediaData)

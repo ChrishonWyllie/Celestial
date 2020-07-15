@@ -13,6 +13,8 @@ internal class ObservableAVPlayer: AVPlayer, ObservablePlayerProtocol {
     
     internal private(set) var playerItemContext: Int = 0
     
+    private var didAddObserver: Bool = false
+    
     required init(playerItem item: AVPlayerItem, delegate: ObservableAVPlayerDelegate) {
         super.init(playerItem: item)
         observePlayerStatus()
@@ -27,7 +29,10 @@ internal class ObservableAVPlayer: AVPlayer, ObservablePlayerProtocol {
         super.init()
     }
     
+    
+    
     private func observePlayerStatus() {
+        didAddObserver = true
         currentItem?.addObserver(self, forKeyPath: #keyPath(AVPlayerItem.status), options: [.old, .new], context: &playerItemContext)
     }
     
@@ -56,5 +61,17 @@ internal class ObservableAVPlayer: AVPlayer, ObservablePlayerProtocol {
             
             delegate?.observablePlayer(self, didLoadChangePlayerItem: status)
         }
+    }
+    
+    internal func reset() {
+        if didAddObserver {
+            currentItem?.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.status))
+            didAddObserver = false
+        }
+    }
+    
+    deinit {
+        reset()
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - is being deinitialized")
     }
 }
