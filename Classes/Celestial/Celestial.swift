@@ -14,21 +14,7 @@ public final class Celestial: NSObject {
     
     internal var debugModeIsActive: Bool = false
     
-    internal var cachedResourceIdentifiers: Set<CachedResourceIdentifier> {
-        var identifiers: Set<CachedResourceIdentifier>!
-        
-        concurrentQueue.sync { [weak self] in
-            guard let strongSelf = self else { return }
-            identifiers = strongSelf.threadUnsafeCachedResourceIdentifiers
-        }
-        return identifiers
-    }
-    
-    private var threadUnsafeCachedResourceIdentifiers = Set<CachedResourceIdentifier>()
-    
-    private let concurrentQueue = DispatchQueue(label: "com.chrishonwyllie.Celestial.CachedResourceIdentifiers.concurrentQueue", attributes: .concurrent)
-    
-    private let resourceIdentifiersKey = "com.chrishonwyllie.Celestial.CachedResourceIdentifiers.UserDefaults.key"
+    internal let cachedResourceContext = CachedResourceIdentifierContext()
     
     private var backgroundSessionCompletionHandler: (() -> Void)?
     
@@ -39,7 +25,7 @@ public final class Celestial: NSObject {
     
     private override init() {
         super.init()
-        loadCachedResourceIdentifiers()
+        
     }
 }
 
@@ -71,7 +57,7 @@ extension Celestial: CelestialVideoCachingProtocol {
         let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
                                                           resourceType: .video,
                                                           cacheLocation: .inMemory)
-        storeReferenceTo(cachedResource: resourceIdentifier)
+        cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
         VideoCache.shared.store(videoData, with: sourceURLString.convertURLToUniqueFileName())
     }
    
@@ -81,7 +67,7 @@ extension Celestial: CelestialVideoCachingProtocol {
             let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
                                                               resourceType: .video,
                                                               cacheLocation: .fileSystem)
-            self?.storeReferenceTo(cachedResource: resourceIdentifier)
+            self?.cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
             
             completion(cachedVideoURL)
         })
@@ -89,7 +75,7 @@ extension Celestial: CelestialVideoCachingProtocol {
     
     public func removeVideoFromMemoryCache(sourceURLString: String) {
         VideoCache.shared.removeItem(at: sourceURLString.convertURLToUniqueFileName())
-        removeResourceIdentifier(for: sourceURLString)
+        cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
     }
    
     public func removeVideoFromFileCache(sourceURLString: String) -> Bool {
@@ -98,13 +84,13 @@ extension Celestial: CelestialVideoCachingProtocol {
         }
         let successfullyDeletedResource = FileStorageManager.shared.deleteCachedVideo(using: sourceURL)
         if successfullyDeletedResource {
-            removeResourceIdentifier(for: sourceURLString)
+            cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
         }
         return successfullyDeletedResource
     }
    
     public func clearAllVideos() {
-        clearResourceIdentifiers(withResourceType: .video)
+        cachedResourceContext.clearResourceIdentifiers(withResourceType: .video)
         VideoCache.shared.clearAllItems()
         FileStorageManager.shared.clearCache(fileType: ResourceFileType.video)
     }
@@ -135,7 +121,7 @@ extension Celestial: CelestialImageCachingProtocol {
         let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
                                                           resourceType: .image,
                                                           cacheLocation: .inMemory)
-        storeReferenceTo(cachedResource: resourceIdentifier)
+        cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
         ImageCache.shared.store(image, with: sourceURLString.convertURLToUniqueFileName())
     }
     
@@ -146,7 +132,7 @@ extension Celestial: CelestialImageCachingProtocol {
             let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
                                                               resourceType: .image,
                                                               cacheLocation: .fileSystem)
-            self?.storeReferenceTo(cachedResource: resourceIdentifier)
+            self?.cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
             
             completion(cachedImageURL)
         })
@@ -154,7 +140,7 @@ extension Celestial: CelestialImageCachingProtocol {
     
     public func removeImageFromMemoryCache(sourceURLString: String) {
         ImageCache.shared.removeItem(at: sourceURLString)
-        removeResourceIdentifier(for: sourceURLString)
+        cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
     }
     
     public func removeImageFromFileCache(sourceURLString: String) -> Bool {
@@ -164,13 +150,13 @@ extension Celestial: CelestialImageCachingProtocol {
         }
         let successfullyDeletedResource = FileStorageManager.shared.deleteCachedImage(using: sourceURL)
         if successfullyDeletedResource {
-            removeResourceIdentifier(for: sourceURLString)
+            cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
         }
         return successfullyDeletedResource
     }
     
     public func clearAllImages() {
-        clearResourceIdentifiers(withResourceType: .image)
+        cachedResourceContext.clearResourceIdentifiers(withResourceType: .image)
         ImageCache.shared.clearAllItems()
         FileStorageManager.shared.clearCache(fileType: ResourceFileType.image)
     }
@@ -314,7 +300,7 @@ extension Celestial: CelestialUtilityProtocol {
        
     public func reset() {
         DownloadTaskManager.shared.cancelAllDownloads()
-        clearAllResourceIdentifiers()
+        cachedResourceContext.clearAllResourceIdentifiers()
         clearAllImages()
         clearAllVideos()
     }
@@ -342,7 +328,7 @@ extension Celestial: CelestialUtilityProtocol {
     
     internal func deleteFile(at location: URL, deleteReferenceForSourceURL url: URL? = nil) {
         if let sourceURL = url {
-            removeResourceIdentifier(for: sourceURL.absoluteString)
+            cachedResourceContext.removeResourceIdentifier(for: sourceURL.absoluteString)
         }
         DispatchQueue.global(qos: .background).async {
             FileStorageManager.shared.deleteFile(at: location)
@@ -377,148 +363,6 @@ extension Celestial: CelestialUtilityProtocol {
 // MARK: - CachedResourceIdentifier
 
 extension Celestial {
-    
-    internal func storeReferenceTo(cachedResource: CachedResourceIdentifier) {
-        
-        guard threadUnsafeCachedResourceIdentifiers.contains(cachedResource) == false else {
-            return
-        }
-        
-        threadUnsafeCachedResourceIdentifiers.insert(cachedResource)
-        
-        do {
-            let encodedData = try PropertyListEncoder().encode(threadUnsafeCachedResourceIdentifiers)
-            UserDefaults.standard.set(encodedData, forKey: resourceIdentifiersKey)
-        } catch let error {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error encoding resource identifiers array to data. Error: \(error)")
-        }
-    }
-    
-    private func loadCachedResourceIdentifiers() {
-        
-        guard
-            let cachedResourcesData = UserDefaults.standard.value(forKey: resourceIdentifiersKey) as? Data,
-            let locallyStoredCachedResourceReferences = try? PropertyListDecoder().decode(Set<CachedResourceIdentifier>.self, from: cachedResourcesData) else {
-                
-            threadUnsafeCachedResourceIdentifiers = []
-            return
-        }
-        threadUnsafeCachedResourceIdentifiers = locallyStoredCachedResourceReferences
-    }
-    
-    internal func removeResourceIdentifier(for sourceURLString: String) {
-        guard let sourceURL = URL(string: sourceURLString) else {
-            fatalError("\(sourceURLString) is not a valid URL")
-        }
-        DispatchQueue.global(qos: .background).async { [weak self] in
-            guard let strongSelf = self else { return }
-            guard
-                strongSelf.cachedResourceIdentifiers.count > 0 else {
-                return
-            }
-            
-            guard let resourceIdentifierToRemove = strongSelf.threadUnsafeCachedResourceIdentifiers.filter({ (identifier) -> Bool in
-                return identifier.sourceURL == sourceURL
-            }).first else {
-                return
-            }
-            
-            strongSelf.threadUnsafeCachedResourceIdentifiers.remove(resourceIdentifierToRemove)
-            strongSelf.saveResourceIdentifiersInUserDefaults()
-        }
-    }
-    
-    internal func clearAllResourceIdentifiers() {
-        DispatchQueue.global(qos: .background).async { [weak self] in
-            guard let strongSelf = self else { return }
-            guard strongSelf.threadUnsafeCachedResourceIdentifiers.count > 0 else {
-                return
-            }
-            strongSelf.threadUnsafeCachedResourceIdentifiers.removeAll(keepingCapacity: false)
-            strongSelf.saveResourceIdentifiersInUserDefaults()
-        }
-    }
-    
-    internal func clearResourceIdentifiers(withResourceType resourceType: ResourceFileType) {
-        DispatchQueue.global(qos: .background).async { [weak self] in
-            guard let strongSelf = self else { return }
-            guard strongSelf.threadUnsafeCachedResourceIdentifiers.count > 0 else {
-                return
-            }
-            
-            let resourceIdentifiersToRemove = strongSelf.threadUnsafeCachedResourceIdentifiers.filter({ (identifier) -> Bool in
-                return identifier.resourceType == resourceType
-            })
-            
-            for identifier in resourceIdentifiersToRemove {
-                strongSelf.threadUnsafeCachedResourceIdentifiers.remove(identifier)
-            }
-            
-            strongSelf.saveResourceIdentifiersInUserDefaults()
-        }
-    }
-    
-    private func saveResourceIdentifiersInUserDefaults() {
-        do {
-            let encodedData = try PropertyListEncoder().encode(threadUnsafeCachedResourceIdentifiers)
-            UserDefaults.standard.set(encodedData, forKey: resourceIdentifiersKey)
-        } catch let error {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error encoding resource identifiers array to data. Error: \(error)")
-        }
-    }
-    
-    internal func resourceIdentifier(for sourceURL: URL) -> CachedResourceIdentifier? {
-        let cachedResourceReferencesMatchingURL = cachedResourceIdentifiers.filter({ $0.sourceURL == sourceURL })
-        
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Filtering for CachedResourceIdentifier matching url: \(sourceURL). Resource identifiers:")
-        
-        for identifier in cachedResourceIdentifiers {
-            DebugLogger.shared.addDebugMessage("\(identifier)")
-        }
-        
-        if cachedResourceReferencesMatchingURL.count > 1 {
-            fatalError("Internal inconsistency. There can only be 0 (non-existent) or 1 identifier for a single URL: \(sourceURL). Found \(cachedResourceReferencesMatchingURL.count) matching results: \(cachedResourceReferencesMatchingURL)")
-        }
-        
-        return cachedResourceReferencesMatchingURL.first
-    }
-    
-    internal func resourceIdentifierExists(for sourceURL: URL) -> Bool {
-        
-        var resourceExists: Bool = false
-        
-        if let resourceIdentifier = resourceIdentifier(for: sourceURL) {
-            
-            resourceExists = true
-            
-            switch resourceIdentifier.cacheLocation {
-            case .inMemory:
-                break
-            case .fileSystem:
-                if let info = FileStorageManager.shared.getInfoForStoredResource(matchingSourceURL: resourceIdentifier.sourceURL,
-                                                                                 fileType: resourceIdentifier.resourceType) {
-                
-                    if info.fileSize == 0 {
-                        // Upon further inspection,
-                        // the file does not actually exist.
-                        // There is no data at the specified file URL.
-                        // An error may have occured, such as moving app to background
-                        // during some process that cannot continue unless app
-                        // is in foreground
-                        // Such as AVAssextExportSession for videos
-                        
-                        try? FileManager.default.removeItem(at: info.fileURL)
-                        
-                        resourceExists = false
-                    }
-                } else {
-                    resourceExists = false
-                }
-            }
-        }
-        
-        return resourceExists
-    }
     
     func determineResourceExistenceState(forSourceURL sourceURL: URL,
                                          ifCacheLocationIsKnown cacheLocation: ResourceCacheLocation?,
@@ -575,7 +419,7 @@ extension Celestial {
     }
     
     private func cachedResourceAndIdentifierExists(for sourceURL: URL, resourceType: ResourceFileType, cacheLocation: ResourceCacheLocation) -> Bool {
-        var identifierExists = resourceIdentifierExists(for: sourceURL)
+        var identifierExists = cachedResourceContext.resourceIdentifierExists(for: sourceURL)
         var fileExists: Bool = false
         
         switch cacheLocation {
@@ -599,7 +443,7 @@ extension Celestial {
         
         if identifierExists == false && fileExists == true {
             let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL, resourceType: resourceType, cacheLocation: cacheLocation)
-            storeReferenceTo(cachedResource: resourceIdentifier)
+            cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
             identifierExists = true
         }
         
