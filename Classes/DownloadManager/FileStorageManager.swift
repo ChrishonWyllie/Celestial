@@ -10,7 +10,7 @@ import UIKit
 import AVFoundation
 
 /// Manages directories for downloaded and cached resources
-class FileStorageDirectoryManager: NSObject {
+internal class FileStorageDirectoryManager: NSObject {
     
     // NOTE
     // For hiding access to urls
@@ -186,13 +186,13 @@ internal protocol FileStorageMangerProtocol {
 }
 
 
-class FileStorageManager: NSObject, FileStorageMangerProtocol {
+internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     // MARK: - Variables
     
-    public static let shared = FileStorageManager()
+    internal static let shared = FileStorageManager()
     
-    let directoryManager = FileStorageDirectoryManager()
+    internal let directoryManager = FileStorageDirectoryManager()
     
    
     
@@ -308,7 +308,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     internal func createTemporaryFileURL(from sourceURL: URL) -> URL {
         
-        let localFileName = sourceURL.localUniqueFileName
+        let localFileName = sourceURL.localUniqueFileName()
         let fileExtension = sourceURL.pathExtension
         
         let intermediateTemporaryFileURL =
@@ -535,6 +535,8 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
     
     private func downloadedFileExists(for sourceURL: URL, fileType: ResourceFileType) -> Bool {
         
+        var fileExists: Bool = false
+        
         var directoryURL: URL
         
         switch fileType {
@@ -543,7 +545,31 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         default:       directoryURL = directoryManager.temporaryDirectoryURL
         }
         
-        let localFileName = sourceURL.localUniqueFileName
+        let localFileName = sourceURL.localUniqueFileName()
+        
+        if fileType == .video {
+            // TODO
+            // Videos do not have multiple sizes at this time 07/13/2020
+            // Therefore, the stored fileURL will not contain any special suffixes
+            let completeStoredFileURL = directoryURL
+                .appendingPathComponent(localFileName)
+                .appendingPathExtension(sourceURL.pathExtension)
+            
+            guard ((try? completeStoredFileURL.checkResourceIsReachable()) != nil) else {
+                return false
+            }
+            
+            guard let fileAttributes = try? FileManager.default.attributesOfItem(atPath: completeStoredFileURL.path) else {
+                return false
+            }
+            
+            if StoredFile(fileAttributes: fileAttributes, fileURL: completeStoredFileURL).fileSize == 0 {
+                deleteFile(at: completeStoredFileURL)
+                return false
+            } else {
+                return true
+            }
+        }
         
         guard
             let directoryContents = try? FileManager.default.contentsOfDirectory(atPath: directoryURL.path)
@@ -551,9 +577,9 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
             return false
         }
         
-        var fileExists: Bool = false
         
-        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Checking if downloaded file exists in file system directory: \(directoryURL). Directory contents: \(directoryContents)")
+        
+        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Checking if downloaded file with local file name: \(localFileName) exists in file system directory: \(directoryURL). Directory contents: \(directoryContents)")
         
         fileExistsLoop: for storedFileName in directoryContents {
             if storedFileName.hasPrefix(localFileName) {
@@ -580,6 +606,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
                         fileExists = false
                     } else {
                         fileExists = true
+                        break fileExistsLoop
                     }
                     
                 } catch let error {
@@ -589,8 +616,6 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
                     fileExists = false
                     break fileExistsLoop
                 }
-                
-                break fileExistsLoop
             }
         }
         
@@ -603,7 +628,7 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         // image name 1: URL: https://picsum.photos/id/0/5616/3744 -> becomes -> 3744-size-327.0-246.0 (no extension)
         // image name 2: URL: https://server/url/to/your/image.png -> becomes -> image-size-327-0-246-0.png
         
-        var formattedFileName = sourceURL.localUniqueFileName
+        var formattedFileName = sourceURL.localUniqueFileName()
         let fileExtension = sourceURL.pathExtension
         
         if let size = size {
@@ -665,9 +690,20 @@ class FileStorageManager: NSObject, FileStorageMangerProtocol {
         default:       directoryURL = directoryManager.temporaryDirectoryURL
         }
         
-        let cachedResourceURL = constructFormattedURL(from: sourceURL,
-                                                      expectedDirectoryURL: directoryURL,
-                                                      size: nil)
+        // TODO
+        // NOTE
+        // This only works for videos
+        // Will return nil since image files
+        // have size suffixes
+        
+        var cachedResourceURL: URL!
+        
+        switch fileType {
+        case .video:
+            cachedResourceURL = constructFormattedURL(from: sourceURL, expectedDirectoryURL: directoryURL, size: nil)
+        default:
+            fatalError("Not implemented")
+        }
 
         guard ((try? cachedResourceURL.checkResourceIsReachable()) != nil) else {
             return nil

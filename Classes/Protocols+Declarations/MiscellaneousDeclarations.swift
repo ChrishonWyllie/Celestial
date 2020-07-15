@@ -21,7 +21,7 @@ import AVFoundation
     var cacheLocation: ResourceCacheLocation { get }
     
     /**
-     Initializes a download model to begin a download and link its status with a receiver
+     Begins a download and link its status with a receiver
 
     - Parameters:
        - delegate: Used to notify receiver of events related to current download of the requested resource. e.g. An image or video hosted on an external server
@@ -207,6 +207,138 @@ enum CLSError: Error {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - DownloadTaskManagerProtocol
+
+/// Singleton for managing all downloads of resources from external URLs
+protocol DownloadTaskManagerProtocol {
+    /// Keeps track of active downloads
+    var activeDownloadsContext: DownloadManagerContext { get }
+    
+    /// Session for downloads
+    var downloadsSession: URLSession { get }
+    
+    /**
+     Cancels all running and/or paused downloads
+     */
+    func cancelAllDownloads()
+    
+    /**
+     Pauses all running downloads
+    */
+    func pauseAllDownloads()
+    
+    /**
+     Resumes all paused downloads
+    */
+    func resumeAllDownloads()
+    
+    /**
+     Cancels an active download
+
+    - Parameters:
+       - url: The URL of the resource
+    */
+    func cancelDownload(forSourceURL sourceURL: URL)
+    
+    /**
+     Cancels an active download
+
+    - Parameters:
+       - downloadTaskRequest: The DownloadTaskRequest object that originally initiated the download.
+    */
+    func cancelDownload(downloadTaskRequest: DownloadTaskRequest)
+    
+    /**
+     Pauses an active download. May be resumed
+
+    - Parameters:
+       - url: The URL of the resource
+    */
+    func pauseDownload(forSourceURL sourceURL: URL)
+    
+    /**
+     Pauses an active download. May be resumed
+
+    - Parameters:
+       - downloadTaskRequest: The DownloadTaskRequest object that originally initiated the download.
+    */
+    func pauseDownload(downloadTaskRequest: DownloadTaskRequest)
+    
+    /**
+     Resumes a previously paused download
+
+    - Parameters:
+       - url: The URL of the resource
+    */
+    func resumeDownload(forSourceURL sourceURL: URL)
+    
+    /**
+     Resumes a previously paused download
+
+    - Parameters:
+       - downloadTaskRequest: The DownloadTaskRequest object that originally initiated the download. However in cases where the original model was deinitialized, a re-initiated model will still resume the same download
+    */
+    func resumeDownload(downloadTaskRequest: DownloadTaskRequest)
+    
+    /**
+     Begins a download for a requested resource. May be paused, resumed or cancelled
+
+    - Parameters:
+       - downloadTaskRequest: The DownloadTaskRequest object used to initiate the download.
+    */
+    func startDownload(downloadTaskRequest: DownloadTaskRequest)
+    
+    
+    
+    
+    
+    /**
+     Returns the download state for a given url
+     
+    - Parameters:
+        - url: The url of the requested resource
+    - Returns:
+        - The `DownloadTaskState` for the given url
+     */
+    func downloadState(forSourceURL sourceURL: URL) -> DownloadTaskState
+    
+    /**
+     Returns a Float value from 0.0 to 1.0 of a download if it exists and is currently in progress
+
+    - Parameters:
+       - url: The url of the resource
+    - Returns:
+       - Float value of download progress
+    */
+    func getDownloadProgress(forSourceURL sourceURL: URL) -> Float?
+    
+}
+
+
+
+
+
+
+
+
+
+
 /// Represents current state of a download of a resource from an external URL
 public enum DownloadTaskState {
     /// First state of a download before it begins
@@ -272,8 +404,8 @@ internal struct CachedResourceIdentifier: Codable, Equatable, Hashable, CustomSt
     let cacheLocation: ResourceCacheLocation
     
     var description: String {
-        let description = "Source URL: \(sourceURL), resourceType: \(resourceType.rawValue), cacheLocation: \(cacheLocation)"
-        return description
+        let printableString = "Source URL: \(sourceURL), resourceType: \(String(reflecting: resourceType)), cacheLocation: \(String(reflecting: cacheLocation))"
+        return printableString
     }
     
     /// Initializes CachedResourceIdentifier object to be used later to determine if the actual file exists and can be retrieved
@@ -307,8 +439,60 @@ internal struct CachedResourceIdentifier: Codable, Equatable, Hashable, CustomSt
         case resourceType
         case cacheLocation
     }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(sourceURL.absoluteString)
+    }
+
+    static func ==(lhs: CachedResourceIdentifier, rhs: CachedResourceIdentifier) -> Bool {
+        return lhs.sourceURL.absoluteString == rhs.sourceURL.absoluteString
+    }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+/// Delegate for notifying receiver of progress, completion and possible errors
+/// of a resource located at a external URL
+internal protocol CachableDownloadModelDelegate: class {
+    
+    /**
+     Notifies receiver that media has been finished downloading to a temporary file location.
+
+    - Parameters:
+       - downloadTaskRequest: The DownloadTaskRequest object that finished the download. Note, this object has been invalidated after completion.
+       - intermediateTemporaryFileURL: The temporary url pointing to the downloaded resource after it is moved to a retrievable URL
+    */
+    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, didFinishDownloadingTo intermediateTemporaryFileURL: URL)
+    
+    /**
+     Notifies receiver that the download has failed.
+
+    - Parameters:
+       - downloadTaskRequest: The DownloadTaskRequest object that finished the download. Note, this object has been invalidated after completion.
+       - error: Error encour
+    */
+    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, downloadFailedWith error: Error)
+    
+    /**
+     Notifies receiver of download progress.
+
+    - Parameters:
+       - downloadTaskRequest: The DownloadTaskRequest object that finished the download. Note, this object has been invalidated after completion.
+       - progress: The current progress of the download from 0.0 to 1.0
+       - humanReadableProgress: A easily readable version of the progress. For convenience
+    */
+    func cachable(_ downloadTaskRequest: DownloadTaskRequestProtocol, downloadProgress progress: Float, humanReadableProgress: String)
+}
 
 
 

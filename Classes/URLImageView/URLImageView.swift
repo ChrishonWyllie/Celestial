@@ -22,7 +22,7 @@ open class URLImageView: UIImageView, URLCachableView {
     
     public private(set) var cacheLocation: ResourceCacheLocation = .fileSystem
     
-    private var downloadModel: GenericDownloadModel!
+    private var downloadTaskRequest: DownloadTaskRequest!
     
     private var downloadTaskHandler: DownloadTaskHandler<UIImage>?
     
@@ -129,7 +129,7 @@ open class URLImageView: UIImageView, URLCachableView {
         }
         self.sourceURL = sourceURL
         
-        downloadModel = GenericDownloadModel(sourceURL: sourceURL, delegate: self)
+        downloadTaskRequest = DownloadTaskRequest(sourceURL: sourceURL, delegate: self)
         
         let resourceExistenceState = Celestial.shared.determineResourceExistenceState(forSourceURL: sourceURL,
                                                                                       ifCacheLocationIsKnown: cacheLocation,
@@ -161,11 +161,11 @@ open class URLImageView: UIImageView, URLCachableView {
         case .currentlyDownloading:
             // Use thumbnail?
             fallbackOnDefaultImageIfExists()
-            Celestial.shared.exchangeDownloadModel(newDownloadModel: downloadModel)
+            Celestial.shared.mergeExistingDownloadTask(with: downloadTaskRequest)
             
         case .downloadPaused:
             // Use thumbnail?
-            Celestial.shared.resumeDownload(downloadModel: downloadModel)
+            Celestial.shared.resumeDownload(downloadTaskRequest: downloadTaskRequest)
             
         case .none:
             
@@ -182,7 +182,9 @@ open class URLImageView: UIImageView, URLCachableView {
                 }
             }
             
-            Celestial.shared.startDownload(downloadModel: downloadModel)
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - No resource exists or is currently downloading for url: \(sourceURL). Will start new download")
+            
+            Celestial.shared.startDownload(downloadTaskRequest: downloadTaskRequest)
         }
     }
     
