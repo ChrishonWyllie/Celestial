@@ -21,7 +21,7 @@ import AVFoundation
     var cacheLocation: ResourceCacheLocation { get }
     
     /**
-     Initializes a download model to begin a download and link its status with a receiver
+     Begins a download and link its status with a receiver
 
     - Parameters:
        - delegate: Used to notify receiver of events related to current download of the requested resource. e.g. An image or video hosted on an external server
@@ -256,15 +256,15 @@ protocol DownloadTaskManagerProtocol {
     - Parameters:
        - url: The URL of the resource
     */
-    func cancelDownload(for url: URL)
+    func cancelDownload(forSourceURL sourceURL: URL)
     
     /**
      Cancels an active download
 
     - Parameters:
-       - model: The DownloadModel object that originally initiated the download.
+       - downloadTaskRequest: The DownloadTaskRequest object that originally initiated the download.
     */
-    func cancelDownload(model: DownloadModelRepresentable)
+    func cancelDownload(downloadTaskRequest: DownloadTaskRequest)
     
     /**
      Pauses an active download. May be resumed
@@ -272,15 +272,15 @@ protocol DownloadTaskManagerProtocol {
     - Parameters:
        - url: The URL of the resource
     */
-    func pauseDownload(for url: URL)
+    func pauseDownload(forSourceURL sourceURL: URL)
     
     /**
      Pauses an active download. May be resumed
 
     - Parameters:
-       - model: The DownloadModel object that originally initiated the download.
+       - downloadTaskRequest: The DownloadTaskRequest object that originally initiated the download.
     */
-    func pauseDownload(model: DownloadModelRepresentable)
+    func pauseDownload(downloadTaskRequest: DownloadTaskRequest)
     
     /**
      Resumes a previously paused download
@@ -288,23 +288,23 @@ protocol DownloadTaskManagerProtocol {
     - Parameters:
        - url: The URL of the resource
     */
-    func resumeDownload(for url: URL)
+    func resumeDownload(forSourceURL sourceURL: URL)
     
     /**
      Resumes a previously paused download
 
     - Parameters:
-       - model: The DownloadModel object that originally initiated the download. However in cases where the original model was deinitialized, a re-initiated model will still resume the same download
+       - downloadTaskRequest: The DownloadTaskRequest object that originally initiated the download. However in cases where the original model was deinitialized, a re-initiated model will still resume the same download
     */
-    func resumeDownload(model: DownloadModelRepresentable)
+    func resumeDownload(downloadTaskRequest: DownloadTaskRequest)
     
     /**
      Begins a download for a requested resource. May be paused, resumed or cancelled
 
     - Parameters:
-       - model: The DownloadModel object used to initiate the download.
+       - downloadTaskRequest: The DownloadTaskRequest object used to initiate the download.
     */
-    func startDownload(model: DownloadModelRepresentable)
+    func startDownload(downloadTaskRequest: DownloadTaskRequest)
     
     
     
@@ -318,7 +318,7 @@ protocol DownloadTaskManagerProtocol {
     - Returns:
         - The `DownloadTaskState` for the given url
      */
-    func downloadState(for url: URL) -> DownloadTaskState
+    func downloadState(forSourceURL sourceURL: URL) -> DownloadTaskState
     
     /**
      Returns a Float value from 0.0 to 1.0 of a download if it exists and is currently in progress
@@ -328,7 +328,7 @@ protocol DownloadTaskManagerProtocol {
     - Returns:
        - Float value of download progress
     */
-    func getDownloadProgress(for url: URL) -> Float?
+    func getDownloadProgress(forSourceURL sourceURL: URL) -> Float?
     
 }
 

@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// Initiates a download from a `DownloadModelRepresentable` object
+/// Initiates a download
 internal protocol DownloadTaskRequestProtocol {
     /// Current progress of a download. To update UI, use `CachableDownloadModelDelegate`
     var progress: Float { get }
@@ -15,32 +15,78 @@ internal protocol DownloadTaskRequestProtocol {
     var resumeData: Data? { get }
     /// `URLSessionDownloadTask` used to download the desired resource
     var task: URLSessionDownloadTask? { get }
-    /// Model used to initiate a download and link the state of the download with its receiver.
-    /// May be used to notify of updates such as progress, errors and completion
-    var downloadModel: DownloadModelRepresentable { get }
+    /// The URL of the resource to be downloaded
+    var sourceURL: URL { get }
+    /// The state of the current download. For updating UI with download state,
+    /// it is best to use the `CachableDownloadModelDelegate`
+    var downloadState: DownloadTaskState { get }
+    /// Used to notify receiver of download state events such as completion, progress and errors
+    var delegate: CachableDownloadModelDelegate? { get set }
     
     /**
      Initializes a object representing a download task as well as supporting information
 
     - Parameters:
-       - downloadModel: The DownloadModel used to initiate the request with a source URL.
+       - sourceURL: The URL of the resource to be downloaded
+       - delegate: The receiver of events pertaining to the download such as progress, completion or errors
     */
-    init(downloadModel: DownloadModelRepresentable)
+    init(sourceURL: URL, delegate: CachableDownloadModelDelegate?)
 }
 
-/// Initiates a download from a `DownloadModelRepresentable` object
-internal class DownloadTaskRequest: DownloadTaskRequestProtocol, CustomStringConvertible {
-    var progress: Float = 0
-    var resumeData: Data?
-    var task: URLSessionDownloadTask?
-    var downloadModel: DownloadModelRepresentable
+/// Initiates a download request
+internal class DownloadTaskRequest: DownloadTaskRequestProtocol, CustomStringConvertible, Codable {
+    private(set) var progress: Float = 0
+    private(set) var resumeData: Data?
+    private(set) var task: URLSessionDownloadTask?
     
-    required init(downloadModel: DownloadModelRepresentable) {
-        self.downloadModel = downloadModel
+    private(set) var sourceURL: URL
+    private(set) var downloadState: DownloadTaskState = .none
+    weak var delegate: CachableDownloadModelDelegate?
+    
+    required init(sourceURL: URL, delegate: CachableDownloadModelDelegate?) {
+        self.sourceURL = sourceURL
+        self.delegate = delegate
+    }
+    
+    
+    
+    func setProgress(_ progress: Float) {
+        self.progress = progress
+    }
+    
+    func storeResumableData(_ resumeData: Data) {
+        self.resumeData = resumeData
+    }
+    
+    func prepareForDownload(task: URLSessionDownloadTask) {
+        self.task = task
+    }
+    
+    func update(downloadState: DownloadTaskState) {
+        self.downloadState = downloadState
     }
     
     var description: String {
-        let printableString = "Progress: \(progress), resumeData coutn if previously paused: \(String(describing: resumeData?.count)), task: \(String(describing: task)), download model: \(downloadModel)"
+        let printableString = "Progress: \(progress), resumeData coutn if previously paused: \(String(describing: resumeData?.count)), task: \(String(describing: task)), source URL: \(sourceURL), download state: \(downloadState)"
         return printableString
+    }
+    
+    
+    
+    
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        sourceURL = try container.decode(URL.self, forKey: .sourceURL)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(sourceURL, forKey: .sourceURL)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case sourceURL
     }
 }

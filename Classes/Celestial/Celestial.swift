@@ -184,26 +184,26 @@ extension Celestial: CelestialImageCachingProtocol {
 extension Celestial: CelestialResourcePrefetchingProtocol {
     
     public func downloadState(for sourceURL: URL) -> DownloadTaskState {
-        return DownloadTaskManager.shared.downloadState(for: sourceURL)
+        return DownloadTaskManager.shared.downloadState(forSourceURL: sourceURL)
     }
     
     public func startDownload(for sourceURL: URL) {
-        // downloadModel will be exchanged with non-nil delegate when view
+        // downloadTaskRequest will be exchanged with non-nil delegate when view
         // calls load(urlString:)
-        let downloadModel = GenericDownloadModel(sourceURL: sourceURL, delegate: nil)
-        DownloadTaskManager.shared.startDownload(model: downloadModel)
+        let downloadTaskRequest = DownloadTaskRequest(sourceURL: sourceURL, delegate: nil)
+        DownloadTaskManager.shared.startDownload(downloadTaskRequest: downloadTaskRequest)
     }
     
     public func pauseDownload(for sourceURL: URL) {
-        DownloadTaskManager.shared.pauseDownload(for: sourceURL)
+        DownloadTaskManager.shared.pauseDownload(forSourceURL: sourceURL)
     }
     
     public func resumeDownload(for sourceURL: URL) {
-        DownloadTaskManager.shared.resumeDownload(for: sourceURL)
+        DownloadTaskManager.shared.resumeDownload(forSourceURL: sourceURL)
     }
     
     public func cancelDownload(for sourceURL: URL) {
-        DownloadTaskManager.shared.cancelDownload(for: sourceURL)
+        DownloadTaskManager.shared.cancelDownload(forSourceURL: sourceURL)
     }
     
     public func prefetchResources(at urlStrings: [String]) {
@@ -328,16 +328,16 @@ extension Celestial: CelestialUtilityProtocol {
     
     
     
-    internal func exchangeDownloadModel(newDownloadModel: GenericDownloadModel) {
-        DownloadTaskManager.shared.exchangeDownloadModel(newModel: newDownloadModel)
+    internal func mergeExistingDownloadTask(with newDownloadTask: DownloadTaskRequest) {
+        DownloadTaskManager.shared.mergeExistingDownloadTask(with: newDownloadTask)
     }
     
-    internal func resumeDownload(downloadModel: GenericDownloadModel) {
-        DownloadTaskManager.shared.resumeDownload(model: downloadModel)
+    internal func resumeDownload(downloadTaskRequest: DownloadTaskRequest) {
+        DownloadTaskManager.shared.resumeDownload(downloadTaskRequest: downloadTaskRequest)
     }
     
-    internal func startDownload(downloadModel: GenericDownloadModel) {
-        DownloadTaskManager.shared.startDownload(model: downloadModel)
+    internal func startDownload(downloadTaskRequest: DownloadTaskRequest) {
+        DownloadTaskManager.shared.startDownload(downloadTaskRequest: downloadTaskRequest)
     }
     
     internal func deleteFile(at location: URL, deleteReferenceForSourceURL url: URL? = nil) {
@@ -628,6 +628,7 @@ extension Celestial {
     
     public func handleBackgroundSession(identifier: String, completionHandler: @escaping () -> Void) {
         guard identifier == DownloadTaskManager.backgroundDownloadSessionIdentifier else {
+            print("Found another identifier: \(identifier)")
             return
         }
         backgroundSessionCompletionHandler = completionHandler
