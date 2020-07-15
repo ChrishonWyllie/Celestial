@@ -207,6 +207,125 @@ enum CLSError: Error {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - DownloadTaskManagerProtocol
+
+/// Singleton for managing all downloads of resources from external URLs
+protocol DownloadTaskManagerProtocol {
+    /// Dictionary of currently active or paused downloads.
+    /// Key: the URL of the requested resource
+    /// Value: the `DownloadTaskRequest` for the request resource
+    var activeDownloads: [URL: DownloadTaskRequest] { get }
+    
+    /// Session for downloads
+    var downloadsSession: URLSession { get }
+    
+    /**
+     Cancels an active download
+
+    - Parameters:
+       - url: The URL of the resource
+    */
+    func cancelDownload(for url: URL)
+    
+    /**
+     Cancels an active download
+
+    - Parameters:
+       - model: The DownloadModel object that originally initiated the download.
+    */
+    func cancelDownload(model: DownloadModelRepresentable)
+    
+    /**
+     Pauses an active download. May be resumed
+
+    - Parameters:
+       - url: The URL of the resource
+    */
+    func pauseDownload(for url: URL)
+    
+    /**
+     Pauses an active download. May be resumed
+
+    - Parameters:
+       - model: The DownloadModel object that originally initiated the download.
+    */
+    func pauseDownload(model: DownloadModelRepresentable)
+    
+    /**
+     Resumes a previously paused download
+
+    - Parameters:
+       - url: The URL of the resource
+    */
+    func resumeDownload(for url: URL)
+    
+    /**
+     Resumes a previously paused download
+
+    - Parameters:
+       - model: The DownloadModel object that originally initiated the download. However in cases where the original model was deinitialized, a re-initiated model will still resume the same download
+    */
+    func resumeDownload(model: DownloadModelRepresentable)
+    
+    /**
+     Begins a download for a requested resource. May be paused, resumed or cancelled
+
+    - Parameters:
+       - model: The DownloadModel object used to initiate the download.
+    */
+    func startDownload(model: DownloadModelRepresentable)
+    
+    
+    
+    
+    
+    /**
+     Returns the download state for a given url
+     
+    - Parameters:
+        - url: The url of the requested resource
+    - Returns:
+        - The `DownloadTaskState` for the given url
+     */
+    func downloadState(for url: URL) -> DownloadTaskState
+    
+    /**
+     Returns a Float value from 0.0 to 1.0 of a download if it exists and is currently in progress
+
+    - Parameters:
+       - url: The url of the resource
+    - Returns:
+       - Float value of download progress
+    */
+    func getDownloadProgress(for url: URL) -> Float?
+    
+}
+
+
+
+
+
+
+
+
+
+
 /// Represents current state of a download of a resource from an external URL
 public enum DownloadTaskState {
     /// First state of a download before it begins
