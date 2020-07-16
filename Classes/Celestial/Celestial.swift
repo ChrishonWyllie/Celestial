@@ -439,6 +439,8 @@ extension Celestial {
                 fileExists = FileStorageManager.shared.imageExists(for: sourceURL)
             default: fatalError("Unexpected resource type: \(String(reflecting: resourceType))")
             }
+        case .none:
+            return false
         }
         
         if identifierExists == false && fileExists == true {

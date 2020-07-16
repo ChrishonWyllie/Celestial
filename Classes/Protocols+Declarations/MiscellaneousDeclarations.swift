@@ -14,10 +14,7 @@ import AVFoundation
     /// The url of the requested resource
     var sourceURL: URL? { get }
     
-    /// Determines whether the requested resource should be cached or not once download completes
-    var cachePolicy: MultimediaCachePolicy { get }
-    
-    /// Determines where a downloaded resource will be stored if `cachePolicy == .allow`
+    /// Determines where a downloaded resource will be stored if at all
     var cacheLocation: ResourceCacheLocation { get }
     
     /**
@@ -25,10 +22,9 @@ import AVFoundation
 
     - Parameters:
        - delegate: Used to notify receiver of events related to current download of the requested resource. e.g. An image or video hosted on an external server
-       - cachePolicy: Used to notify receiver of download state events such as completion, progress and errors
-       - cacheLocation: Determines where a downloaded resource will be stored if `cachePolicy == .allow`
+       - cacheLocation: Determines where a downloaded resource will be stored if at all
     */
-    init(frame: CGRect, cachePolicy: MultimediaCachePolicy, cacheLocation: ResourceCacheLocation)
+    init(frame: CGRect, cacheLocation: ResourceCacheLocation)
 }
 
 /// Delegate for notifying receiver of events related to current download of a requested resource
@@ -340,9 +336,9 @@ protocol DownloadTaskManagerProtocol {
 
 
 /// Represents current state of a download of a resource from an external URL
-public enum DownloadTaskState {
+public enum DownloadTaskState: Int {
     /// First state of a download before it begins
-    case none
+    case none = 0
     /// Download has been temporarily paused. May be resumed
     case paused
     /// Download is currently in progress
@@ -351,12 +347,14 @@ public enum DownloadTaskState {
     case finished
 }
 
-/// Determines where cached files will be stored if `cachePolicy == .allow`
+/// Determines where cached files will be stored if at all
 @objc public enum ResourceCacheLocation: Int {
     /// Downloaded resources will be stored in local `NSCache`
     case inMemory = 0
     /// Downloaded resources will be stored in local file system
     case fileSystem
+    /// Downloaded resources will not be cached
+    case none
 }
 
 

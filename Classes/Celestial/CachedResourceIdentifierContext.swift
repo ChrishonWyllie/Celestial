@@ -150,6 +150,8 @@ internal class CachedResourceIdentifierContext {
             resourceExists = true
             
             switch resourceIdentifier.cacheLocation {
+            case .none:
+                return false
             case .inMemory:
                 break
             case .fileSystem:

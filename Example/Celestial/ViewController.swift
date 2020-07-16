@@ -466,7 +466,7 @@ extension ViewController: URLCachableViewDelegate {
     
     func urlCachableView(_ view: URLCachableView, didFinishDownloading media: Any) {
         print("download completed with url string: \(String(describing: view.sourceURL?.absoluteString))")
-        print("image has been cached?: \(view.cachePolicy == .allow)")
+        print("image has been cached?: \(view.cacheLocation != .none)")
     }
     
     func urlCachableView(_ view: URLCachableView, downloadFailedWith error: Error) {
@@ -495,7 +495,7 @@ extension ViewController: CachableAVPlayerItemDelegate {
     func playerItem(_ playerItem: CachableAVPlayerItem, didFinishDownloading data: Data) {
         print("File is downloaded and ready for storing")
         print("asset duration after downloading: \(CMTimeGetSeconds(playerItem.asset.duration))")
-        print("video has been cached?: \(playerItem.cachePolicy == .allow)")
+        print("video has been cached?: \(playerItem.cacheLocation != .none)")
     }
 
     func playerItem(_ playerItem: CachableAVPlayerItem, downloadFailedWith error: Error) {
