@@ -241,13 +241,6 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                     
                     DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Initializing DataLoadablePlayerItem with cached video url: \(cachedVideoURL). Media data size in MB: \(cachedVideoData.sizeInMB)")
                     
-                    if cachedVideoData.count == 0 {
-                        let cacheInfo = Celestial.shared.getCacheInfo()
-                        for info in cacheInfo {
-                            print(info)
-                        }
-                    }
-                    
                     let playerItem = DataLoadablePlayerItem(data: cachedVideoData,
                                                             mimeType: cachedVideoURL.mimeType(),
                                                             fileExtension: cachedVideoURL.pathExtension)
