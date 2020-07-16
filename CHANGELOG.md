@@ -1,3 +1,14 @@
+## [Version 0.8.10](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.10) 
+### New
+* Added .none case to CacheLocation to deprecate the CachePolicy enum
+
+### Improvements
+* Added relevant properties of DownloadTaskRequest to encodable/decodable functions
+* Deprecated the CachePolicy enum in favor of just using CacheLocation
+
+### Bug fixes
+* N/A
+
 ## [Version 0.8.0](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.0) 
 ### New
 * Created `CachedResourceIdentifierContext` to separate concerns of identifying resources
