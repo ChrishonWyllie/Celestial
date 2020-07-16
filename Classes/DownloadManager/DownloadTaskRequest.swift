@@ -43,6 +43,16 @@ internal class DownloadTaskRequest: DownloadTaskRequestProtocol, CustomStringCon
     private(set) var downloadState: DownloadTaskState = .none
     weak var delegate: CachableDownloadModelDelegate?
     
+    private enum CodingKeys: String, CodingKey {
+        case sourceURL
+        case progress
+        case resumeData
+        case downloadState
+    }
+    
+    
+    
+    
     required init(sourceURL: URL, delegate: CachableDownloadModelDelegate?) {
         self.sourceURL = sourceURL
         self.delegate = delegate
@@ -78,15 +88,19 @@ internal class DownloadTaskRequest: DownloadTaskRequestProtocol, CustomStringCon
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
         sourceURL = try container.decode(URL.self, forKey: .sourceURL)
+        progress = try container.decode(Float.self, forKey: .progress)
+        let downloadStateRawValue = try container.decode(Int.self, forKey: .downloadState)
+        downloadState = DownloadTaskState(rawValue: downloadStateRawValue) ?? .none
+        resumeData = try container.decode(Data.self, forKey: .resumeData)
     }
     
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
         try container.encode(sourceURL, forKey: .sourceURL)
+        try container.encode(progress, forKey: .progress)
+        try container.encode(downloadState.rawValue, forKey: .downloadState)
+        try container.encode(resumeData, forKey: .resumeData)
     }
     
-    private enum CodingKeys: String, CodingKey {
-        case sourceURL
-    }
 }
