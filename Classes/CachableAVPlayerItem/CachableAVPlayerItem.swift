@@ -44,7 +44,7 @@ open class CachableAVPlayerItem: AVPlayerItem {
     /// NOTE: Your should use this as primary method of initialization.
     /// - Parameter url: The URL of the video you would like to download and play
     /// - Parameter delegate: `CachableAVPlayerItemDelegate` for useful delegation functions such as knowing when download has completed, or its current progress.
-    /// - Parameter cacheLocation: `ResourceLocation` for determining where the video should be cached upon completion of its download, if at all.
+    /// - Parameter cacheLocation: `ResourceCacheLocation` for determining where the video should be cached upon completion of its download, if at all.
     convenience public init(url: URL,
                             delegate: CachableAVPlayerItemDelegate?,
                             cacheLocation: ResourceCacheLocation = .inMemory) {
@@ -72,7 +72,7 @@ open class CachableAVPlayerItem: AVPlayerItem {
             
             initialScheme = nil
             
-            assetResourceLoader = MediaResourceLoader(url: url)
+            assetResourceLoader = MediaResourceLoader()
             assetResourceLoader?.setMediaData(originalVideoData.videoData, mimeType: originalVideoData.originalURLMimeType)
 
             asset = AVURLAsset(url: fakeUrl)
