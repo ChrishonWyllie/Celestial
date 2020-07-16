@@ -185,8 +185,6 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
         downloadTaskRequest.task?.resume()
         downloadTaskRequest.update(downloadState: .downloading)
         activeDownloadsContext.save(downloadTaskRequest: downloadTaskRequest)
-        
-//        MediaPendingOperations.shared.startDownload(for: model)
     }
 }
 
@@ -240,6 +238,7 @@ extension DownloadTaskManager {
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Exchanging GenericCellModel with new model containing delegate: \(String(describing: newDownloadTask.delegate)). url: \(newDownloadTask.sourceURL)")
         
         newDownloadTask.update(downloadState: existingDownloadTaskRequest.downloadState)
+        activeDownloadsContext.save(downloadTaskRequest: existingDownloadTaskRequest)
     }
 }
 
@@ -357,6 +356,8 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
             downloadTaskRequest.storeResumableData(resumeData)
             //
             downloadTaskRequest.update(downloadState: .paused)
+            
+            activeDownloadsContext.save(downloadTaskRequest: downloadTaskRequest)
         }
     }
     
