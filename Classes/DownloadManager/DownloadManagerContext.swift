@@ -46,7 +46,6 @@ internal class DownloadManagerContext {
             
             let encodedData = try? JSONEncoder().encode(downloadTaskRequest)
             self?.userDefaults.set(encodedData, forKey: downloadTaskRequest.sourceURL.path)
-            self?.userDefaults.synchronize()
         }
     }
     
@@ -54,7 +53,6 @@ internal class DownloadManagerContext {
         concurrentQueue.async(flags: .barrier) { [weak self] in
             self?.activeDownloads.removeValue(forKey: sourceURL)
             self?.userDefaults.removeObject(forKey: sourceURL.path)
-            self?.userDefaults.synchronize()
         }
     }
 }
