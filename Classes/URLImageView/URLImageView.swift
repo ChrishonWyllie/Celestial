@@ -16,8 +16,6 @@ open class URLImageView: UIImageView, URLCachableView {
     
     public private(set) weak var delegate: URLCachableViewDelegate?
     
-    public private(set) var cachePolicy: MultimediaCachePolicy = .allow
-    
     public private(set) var sourceURL: URL?
     
     public private(set) var cacheLocation: ResourceCacheLocation = .fileSystem
@@ -43,27 +41,24 @@ open class URLImageView: UIImageView, URLCachableView {
     
     public convenience init(delegate: URLCachableViewDelegate?,
                             sourceURLString: String,
-                            cachePolicy: MultimediaCachePolicy = .allow,
                             cacheLocation: ResourceCacheLocation = .fileSystem) {
-        self.init(delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
+        self.init(delegate: delegate, cacheLocation: cacheLocation)
         loadImageFrom(urlString: sourceURLString)
     }
     
     public convenience init(delegate: URLCachableViewDelegate?,
-                            cachePolicy: MultimediaCachePolicy = .allow,
                             cacheLocation: ResourceCacheLocation = .fileSystem) {
-        self.init(frame: .zero, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
+        self.init(frame: .zero, cacheLocation: cacheLocation)
         self.delegate = delegate
     }
     
-    public required init(frame: CGRect, cachePolicy: MultimediaCachePolicy, cacheLocation: ResourceCacheLocation) {
+    public required init(frame: CGRect, cacheLocation: ResourceCacheLocation) {
         super.init(frame: frame)
         
         if translatesAutoresizingMaskIntoConstraints == true && frame != .zero {
             self.expectedImageSize = frame.size
         }
         
-        self.cachePolicy = cachePolicy
         self.cacheLocation = cacheLocation
     }
     
@@ -207,6 +202,8 @@ open class URLImageView: UIImageView, URLCachableView {
                 return
             }
             asyncSetImage(from: cachedImageURL, completion: completion)
+            
+        default: break
         }
     }
     
@@ -289,52 +286,36 @@ extension URLImageView: CachableDownloadModelDelegate {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let strongSelf = self else { return }
             
-            switch strongSelf.cachePolicy {
-            case .allow:
+            guard let originalSourceURL = strongSelf.sourceURL else {
+                let error = CLSError.invalidSourceURLError("The sourceURL does not exist")
+                strongSelf.handleDisplayOf(resizedImage: nil, error: error)
+                return
+            }
+            
+            switch strongSelf.cacheLocation {
+            case .fileSystem:
                 
-                strongSelf.getCachedAndResized(intermediateTemporaryFileURL: intermediateTemporaryFileURL, desiredImageSize: desiredImageSize) { (resizedImage, error) in
-                    
-                    strongSelf.handleDisplayOf(resizedImage: resizedImage, error: error)
-                }
+                Celestial.shared.storeDownloadedImageToFileCache(intermediateTemporaryFileURL,
+                                                                 withSourceURL: originalSourceURL,
+                                                                 pointSize: desiredImageSize,
+                                                                 completion: { (resizedImage) in
+                                                
+                    strongSelf.handleDisplayOf(resizedImage: resizedImage, error: nil)
+                })
                 
-            default:
+            case .inMemory, .none:
                 
                 strongSelf.getResizedImage(from: intermediateTemporaryFileURL, desiredImageSize: desiredImageSize) { (resizedImage, error) in
+                    if strongSelf.cacheLocation == .inMemory {
+                        if let resizedImage = resizedImage {
+                            Celestial.shared.storeImageInMemoryCache(image: resizedImage, sourceURLString: originalSourceURL.absoluteString)
+                        }
+                    } else if strongSelf.cacheLocation == .none {
+                        Celestial.shared.deleteFile(at: intermediateTemporaryFileURL)
+                    }
                     strongSelf.handleDisplayOf(resizedImage: resizedImage, error: error)
-                    
-                    Celestial.shared.deleteFile(at: intermediateTemporaryFileURL)
                 }
             }
-        }
-    }
-    
-    private func getCachedAndResized(intermediateTemporaryFileURL: URL, desiredImageSize: CGSize, completion: @escaping (_ resizedImage: UIImage?, _ error: Error?) -> ()) {
-        
-        guard let originalSourceURL = sourceURL else {
-            let error = CLSError.invalidSourceURLError("The sourceURL does not exist")
-            completion(nil, error)
-            return
-        }
-        
-        switch cacheLocation {
-        case .inMemory:
-           
-            getResizedImage(from: intermediateTemporaryFileURL, desiredImageSize: desiredImageSize) { (resizedImage, error) in
-                if let resizedImage = resizedImage {
-                    Celestial.shared.storeImageInMemoryCache(image: resizedImage, sourceURLString: originalSourceURL.absoluteString)
-                }
-                completion(resizedImage, error)
-            }
-            
-        case .fileSystem:
-            
-            Celestial.shared.storeDownloadedImageToFileCache(intermediateTemporaryFileURL,
-                                                             withSourceURL: originalSourceURL,
-                                                             pointSize: desiredImageSize,
-                                                             completion: { (resizedImage) in
-                                            
-                completion(resizedImage, nil)
-            }) 
         }
     }
     

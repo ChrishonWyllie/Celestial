@@ -439,6 +439,8 @@ extension Celestial {
                 fileExists = FileStorageManager.shared.imageExists(for: sourceURL)
             default: fatalError("Unexpected resource type: \(String(reflecting: resourceType))")
             }
+        case .none:
+            return false
         }
         
         if identifierExists == false && fileExists == true {
@@ -472,7 +474,7 @@ extension Celestial {
     
     public func handleBackgroundSession(identifier: String, completionHandler: @escaping () -> Void) {
         guard identifier == DownloadTaskManager.backgroundDownloadSessionIdentifier else {
-            print("Found another identifier: \(identifier)")
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Found another identifier: \(identifier)")
             return
         }
         backgroundSessionCompletionHandler = completionHandler

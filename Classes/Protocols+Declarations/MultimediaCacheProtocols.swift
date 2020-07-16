@@ -7,15 +7,6 @@
 
 import UIKit.UIImage
 
-// MARK: - MultimediaCachePolicy
-
-/// Enum for specifying if the image or video should be cached or not.
-/// Used as optional argument in the URLImageView, URLVideoPlayerView and CachableAVPlayerItem initializer.
-@objc public enum MultimediaCachePolicy: Int {
-    case allow = 0
-    case notAllowed
-}
-
 // MARK: - CelestialVideoCachingProtocol
 
 /// Forces conformance for implementing functions related to video caching

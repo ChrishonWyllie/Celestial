@@ -16,7 +16,7 @@ open class CachableAVPlayerItem: AVPlayerItem {
     // MARK: - Variables
     
     public private(set) var url: URL
-    public private(set) var cachePolicy: MultimediaCachePolicy = .allow
+    public private(set) var cacheLocation: ResourceCacheLocation = .inMemory
     public private(set) weak var delegate: CachableAVPlayerItemDelegate?
     
     private var assetResourceLoader: MediaResourceLoader?
@@ -44,18 +44,23 @@ open class CachableAVPlayerItem: AVPlayerItem {
     /// NOTE: Your should use this as primary method of initialization.
     /// - Parameter url: The URL of the video you would like to download and play
     /// - Parameter delegate: `CachableAVPlayerItemDelegate` for useful delegation functions such as knowing when download has completed, or its current progress.
-    /// - Parameter cachePolicy: `MultimediaCachePolicy` for determining whether the video should be cached upon completion of its download.
-    convenience public init(url: URL, delegate: CachableAVPlayerItemDelegate?, cachePolicy: MultimediaCachePolicy = .allow) {
-        self.init(url: url, customFileExtension: nil, delegate: delegate, cachePolicy: cachePolicy)
+    /// - Parameter cacheLocation: `ResourceCacheLocation` for determining where the video should be cached upon completion of its download, if at all.
+    convenience public init(url: URL,
+                            delegate: CachableAVPlayerItemDelegate?,
+                            cacheLocation: ResourceCacheLocation = .inMemory) {
+        self.init(url: url, customFileExtension: nil, delegate: delegate, cacheLocation: cacheLocation)
     }
     
     /// Override/append custom file extension to URL path.
     /// This is required for the player to work correctly with the intended file type.
-    public init(url: URL, customFileExtension: String?, delegate: CachableAVPlayerItemDelegate?, cachePolicy: MultimediaCachePolicy = .allow) {
+    public init(url: URL,
+                customFileExtension: String?,
+                delegate: CachableAVPlayerItemDelegate?,
+                cacheLocation: ResourceCacheLocation = .inMemory) {
         
         self.url = url
         self.delegate = delegate
-        self.cachePolicy = cachePolicy
+        self.cacheLocation = cacheLocation
         
         var asset: AVURLAsset
         
@@ -67,7 +72,7 @@ open class CachableAVPlayerItem: AVPlayerItem {
             
             initialScheme = nil
             
-            assetResourceLoader = MediaResourceLoader(url: url)
+            assetResourceLoader = MediaResourceLoader()
             assetResourceLoader?.setMediaData(originalVideoData.videoData, mimeType: originalVideoData.originalURLMimeType)
 
             asset = AVURLAsset(url: fakeUrl)
@@ -231,8 +236,21 @@ extension CachableAVPlayerItem: MediaResourceLoaderDelegate {
         let originalVideoData = MemoryCachedVideoData(videoData: mediaData,
                                                   originalURLMimeType: sourceURL.mimeType(),
                                                   originalURLFileExtension: sourceURL.pathExtension)
-        if cachePolicy == .allow {
+        switch cacheLocation {
+        case .inMemory:
             Celestial.shared.storeVideoInMemoryCache(videoData: originalVideoData, sourceURLString: sourceURL.absoluteString)
+        case .fileSystem:
+            do {
+                let temporaryFileURL = FileStorageManager.shared.createTemporaryFileURL(from: sourceURL)
+                try mediaData.write(to: temporaryFileURL)
+                
+                Celestial.shared.storeDownloadedVideoToFileCache(temporaryFileURL, withSourceURL: sourceURL) { (cachedVideoURL) in
+                    // ...
+                }
+            } catch let error {
+                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error writing Data to url. Error: \(error)")
+            }
+        default: break
         }
         
         delegate?.playerItem(self, didFinishDownloading: mediaData)

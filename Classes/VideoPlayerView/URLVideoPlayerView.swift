@@ -20,8 +20,6 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
        
     private weak var delegate: URLVideoPlayerViewDelegate?
     
-    public private(set) var cachePolicy: MultimediaCachePolicy = .allow
-    
     public private(set) var sourceURL: URL?
     
     public private(set) var cacheLocation: ResourceCacheLocation = .fileSystem
@@ -65,31 +63,26 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     
     public convenience init(delegate: URLVideoPlayerViewDelegate?,
                             sourceURLString: String,
-                            cachePolicy: MultimediaCachePolicy = .allow,
                             cacheLocation: ResourceCacheLocation = .fileSystem) {
-        self.init(delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
+        self.init(delegate: delegate, cacheLocation: cacheLocation)
         loadVideoFrom(urlString: sourceURLString)
     }
     
     public convenience init(delegate: URLVideoPlayerViewDelegate?,
-                            cachePolicy: MultimediaCachePolicy = .allow,
                             cacheLocation: ResourceCacheLocation = .fileSystem) {
-        self.init(frame: .zero, delegate: delegate, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
+        self.init(frame: .zero, delegate: delegate, cacheLocation: cacheLocation)
     }
     
     public convenience init(frame: CGRect,
                             delegate: URLVideoPlayerViewDelegate?,
-                            cachePolicy: MultimediaCachePolicy,
                             cacheLocation: ResourceCacheLocation) {
-        self.init(frame: frame, cachePolicy: cachePolicy, cacheLocation: cacheLocation)
+        self.init(frame: frame, cacheLocation: cacheLocation)
         self.delegate = delegate
     }
     
     public required init(frame: CGRect,
-                         cachePolicy: MultimediaCachePolicy,
                          cacheLocation: ResourceCacheLocation) {
         super.init(frame: frame)
-        self.cachePolicy = cachePolicy
         self.cacheLocation = cacheLocation
     }
     
@@ -192,26 +185,24 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                 }
             }
                         
-            if cachePolicy == .allow {
-                if progressHandler != nil && completion != nil && progressHandler != nil {
-                    downloadTaskHandler = DownloadTaskHandler<URL>()
-                    downloadTaskHandler?.completionHandler = { (_) in
-                        DispatchQueue.main.async {
-                            completion?()
-                        }
-                    }
-                    downloadTaskHandler?.progressHandler = { (downloadProgress) in
-                        progressHandler?(downloadProgress)
-                    }
-                    downloadTaskHandler?.errorHandler = { (error) in
-                        errorHandler?(error)
+            if progressHandler != nil && completion != nil && progressHandler != nil {
+                downloadTaskHandler = DownloadTaskHandler<URL>()
+                downloadTaskHandler?.completionHandler = { (_) in
+                    DispatchQueue.main.async {
+                        completion?()
                     }
                 }
-                
-                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - No resource exists or is currently downloading for url: \(sourceURL). Will start new download")
-                
-                Celestial.shared.startDownload(downloadTaskRequest: downloadTaskRequest)
+                downloadTaskHandler?.progressHandler = { (downloadProgress) in
+                    progressHandler?(downloadProgress)
+                }
+                downloadTaskHandler?.errorHandler = { (error) in
+                    errorHandler?(error)
+                }
             }
+            
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - No resource exists or is currently downloading for url: \(sourceURL). Will start new download")
+            
+            Celestial.shared.startDownload(downloadTaskRequest: downloadTaskRequest)
         }
     }
     
@@ -250,13 +241,6 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                     
                     DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Initializing DataLoadablePlayerItem with cached video url: \(cachedVideoURL). Media data size in MB: \(cachedVideoData.sizeInMB)")
                     
-                    if cachedVideoData.count == 0 {
-                        let cacheInfo = Celestial.shared.getCacheInfo()
-                        for info in cacheInfo {
-                            print(info)
-                        }
-                    }
-                    
                     let playerItem = DataLoadablePlayerItem(data: cachedVideoData,
                                                             mimeType: cachedVideoURL.mimeType(),
                                                             fileExtension: cachedVideoURL.pathExtension)
@@ -269,6 +253,8 @@ open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
                     DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting video data from url: \(sourceURL). Error: \(error)")
                 }
             }
+            
+        default: break
         }
     }
     
@@ -348,21 +334,50 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
     
     
     private func prepareAndPossiblyCacheVideo(at intermediateTemporaryFileURL: URL) {
-        switch cachePolicy {
-        case .allow:
-            
-            getCachedAndResizedVideo(intermediateTemporaryFileURL: intermediateTemporaryFileURL) { [weak self] (compressedVideoURL) in
+        
+        guard let sourceURL = sourceURL else {
+            return
+        }
+        
+        switch cacheLocation {
+        case .inMemory:
+           
+            Celestial.shared.decreaseVideoQuality(sourceURL: sourceURL, inputURL: intermediateTemporaryFileURL) { [weak self] (compressedVideoURL) in
                 
-                guard let strongSelf = self else {
-                    return
-                }
-                                        
                 guard let compressedVideoURL = compressedVideoURL else {
                     return
                 }
                 
-                strongSelf.notifyReceiverOfDownloadCompletion(videoFileURL: compressedVideoURL)
+                do {
+                    let compressedDownloadedMediaData = try Data(contentsOf: compressedVideoURL)
+                    
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Compressed video to \(compressedDownloadedMediaData.sizeInMB) MB")
+                    
+                    let videoData = MemoryCachedVideoData(videoData: compressedDownloadedMediaData,
+                                                          originalURLMimeType: sourceURL.mimeType(),
+                                                          originalURLFileExtension: sourceURL.pathExtension)
+                    
+                    Celestial.shared.storeVideoInMemoryCache(videoData: videoData, sourceURLString: sourceURL.absoluteString)
+                    
+                    self?.notifyReceiverOfDownloadCompletion(videoFileURL: compressedVideoURL)
+                    
+                } catch let error {
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting data from contents of url: \(compressedVideoURL). Error: \(error)")
+                }
             }
+            
+        case .fileSystem:
+           
+            Celestial.shared.storeDownloadedVideoToFileCache(intermediateTemporaryFileURL,
+                                                             withSourceURL: sourceURL,
+                                                             completion: { [weak self] (compressedVideoURL) in
+                                                                
+                guard let compressedVideoURL = compressedVideoURL else {
+                    return
+                }
+                                                                
+                self?.notifyReceiverOfDownloadCompletion(videoFileURL: compressedVideoURL)
+            })
             
         default:
             
@@ -380,51 +395,6 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
         } else {
             
             delegate?.urlCachableView?(self, didFinishDownloading: videoFileURL)
-        }
-    }
-    
-    private func getCachedAndResizedVideo(intermediateTemporaryFileURL: URL,
-                                          completion: @escaping (_ compressedCachedURL: URL?) -> ()) {
-        
-        guard let sourceURL = sourceURL else {
-            completion(nil)
-            return
-        }
-        
-        switch cacheLocation {
-        case .inMemory:
-           
-            Celestial.shared.decreaseVideoQuality(sourceURL: sourceURL, inputURL: intermediateTemporaryFileURL) { (compressedVideoURL) in
-                
-                guard let compressedVideoURL = compressedVideoURL else {
-                    completion(nil)
-                    return
-                }
-                
-                do {
-                    let compressedDownloadedMediaData = try Data(contentsOf: compressedVideoURL)
-                    
-                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Compressed video to \(compressedDownloadedMediaData.sizeInMB) MB")
-                    
-                    let videoData = MemoryCachedVideoData(videoData: compressedDownloadedMediaData,
-                                                          originalURLMimeType: sourceURL.mimeType(),
-                                                          originalURLFileExtension: sourceURL.pathExtension)
-                    
-                    Celestial.shared.storeVideoInMemoryCache(videoData: videoData, sourceURLString: sourceURL.absoluteString)
-                    
-                    completion(compressedVideoURL)
-                    
-                } catch let error {
-                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting data from contents of url: \(compressedVideoURL). Error: \(error)")
-                    completion(nil)
-                }
-            }
-            
-        case .fileSystem:
-           
-            Celestial.shared.storeDownloadedVideoToFileCache(intermediateTemporaryFileURL,
-                                                             withSourceURL: sourceURL,
-                                                             completion: completion)
         }
     }
 }

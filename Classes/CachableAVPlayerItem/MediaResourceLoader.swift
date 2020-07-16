@@ -21,8 +21,6 @@ internal class MediaResourceLoader: NSObject, URLSessionDelegate {
     private var mediaData: Data?
     fileprivate var pendingRequests = Set<AVAssetResourceLoadingRequest>()
     
-    private var cachePolicy: MultimediaCachePolicy = .allow
-    
     public weak var delegate: MediaResourceLoaderDelegate?
     
     
@@ -31,16 +29,14 @@ internal class MediaResourceLoader: NSObject, URLSessionDelegate {
     
     // MARK: - Initializers
     
-    convenience init(url: URL, cachePolicy: MultimediaCachePolicy = .allow) {
-        self.init(cachePolicy: cachePolicy)
+    init(url: URL) {
+        super.init()
         self.initialURL = url
     }
     
-    init(cachePolicy: MultimediaCachePolicy = .allow) {
+    override init() {
         super.init()
-        self.cachePolicy = cachePolicy
     }
-    
     
     
     
