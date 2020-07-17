@@ -1,3 +1,13 @@
+## [Version 0.8.13](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.13) 
+### New
+* Committing `Podfile.lock` as suggessted by cocoapods.org
+
+### Improvements
+* N/A
+
+### Bug fixes
+* N/A
+
 ## [Version 0.8.10](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.10) 
 ### New
 * Added .none case to CacheLocation to deprecate the CachePolicy enum
