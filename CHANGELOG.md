@@ -1,3 +1,13 @@
+## [Version 0.8.21](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.21) 
+### New
+* N/A
+
+### Improvements
+* Moved the `URLImageView` `VideoPlayerView` and `URLVideoPlayerView` and all of their relevant supplementary classes to a combined folder called views
+
+### Bug fixes
+* N/A
+
 ## [Version 0.8.18](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.18) 
 ### New
 * Made the `URLImageView` `VideoPlayerView` and `URLVideoPlayerView` IBDesignable
