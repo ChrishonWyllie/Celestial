@@ -9,7 +9,7 @@ import AVFoundation
 
 /// UIView subclass for conveniently allowing for playing
 /// videos. Autoresizes with auto layout.
-open class VideoPlayerView: UIView {
+@IBDesignable open class VideoPlayerView: UIView {
 
     public override class var layerClass: AnyClass {
         return AVPlayerLayer.self

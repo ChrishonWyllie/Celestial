@@ -10,7 +10,7 @@ import UIKit
 /// Subclass of UIImageView which can download and display an image from an external URL,
 /// then cache it for future use if desired.
 /// This is used together with the Celestial cache to prevent needless downloading of the same images.
-open class URLImageView: UIImageView, URLCachableView {
+@IBDesignable open class URLImageView: UIImageView, URLCachableView {
     
     // MARK: - Variables
     

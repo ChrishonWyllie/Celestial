@@ -14,7 +14,7 @@ import AVFoundation
 /// Subclass of UIImageView which can download and display an image from an external URL,
 /// then cache it for future use if desired.
 /// This is used together with the Celestial cache to prevent needless downloading of the same images.
-open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
+@IBDesignable open class URLVideoPlayerView: VideoPlayerView, URLCachableView {
     
     // MARK: - Variables
        
