@@ -1,3 +1,13 @@
+## [Version 0.8.18](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.18) 
+### New
+* Made the `URLImageView` `VideoPlayerView` and `URLVideoPlayerView` IBDesignable
+
+### Improvements
+* The `URLImageView` `VideoPlayerView` and `URLVideoPlayerView` can now be used in Storyboard
+
+### Bug fixes
+* N/A
+
 ## [Version 0.8.13](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.13) 
 ### New
 * Committing `Podfile.lock` as suggessted by cocoapods.org
