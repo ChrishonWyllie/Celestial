@@ -1,3 +1,13 @@
+## [Version 0.8.25](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.25) 
+### New
+* N/A
+
+### Improvements
+* Downgraded minimum iOS deployment target from iOS 11.0 to iOS 10.0
+
+### Bug fixes
+* N/A
+
 ## [Version 0.8.21](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.21) 
 ### New
 * N/A
