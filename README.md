@@ -5,25 +5,28 @@
 [![License](https://img.shields.io/cocoapods/l/Celestial.svg?style=flat)](https://cocoapods.org/pods/Celestial)
 [![Platform](https://img.shields.io/cocoapods/p/Celestial.svg?style=flat)](https://cocoapods.org/pods/Celestial)
 
-`Celestial` is an in-app cache manager that allows you to easily cache both videos and images. You can use built-in subclasses that make this process easier or manually use the caching system.
+`Celestial` is an in-app cache manager that allows you to easily cache both videos and images. You can use built-in UIViews `URLImageView` and `URLVideoPlayerView` to quick display cached images and videos respectively. 
+These two UIView classes provide flexible options such as determing where the cached image or video will be stored: in memory or in the local file system.
 
 <br />
 <br />
 <div id="images">
+    <h3 align="center">In this small demonstration, scrolling through requires each image to constantly be re-fetched, which results in redundant API calls and UI issues with flickering cells</h3>
     <p align="center">
-    <img style="display: inline; margin: 0 5px;" src="Github Images/celestial-app-demo-without-caching.gif" width=300 height=600 />
-    <img style="display: inline; margin: 0 5px;" src="Github Images/celestial-app-demo-with-caching.gif" width=300 height=600 />
-</p>
+        <img style="display: inline; margin: 0 5px;" src="Github Images/celestial-app-demo-without-caching.gif" width=300 height=600 />
+        <img style="display: inline; margin: 0 5px;" src="Github Images/celestial-app-demo-with-caching.gif" width=300 height=600 />
+    </p>
 </div>
 
 ### Table of Contents  
 * [Prerequisites](#prerequisites)
 * [Installation](#installation)
 * [Usage](#usage)
-    * [Cache Videos](#cache_videos)
     * [Cache Images](#cache_images)
-    * [Cache Images in cells](#cache_images_in_cells)
-    * [Observe image download without delegation](#urlimageview_download_task_handlers)
+        * [Caching in cells](#cache_images_in_cells)
+        * [Observing progress](#observing_image_download_progress)
+    * [Cache Videos](#cache_videos)
+    * [Observe download without delegation](#observe_download_task_handlers)
 * [Example App](#example-app)
 <br />
 
@@ -51,11 +54,164 @@ pod 'Celestial'
 
 ## Usage
 
+<a name="cache_images" />
+
+## Caching images
+
+For caching images, use the `URLImageView` which is a subclass of the default `UIImageView` . The URLImageView can be initialized with a URL pointing to the image or this image can be manually loaded.
+
+The first initializer accepts a `sourceURLString: String` which is the absoluteString of the URL at which the image file is located.
+Both initializers share 2 arguments:
+- delegate: The `URLCachableViewDelegate` notifies the receiver of events such as download completion, progress, errors, etc.
+- cacheLocation: The `ResourceCacheLocation` determines where the downloaded image will be stored upon completion. By default, images are stored `inMemory`. Images or videos stored with this setting are <b>not persisted across app sessions and are subject to automatic removal by the system if memory is strained</b>. However, for images, caching to memory is often sufficient.
+
+```swift
+import Celestial
+
+let sourceURLString = <your URL string>
+let imageView = URLImageView(sourceURLString: sourceURLString, delegate: nil, cacheLocation: .inMemory)
+
+// Will automatically load the image from the sourceURLString, and cache the downloaded image
+// in a local NSCache, for reuse later
+
+```
+
+
+<br />
+<br />
+<br />
+
+<a name="cache_images_in_cells" />
+
+## Caching images in cells...
+
+Caching images in UICollectionViewCells and UITableViewCells is slightly different. 
+In such cases, the `URLImageView` needs to be initialized first and the urlString will likely be provided some time later as the cell is dequeued.
+
+In such cases, use the `func loadImageFrom(urlString:)` function:
+
+```swift
+
+struct CellModel {
+    let urlString: String
+}
+
+class ImageCell: UICollectionViewCell {
+
+    // Initialize the URLImageView within the cell as a variable.
+    // NOTE: The second initializer is used which does NOT have the urlString argument.
+    private var imageView: URLImageView = {
+        let img = URLImageView(delegate: nil, cacheLocation: .inMemory)
+        img.translatesAutoresizingMaskIntoConstraints = false
+        return img
+    }()
+    
+    
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        addSubview(imageView)
+        
+        // Handle layout...
+    }
+    
+    // This function is called during the cell dequeue process and will load the image
+    // using the `CellModel` struct. However, this would be replaced with your method.
+    public func configureCell(someCellModel: CellModel) {
+        imageView.loadImageFrom(urlString: someCellModel.urlString)
+    }
+
+}
+```
+
+<a name="observing_image_download_progress"/>
+
+## Observing download events
+
+There are three possible events that occur when downloading images and videos: 
+* The download completes successfully
+* The download is currently in progress
+* An error occurred whil downloading the image or video
+
+Both `URLImageView` and `URLVideoPlayerView` offer different ways to observe these events:
+
+### With delegation:
+
+Extend the `URLCachableViewDelegate` to be notified of such events
+
+```swift
+
+let sourceURLString = <your URL string>
+let imageView = URLImageView(sourceURLString: sourceURLString, delegate: self, cacheLocation: .inMemory)
+
+...
+
+
+extension ViewController: URLCachableViewDelegate {
+    
+    func urlCachableView(_ view: URLCachableView, didFinishDownloading media: Any) {
+        // Image has finished downloading and will be cached if cachePolicy is set to .allow
+    }
+    
+    func urlCachableView(_ view: URLCachableView, downloadFailedWith error: Error) {
+        // Investigate download error
+    }
+    
+    func urlCachableView(_ view: URLCachableView, downloadProgress progress: Float, humanReadableProgress: String) {
+        // Update UI with download progress if necessary
+    }
+}
+
+```
+
+### With completion blocks
+
+The other option is receive these events using in-line completion blocks
+
+
+```swift
+
+let imageView = URLImageView(delegate: nil, cachePolicy: .allow, defaultImage: nil)
+
+let sourceURLString = <your URL string>
+
+imageView.loadImageFrom(urlString: sourceURLString,
+progressHandler: { (progress) in
+    print("current downlod progress: \(progress)")
+}, completion: {
+    print("Image has finished loading")
+}) { (error) in
+    print("Error loading image: \(error)")
+}
+```
+
+<br />
+<br />
+<br />
+
+
+
+
 <a name="cache_videos" />
 
-## Cache videos automatically
+## Caching videos
 
-For caching videos, use the `CachableAVPlayerItem` which is a subclass of the default `AVPlayerItem` . It has three arguments in its primary (recommended) initializer:
+Similar to caching and displaying images, the `URLVideoPlayerView` will display videos and cache them later for reuse.
+It encapsulates the usually tedious process or creating `AVAssets`, `AVPlayerItems` and `AVPlayers` . Instead, all you need to do is provide a URL for it play.
+
+If you have read the [Caching Images](#cache_images) section, the initializers and functions are virtually identical between `URLImageView` and `URLVideoPlayerView`
+
+```swift
+
+let sourceURLString = <your URL string>
+let videoView = URLVideoPlyerView(sourceURLString: sourceURLString, delegate: nil, cacheLocation: .fileSystem)
+
+```
+
+In this example, the video will be played and cached to the local file system. <b>NOTE</b> Caching to the local system will persist the image or video across app sessions until manually deleted.
+
+Additionally, you may use the `CachableAVPlayerItem` which is a subclass of the default `AVPlayerItem` . It has three arguments in its primary (recommended) initializer:
 - url: The `URL` of the video that you want to download, play and possibly cache for later.
 - delegate: The `CachableAVPlayerItemDelegate` offers 5 delegate functions shown below.
 - cachePolicy: The `MultimediaCachePolicy` is an <b>optional</b> argument that is set to `.allow` by default. This handles the behavior of whether the video file will be automatically cached once download completes.
@@ -110,144 +266,6 @@ extension ViewController: CachableAVPlayerItemDelegate {
 }
 ```
 
-
-
-
-<br />
-<br />
-<br />
-
-
-
-
-
-<a name="cache_images" />
-
-## Cache images automatically
-
-For caching images, use the `URLImageView` which is a subclass of the default `UIImageView` and has two initalizers. One for immediately downloading an image from a URL, and another for manually downloading at a specified time. (The second one is more ideal for UICollectionView and UITableView cell use. More on that later)
-
-The first initializer accepts a `urlString: String` which is the absoluteString of the URL at which the image file is located.
-Both initializers share three arguments:
-- delegate: The `URLImageViewDelegate` offers 3 delegate functions shown below.
-- cachePolicy: The `MultimediaCachePolicy` is an <b>optional</b> argument that is set to `.allow` by default. This handles the behavior of whether the video file will be automatically cached once download completes.
-- defaultImage: This `UIImage` is an <b>default</b> argument which will set the image to an image of your choosing if an error occurs.
-```swift
-import Celestial
-
-...
-
-
-let urlString = <your URL string>
-let imageView = URLImageView(urlString: urlString, 
-                            delegate: self, 
-                            cachePolicy: .allow, // Remember, this is an default parameter. You can exclude this one if you want caching to be set to .allow.
-                            defaultImage: nil)   // Remember, this is an default parameter. You can exclude this one unless you want an image to be displayed in case of an unexpected download error.
-
-
-...
-
-
-extension ViewController: URLImageViewDelegate {
-    
-    func urlImageView(_ view: URLImageView, didFinishDownloading image: UIImage) {
-         // Image has finished downloading and will be cached if cachePolicy is set to .allow
-    }
-    
-    func urlImageView(_ view: URLImageView, downloadFailedWith error: Error) {
-        // Investigate download error
-    }
-    
-    
-    // Optional 
-    
-    func urlImageView(_ view: URLImageView, downloadProgress progress: CGFloat, humanReadableProgress: String) {
-        // Update UI with download progress if necessary
-    }
-}
-```
-
-
-<br />
-<br />
-<br />
-
-<a name="cache_images_in_cells" />
-
-## Cache images in cells...
-
-Caching images in UICollectionViewCells and UITableViewCells is slightly different. In such cases, the `URLImageView` needs to be initialized first and the urlString will likely be provided some time later as the cell is dequeued.
-
-```swift
-
-struct CellModel {
-    let urlString: String
-}
-
-class ImageCell: UICollectionViewCell {
-
-    // Initialize the URLImageView within the cell as a variable.
-    // NOTE: The second initializer is used which does NOT have the urlString argument.
-    private var imageView: URLImageView = {
-        let img = URLImageView(delegate: nil, cachePolicy: .allow, defaultImage: nil)
-        img.translatesAutoresizingMaskIntoConstraints = false
-        return img
-    }()
-    
-    
-    
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        
-        addSubview(imageView)
-        
-        // Handle layout...
-    }
-    
-    // This function is called during the cell dequeue process and will load the image
-    // using the `CellModel` struct. However, this would be replaced with your method.
-    public func configureCell(someCellModel: CellModel) {
-        imageView.loadImageFrom(urlString: someCellModel.urlString)
-    }
-
-}
-```
-
-
-<br />
-<br />
-<br />
-
-<a name="urlimageview_download_task_handlers" />
-
-## Observe image download without delegation
-
-You may prefer to observe three delegation properties: `download completion`, `download progress` and `errors` without using the delegation route (perhaps to keep the swift source file as short as possible).
-In such cases, URLImageView provides another function for downloading and caching images from URLs:
-
-```swift
-public func loadImageFrom(urlString: String, progressHandler: (DownloadTaskProgressHandler?), completion: (() -> ())?, errorHandler: (DownloadTaskErrorHandler?))
-```
-
-which is called like so...
-
-```swift
-
-let imageView = URLImageView(delegate: nil, cachePolicy: .allow, defaultImage: nil)
-
-...
-
-let urlString = <Your URL string>
-
-imageView.loadImageFrom(urlString: urlString, progressHandler: { (progress) in
-    print("current downlod progress: \(progress)")
-}, completion: {
-    print("Image has finished loading")
-}) { (error) in
-    print("Error loading image: \(error)")
-}
-
-```
 <a name="example-app"/>
 
 ## Example
