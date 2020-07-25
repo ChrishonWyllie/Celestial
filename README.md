@@ -64,7 +64,7 @@ For caching images, use the `URLImageView` which is a subclass of the default `U
 The first initializer accepts a `sourceURLString: String` which is the absoluteString of the URL at which the image file is located.
 Both initializers share 2 arguments:
 - delegate: The `URLCachableViewDelegate` notifies the receiver of events such as download completion, progress, errors, etc.
-- cacheLocation: The `ResourceCacheLocation` determines where the downloaded image will be stored upon completion. By default, images are stored `inMemory`. Images or videos stored with this setting are <b>not persisted across app sessions and are subject to automatic removal by the system if memory is strained</b>. Storing with `.fileSystem` will persist the images across app sessions. However, for images, caching to memory is often sufficient. Set to `.none` for no caching
+- cacheLocation: The `ResourceCacheLocation` determines where the downloaded image will be stored upon completion. By default, images are stored `inMemory`. Images or videos stored with this setting are <b>not persisted across app sessions and are subject to automatic removal by the system if memory is strained</b>. Storing with `.fileSystem` will persist the images across app sessions until manually deleted. However, for images, caching to memory is often sufficient. Set to `.none` for no caching
 
 ```swift
 import Celestial
@@ -199,7 +199,7 @@ progressHandler: { (progress) in
 ## Caching videos
 
 Similar to caching and displaying images, the `URLVideoPlayerView` will display videos and cache them later for reuse.
-It encapsulates the usually tedious process or creating `AVAssets`, `AVPlayerItems` and `AVPlayers` . Instead, all you need to do is provide a URL for it play.
+It encapsulates the usually tedious process or creating instances of `AVAsset`, `AVPlayerItem`, `AVPlayerLayer` and `AVPlayer` . Instead, all you need to do is provide a URL for it play.
 
 If you have read the [Caching Images](#cache_images) section, the initializers and functions are virtually identical between `URLImageView` and `URLVideoPlayerView`
 
@@ -212,58 +212,57 @@ let videoView = URLVideoPlyerView(sourceURLString: sourceURLString, delegate: ni
 
 In this example, the video will be played and cached to the local file system. <b>NOTE</b> Caching to the local system will persist the image or video across app sessions until manually deleted.
 
-Additionally, you may use the `CachableAVPlayerItem` which is a subclass of the default `AVPlayerItem` . It has three arguments in its primary (recommended) initializer:
-- url: The `URL` of the video that you want to download, play and possibly cache for later.
-- delegate: The `CachableAVPlayerItemDelegate` offers 5 delegate functions shown below.
-- cacheLocation: The `ResourceCacheLocation` determines where the downloaded video data will be stored upon completion. Set to `.none` for no caching
+### Caching videos in cells
+
+As previously mentioned, the functions provided in `URLVideoPlayerView` are virtually identical to those of  `URLImageView`
 
 ```swift
 
-import Celestial
-
-...
-
-
-
-let urlString = <Your URL string>
-guard let url = URL(string: urlString) else {
-    return
+public func configureCell(someCellModel: CellModel) {
+    playerView.loadVideoFrom(urlString: someCellModel.urlString)
 }
 
-let playerItem = CachableAVPlayerItem(url: url, delegate: self, cacheLocation: .fileSystem)
-
-// Initialize AVPlayerLayer and AVPlayer as usual...
-
-...
-
-
-extension ViewController: CachableAVPlayerItemDelegate {
-
-    func playerItem(_ playerItem: CachableAVPlayerItem, didFinishDownloading data: Data) {
-        // Video has finished downloading and will be cached to specified location
-    }
-    
-    func playerItem(_ playerItem: CachableAVPlayerItem, downloadFailedWith error: Error) {
-        // Investigate download error 
-    }
-    
-    
-    
-    // Optional
-    
-    func playerItem(_ playerItem: CachableAVPlayerItem, downloadProgress progress: CGFloat, humanReadableProgress: String) {
-        // Update UI with download progress if necessary
-    }
-
-    func playerItemReadyToPlay(_ playerItem: CachableAVPlayerItem) {
-        // Video is ready to begin playing
-    }
-
-    func playerItemPlaybackStalled(_ playerItem: CachableAVPlayerItem) {
-        // Video playback has stalled. Update UI if necessary
-    }
-
+struct CellModel {
+    let urlString: String
 }
+
+class VideoCell: UICollectionViewCell {
+
+    private var playerView: URLVideoPlayerView = {
+        // Observe events with delegation...
+        let v = URLVideoPlayerView(delegate: self, cacheLocation: .fileSystem)
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.playerLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
+        return v
+    }()
+    
+    
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        addSubview(playerView)
+        
+        // Handle layout...
+    }
+    
+    // This function is called during the cell dequeue process and will load the image
+    // using the `CellModel` struct. However, this would be replaced with your method.
+    public func configureCell(someCellModel: CellModel) {
+        
+        // Or with completion handlers...
+        
+        playerView.loadVideoFrom(urlString: someCellModel.urlString, 
+        progressHandler: { (progress) in
+            print("current downlod progress: \(progress)")
+        }, completion: {
+            print("Video has finished loading")
+        }) { (error) in
+            print("Error loading video")=
+        }
+    }
+}
+
 ```
 
 <a name="example-app"/>
