@@ -1,3 +1,13 @@
+## [Version 0.8.36](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.36) 
+### New
+* N/A
+
+### Improvements
+* N/A
+
+### Bug fixes
+* Committing podspec. Failed to do so in previous new version update
+
 ## [Version 0.8.33](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.33) 
 ### New
 * N/A
