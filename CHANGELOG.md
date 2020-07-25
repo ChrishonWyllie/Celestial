@@ -1,3 +1,13 @@
+## [Version 0.8.33](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.33) 
+### New
+* N/A
+
+### Improvements
+* Updated README to include documention on the `URLVideoPlayerView` as well as provided updated documentation on `URLImageView`
+
+### Bug fixes
+* N/A
+
 ## [Version 0.8.25](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.25) 
 ### New
 * N/A
