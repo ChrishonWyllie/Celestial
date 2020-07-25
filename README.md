@@ -16,16 +16,36 @@
 </p>
 </div>
 
-##### Table of Contents  
-[Usage](#usage)
+### Table of Contents  
+* [Prerequisites](#prerequisites)
+* [Installation](#installation)
+* [Usage](#usage)
+    * [Cache Videos](#cache_videos)
+    * [Cache Images](#cache_images)
+    * [Cache Images in cells](#cache_images_in_cells)
+    * [Observe image download without delegation](#urlimageview_download_task_handlers)
+* [Example App](#example-app)
 <br />
-[Cache Videos](#cache_videos)
-<br />
-[Cache Images](#cache_images)
-<br />
-[Cache Images in cells](#cache_images_in_cells)
-<br />
-[Observe image download without delegation](#urlimageview_download_task_handlers)
+
+<a name="prerequisites"/>
+
+## Prerequisites
+
+<ul>
+    <li>Xcode 8.0 or higher</li>
+    <li>iOS 10.0 or higher</li>
+</ul>
+
+<a name="installation"/>
+
+## Installation
+
+Celestial is available through [CocoaPods](https://cocoapods.org). To install
+it, simply add the following line to your Podfile:
+
+```ruby
+pod 'Celestial'
+```
 
 <a name="usage"/>
 
@@ -228,23 +248,11 @@ imageView.loadImageFrom(urlString: urlString, progressHandler: { (progress) in
 }
 
 ```
+<a name="example-app"/>
 
 ## Example
 
 To run the example project, clone the repo, and run `pod install` from the Example directory first.
-
-## Requirements
-
-Requires iOS 13.0
-
-## Installation
-
-Celestial is available through [CocoaPods](https://cocoapods.org). To install
-it, simply add the following line to your Podfile:
-
-```ruby
-pod 'Celestial'
-```
 
 ## Author
 
