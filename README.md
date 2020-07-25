@@ -5,13 +5,15 @@
 [![License](https://img.shields.io/cocoapods/l/Celestial.svg?style=flat)](https://cocoapods.org/pods/Celestial)
 [![Platform](https://img.shields.io/cocoapods/p/Celestial.svg?style=flat)](https://cocoapods.org/pods/Celestial)
 
-`Celestial` is an in-app cache manager that allows you to easily cache both videos and images. You can use built-in UIViews `URLImageView` and `URLVideoPlayerView` to quick display cached images and videos respectively. 
+`Celestial` is an in-app cache manager that allows you to easily cache both videos and images. You can use built-in UIViews `URLImageView` and `URLVideoPlayerView` to quickly display cached images and videos respectively. 
 These two UIView classes provide flexible options such as determing where the cached image or video will be stored: in memory or in the local file system.
 
 <br />
 <br />
 <div id="images">
-    <h3 align="center">In this small demonstration, scrolling through requires each image to constantly be re-fetched, which results in redundant API calls and UI issues with flickering cells</h3>
+    <h3 align="center">
+    In this small demonstration, scrolling through requires each image to constantly be re-fetched, 
+    which results in redundant API calls and UI issues with flickering cells</h3>
     <p align="center">
         <img style="display: inline; margin: 0 5px;" src="Github Images/celestial-app-demo-without-caching.gif" width=300 height=600 />
         <img style="display: inline; margin: 0 5px;" src="Github Images/celestial-app-demo-with-caching.gif" width=300 height=600 />
