@@ -28,7 +28,6 @@ These two UIView classes provide flexible options such as determing where the ca
         * [Caching in cells](#cache_images_in_cells)
         * [Observing progress](#observing_image_download_progress)
     * [Cache Videos](#cache_videos)
-    * [Observe download without delegation](#observe_download_task_handlers)
 * [Example App](#example-app)
 <br />
 
@@ -65,7 +64,7 @@ For caching images, use the `URLImageView` which is a subclass of the default `U
 The first initializer accepts a `sourceURLString: String` which is the absoluteString of the URL at which the image file is located.
 Both initializers share 2 arguments:
 - delegate: The `URLCachableViewDelegate` notifies the receiver of events such as download completion, progress, errors, etc.
-- cacheLocation: The `ResourceCacheLocation` determines where the downloaded image will be stored upon completion. By default, images are stored `inMemory`. Images or videos stored with this setting are <b>not persisted across app sessions and are subject to automatic removal by the system if memory is strained</b>. However, for images, caching to memory is often sufficient.
+- cacheLocation: The `ResourceCacheLocation` determines where the downloaded image will be stored upon completion. By default, images are stored `inMemory`. Images or videos stored with this setting are <b>not persisted across app sessions and are subject to automatic removal by the system if memory is strained</b>. Storing with `.fileSystem` will persist the images across app sessions. However, for images, caching to memory is often sufficient. Set to `.none` for no caching
 
 ```swift
 import Celestial
@@ -153,7 +152,7 @@ let imageView = URLImageView(sourceURLString: sourceURLString, delegate: self, c
 extension ViewController: URLCachableViewDelegate {
     
     func urlCachableView(_ view: URLCachableView, didFinishDownloading media: Any) {
-        // Image has finished downloading and will be cached if cachePolicy is set to .allow
+        // Image has finished downloading and will be cached to specified cache location
     }
     
     func urlCachableView(_ view: URLCachableView, downloadFailedWith error: Error) {
@@ -174,7 +173,7 @@ The other option is receive these events using in-line completion blocks
 
 ```swift
 
-let imageView = URLImageView(delegate: nil, cachePolicy: .allow, defaultImage: nil)
+let imageView = URLImageView(delegate: nil, cacheLocation: .inMemory, defaultImage: nil)
 
 let sourceURLString = <your URL string>
 
@@ -216,7 +215,8 @@ In this example, the video will be played and cached to the local file system. <
 Additionally, you may use the `CachableAVPlayerItem` which is a subclass of the default `AVPlayerItem` . It has three arguments in its primary (recommended) initializer:
 - url: The `URL` of the video that you want to download, play and possibly cache for later.
 - delegate: The `CachableAVPlayerItemDelegate` offers 5 delegate functions shown below.
-- cachePolicy: The `MultimediaCachePolicy` is an <b>optional</b> argument that is set to `.allow` by default. This handles the behavior of whether the video file will be automatically cached once download completes.
+- cacheLocation: The `ResourceCacheLocation` determines where the downloaded video data will be stored upon completion. Set to `.none` for no caching
+
 ```swift
 
 import Celestial
@@ -230,9 +230,7 @@ guard let url = URL(string: urlString) else {
     return
 }
 
-let playerItem = CachableAVPlayerItem(url: url, 
-                                      delegate: self, 
-                                      cachePolicy: .allow) // Remember, this is an default parameter. You can exclude this one if you want caching to be set to .allow.
+let playerItem = CachableAVPlayerItem(url: url, delegate: self, cacheLocation: .fileSystem)
 
 // Initialize AVPlayerLayer and AVPlayer as usual...
 
@@ -242,7 +240,7 @@ let playerItem = CachableAVPlayerItem(url: url,
 extension ViewController: CachableAVPlayerItemDelegate {
 
     func playerItem(_ playerItem: CachableAVPlayerItem, didFinishDownloading data: Data) {
-        // Video has finished downloading and will be cached if cachePolicy is set to .allow
+        // Video has finished downloading and will be cached to specified location
     }
     
     func playerItem(_ playerItem: CachableAVPlayerItem, downloadFailedWith error: Error) {
