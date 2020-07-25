@@ -1,4 +1,4 @@
-## [Version 0.8.35](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.35) 
+## [Version 0.8.36](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.36) 
 ### New
 * N/A
 
