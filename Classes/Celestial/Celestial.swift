@@ -78,7 +78,7 @@ extension Celestial: CelestialVideoCachingProtocol {
         cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
     }
    
-    public func removeVideoFromFileCache(sourceURLString: String) -> Bool {
+    @discardableResult public func removeVideoFromFileCache(sourceURLString: String) -> Bool {
         guard let sourceURL = URL(string: sourceURLString) else {
             fatalError("\(sourceURLString) is not a valid URL")
         }
@@ -143,7 +143,7 @@ extension Celestial: CelestialImageCachingProtocol {
         cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
     }
     
-    public func removeImageFromFileCache(sourceURLString: String) -> Bool {
+    @discardableResult public func removeImageFromFileCache(sourceURLString: String) -> Bool {
         
         guard let sourceURL = URL(string: sourceURLString) else {
             fatalError("\(sourceURLString) is not a valid URL")
