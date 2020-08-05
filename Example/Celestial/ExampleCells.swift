@@ -177,9 +177,9 @@ class VideoCell: ExampleCell {
     }
     
     @objc private func togglePlaying() {
+        playerView.isPlaying ? playerView.pause() : playerView.play()
         let newPlayButtonTitle = playerView.isPlaying ? "Pause" : "Play"
         playButton.setTitle(newPlayButtonTitle, for: UIControl.State.normal)
-        playerView.isPlaying ? playerView.pause() : playerView.play()
     }
     
     private weak var playtimeObserver: NSObjectProtocol?
