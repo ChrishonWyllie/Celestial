@@ -1,3 +1,15 @@
+## [Version 0.8.46](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.46) 
+### New
+* Added Boolean for determining if `URLVideoPlayerView` is currently playing
+* Made the function for setting inMemory cache item costs, public
+
+### Improvements
+* Added link to more documentation
+* Added `@discardableResult` for deleting items from file system cache
+
+### Bug fixes
+* N/A
+
 ## [Version 0.8.36](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.36) 
 ### New
 * N/A
