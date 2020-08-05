@@ -135,7 +135,18 @@ class VideoCell: ExampleCell {
         return v
     }()
     
-    
+    private lazy var playButton: UIButton = {
+        let btn = UIButton()
+        btn.translatesAutoresizingMaskIntoConstraints = false
+        btn.setTitle("Play", for: .normal)
+        btn.backgroundColor = UIColor.white
+        btn.clipsToBounds = true
+        btn.layer.cornerRadius = 10
+        btn.titleLabel?.font = UIFont.boldSystemFont(ofSize: 20)
+        btn.setTitleColor(UIColor.blue, for: UIControl.State.normal)
+        btn.addTarget(self, action: #selector(togglePlaying), for: UIControl.Event.touchUpInside)
+        return btn
+    }()
     
     
     override func prepareForReuse() {
@@ -147,7 +158,7 @@ class VideoCell: ExampleCell {
     override func setupUIElements() {
         super.setupUIElements()
         
-        [playerView].forEach { (subview) in
+        [playerView, playButton].forEach { (subview) in
             containerView.addSubview(subview)
         }
         
@@ -159,8 +170,17 @@ class VideoCell: ExampleCell {
         playerView.trailingAnchor.constraint(equalTo: super.containerView.trailingAnchor, constant: -padding).isActive = true
         playerView.bottomAnchor.constraint(equalTo: super.titleLabel.topAnchor, constant: -padding).isActive = true
         
+        playButton.trailingAnchor.constraint(equalTo: playerView.trailingAnchor, constant: -padding).isActive = true
+        playButton.bottomAnchor.constraint(equalTo: playerView.bottomAnchor, constant: -padding).isActive = true
+        playButton.widthAnchor.constraint(equalToConstant: 80).isActive = true
+        
     }
     
+    @objc private func togglePlaying() {
+        let newPlayButtonTitle = playerView.isPlaying ? "Pause" : "Play"
+        playButton.setTitle(newPlayButtonTitle, for: UIControl.State.normal)
+        playerView.isPlaying ? playerView.pause() : playerView.play()
+    }
     
     private weak var playtimeObserver: NSObjectProtocol?
 
