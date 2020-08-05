@@ -41,13 +41,13 @@ import UIKit
     
     public convenience init(delegate: URLCachableViewDelegate?,
                             sourceURLString: String,
-                            cacheLocation: ResourceCacheLocation = .fileSystem) {
+                            cacheLocation: ResourceCacheLocation = .inMemory) {
         self.init(delegate: delegate, cacheLocation: cacheLocation)
         loadImageFrom(urlString: sourceURLString)
     }
     
     public convenience init(delegate: URLCachableViewDelegate?,
-                            cacheLocation: ResourceCacheLocation = .fileSystem) {
+                            cacheLocation: ResourceCacheLocation = .inMemory) {
         self.init(frame: .zero, cacheLocation: cacheLocation)
         self.delegate = delegate
     }

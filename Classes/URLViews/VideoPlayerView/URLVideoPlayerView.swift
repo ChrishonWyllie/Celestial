@@ -54,7 +54,9 @@ import AVFoundation
     }
     private var _isMuted: Bool = false
     
-    
+    public var isPlaying: Bool {
+        return (super.player as? ObservableAVPlayer)?.isPlaying ?? false
+    }
     
     
     

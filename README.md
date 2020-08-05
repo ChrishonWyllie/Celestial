@@ -28,6 +28,7 @@ These two UIView classes provide flexible options such as determing where the ca
         * [Caching in cells](#cache_images_in_cells)
         * [Observing progress](#observing_image_download_progress)
     * [Cache Videos](#cache_videos)
+* [Full Documentation](#full-documentation)
 * [Example App](#example-app)
 <br />
 
@@ -264,6 +265,12 @@ class VideoCell: UICollectionViewCell {
 }
 
 ```
+
+<a name="full-documentation"/>
+
+## Full Documentation
+
+Check out the full documentation [here](https://chrishonwyllie.com/docs/celestial)
 
 <a name="example-app"/>
 

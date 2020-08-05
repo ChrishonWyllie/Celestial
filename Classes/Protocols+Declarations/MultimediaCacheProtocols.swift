@@ -170,7 +170,7 @@ internal protocol CelestialVideoCachingProtocol: class {
     - Returns:
         A Boolean value of whether the video represented by the sourceURL has been deleted
     */
-    func removeVideoFromFileCache(sourceURLString: String) -> Bool
+    @discardableResult func removeVideoFromFileCache(sourceURLString: String) -> Bool
     
     
     
@@ -376,7 +376,7 @@ internal protocol CelestialImageCachingProtocol: class {
     - Returns:
         A Boolean value of whether the image represented by the sourceURL has successfully been deleted from the file system
     */
-    func removeImageFromFileCache(sourceURLString: String) -> Bool
+    @discardableResult func removeImageFromFileCache(sourceURLString: String) -> Bool
     
     
     
