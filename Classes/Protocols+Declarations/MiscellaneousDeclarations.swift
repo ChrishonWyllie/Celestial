@@ -31,7 +31,7 @@ import AVFoundation
 @objc public protocol URLCachableViewDelegate: class {
     
     /**
-     Notifies receiver of errors encountered during download and/or caching
+     Notifies receiver that a download has completed
 
     - Parameters:
        - view: The view that will send delegate information to its receiver

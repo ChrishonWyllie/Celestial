@@ -78,6 +78,16 @@ class ViewController: UIViewController {
         img.backgroundColor = .darkGray
         return img
     }()
+    
+    private lazy var playerView: URLVideoPlayerView = {
+        let urlString = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+        let v = URLVideoPlayerView(delegate: nil, sourceURLString: urlString)
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.playerLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
+//        v.isMuted = true
+        v.play()
+        return v
+    }()
 
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
@@ -144,9 +154,15 @@ extension ViewController {
         
         Celestial.shared.setDebugMode(on: true)
         
+        if #available(iOS 13.0, *) {
+            view.backgroundColor = UIColor.systemGroupedBackground
+        } else {
+            // Fallback on earlier versions
+        }
         navigationItem.rightBarButtonItems = [toggleDataSourceButton, clearCacheButton, cacheInfoButton]
         
 //        setupURLImageView()
+//        setupURLVideoPlayerView()
 //        setupCachableAVPlayerItem()
         setupCollectionView()
     }
@@ -225,10 +241,11 @@ extension ViewController {
         
         view.addSubview(imageView)
          
+        let imageDimension: CGFloat = 300.0
         imageView.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
         imageView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
-        imageView.heightAnchor.constraint(equalToConstant: 200).isActive = true
-        imageView.widthAnchor.constraint(equalToConstant: 200).isActive = true
+        imageView.heightAnchor.constraint(equalToConstant: imageDimension).isActive = true
+        imageView.widthAnchor.constraint(equalToConstant: imageDimension).isActive = true
         
     }
     
@@ -291,8 +308,18 @@ extension ViewController {
 
 extension ViewController {
     
+    private func setupURLVideoPlayerView() {
+        view.addSubview(playerView)
+         
+        let playerDimension: CGFloat = 300.0
+        playerView.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
+        playerView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
+        playerView.heightAnchor.constraint(equalToConstant: playerDimension).isActive = true
+        playerView.widthAnchor.constraint(equalToConstant: playerDimension).isActive = true
+    }
+    
     private func setupCachableAVPlayerItem() {
-        let urlString = "http://www.hochmuth.com/mp3/Tchaikovsky_Nocturne__orch.mp3"
+        let urlString = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
         guard let url = URL(string: urlString) else {
             return
         }
@@ -396,8 +423,8 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
-        guard let videoCell = (cell as? VideoCell) else { return }
-        videoCell.playerView.play()
+//        guard let videoCell = (cell as? VideoCell) else { return }
+//        videoCell.playerView.play()
         
         
 //        let visibleCells = collectionView.visibleCells
@@ -412,18 +439,18 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     }
     
     func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
-        guard let videoCell = cell as? VideoCell else { return }
-        videoCell.playerView.pause()
+//        guard let videoCell = cell as? VideoCell else { return }
+//        videoCell.playerView.pause()
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        guard let videoCell = (collectionView.cellForItem(at: indexPath) as? VideoCell) else { return }
-        videoCell.playerView.play()
+//        guard let videoCell = (collectionView.cellForItem(at: indexPath) as? VideoCell) else { return }
+//        videoCell.playerView.play()
     }
     
     func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
-        guard let videoCell = (collectionView.cellForItem(at: indexPath) as? VideoCell) else { return }
-        videoCell.playerView.pause()
+//        guard let videoCell = (collectionView.cellForItem(at: indexPath) as? VideoCell) else { return }
+//        videoCell.playerView.pause()
     }
     
 }

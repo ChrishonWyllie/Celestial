@@ -15,10 +15,13 @@ internal class ObservableAVPlayer: AVPlayer, ObservablePlayerProtocol {
     
     private var didAddObserver: Bool = false
     
+    internal private(set) var isPlaying: Bool = false
+    
     required init(playerItem item: AVPlayerItem, delegate: ObservableAVPlayerDelegate) {
         super.init(playerItem: item)
         observePlayerStatus()
         self.delegate = delegate
+        
     }
     
     override init(playerItem item: AVPlayerItem?) {
@@ -29,7 +32,15 @@ internal class ObservableAVPlayer: AVPlayer, ObservablePlayerProtocol {
         super.init()
     }
     
+    override func play() {
+        super.play()
+        isPlaying = true
+    }
     
+    override func pause() {
+        super.pause()
+        isPlaying = false
+    }
     
     private func observePlayerStatus() {
         didAddObserver = true
