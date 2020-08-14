@@ -58,6 +58,24 @@ import AVFoundation
         return (super.player as? ObservableAVPlayer)?.isPlaying ?? false
     }
     
+    private var thumbnailImage: UIImage?
+    private var thumbnailGenerationCompletionHandler: ((UIImage?) -> ())?
+    private var shouldCacheThumbnailImage: Bool = false
+    
+    public override var player: AVPlayer? {
+        didSet {
+            guard let asset = player?.currentItem?.asset else {
+                return
+            }
+            if thumbnailGenerationCompletionHandler != nil {
+                performThumbnailGenerationWith(asset: asset, shouldCacheInMemory: shouldCacheThumbnailImage) { [weak self] (image) in
+                    self?.thumbnailGenerationCompletionHandler?(image)
+                    self?.thumbnailGenerationCompletionHandler = nil
+                    self?.shouldCacheThumbnailImage = false
+                }
+            }
+        }
+    }
     
     
     
@@ -112,8 +130,13 @@ import AVFoundation
     // MARK: - Functions
     
     public func loadVideoFrom(urlString: String) {
+        guard let sourceURL = URL(string: urlString) else {
+            return
+        }
+        self.sourceURL = sourceURL
+        
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.acquireVideo(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
+            self?.acquireVideo(from: sourceURL, progressHandler: nil, completion: nil, errorHandler: nil)
         }
     }
     
@@ -122,23 +145,23 @@ import AVFoundation
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
             
+        guard let sourceURL = URL(string: urlString) else {
+            return
+        }
+        self.sourceURL = sourceURL
+        
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.acquireVideo(from: urlString,
+            self?.acquireVideo(from: sourceURL,
                                progressHandler: progressHandler,
                                completion: completion,
                                errorHandler: errorHandler)
         }
     }
     
-    private func acquireVideo(from urlString: String,
+    private func acquireVideo(from sourceURL: URL,
                               progressHandler: DownloadTaskProgressHandler?,
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
-        
-        guard let sourceURL = URL(string: urlString) else {
-            return
-        }
-        self.sourceURL = sourceURL
         
         reset()
         
@@ -260,10 +283,46 @@ import AVFoundation
         }
     }
     
+    public func generateThumbnailImage(shouldCacheInMemory: Bool, completion: @escaping (UIImage?) -> ()) {
+        
+        // Should be non-nil in all cases
+        guard let sourceURLString = sourceURL?.absoluteString else {
+            completion(nil)
+            return
+        }
+        
+        if shouldCacheInMemory == true {
+            
+            if let cachedThumbnailImage = Celestial.shared.imageFromMemoryCache(sourceURLString: sourceURLString) {
+                thumbnailImage = cachedThumbnailImage
+                completion(cachedThumbnailImage)
+                return
+            }
+        }
+        
+        // Generates when the player is set
+        thumbnailGenerationCompletionHandler = completion
+        shouldCacheThumbnailImage = shouldCacheInMemory
+    }
+    
+    private func performThumbnailGenerationWith(asset: AVAsset, shouldCacheInMemory: Bool, completion: @escaping (UIImage?) -> ()) {
+        guard let sourceURLString = sourceURL?.absoluteString else {
+            completion(nil)
+            return
+        }
+        asset.generateThumbnailImage(at: CMTime.zero) { [weak self] (image) in
+            if shouldCacheInMemory == true {
+                Celestial.shared.storeImageInMemoryCache(image: image, sourceURLString: sourceURLString)
+            }
+            self?.thumbnailImage = image
+            completion(image)
+        }
+    }
+    
     private func setupPlayer(with playerItem: AVPlayerItem) {
         let player = ObservableAVPlayer(playerItem: playerItem, delegate: self)
         player.isMuted = _isMuted
-        super.player = player
+        self.player = player
     }
     
     public func play() {

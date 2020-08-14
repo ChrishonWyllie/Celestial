@@ -191,6 +191,9 @@ class VideoCell: ExampleCell {
         print("------------------\nstarting new video\n------------------")
         let urlString = someCellModel.urlString
         playerView.loadVideoFrom(urlString: urlString)
+        playerView.generateThumbnailImage(shouldCacheInMemory: true, completion: { (image) in
+            print("Generated thumbnail image: \(String(describing: image))")
+        })
         
 //        playerView.loadVideoFrom(urlString: someCellModel.urlString, progressHandler: { (progress) in
 //            print("current downlod progress: \(progress)")
