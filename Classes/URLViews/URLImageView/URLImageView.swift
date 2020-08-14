@@ -90,8 +90,14 @@ import UIKit
     
     /// Downloads an image from an external URL string
     public func loadImageFrom(urlString: String) {
+        guard
+            urlString.isValidURL,
+            let sourceURL = URL(string: urlString) else {
+            return
+        }
+        self.sourceURL = sourceURL
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.acquireImage(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
+            self?.acquireImage(from: sourceURL, progressHandler: nil, completion: nil, errorHandler: nil)
         }
     }
     
@@ -101,16 +107,24 @@ import UIKit
                               progressHandler: DownloadTaskProgressHandler?,
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
+        guard
+            urlString.isValidURL,
+            let sourceURL = URL(string: urlString) else {
+                let error = Celestial.CSError.invalidURL("The URL: \(urlString) is not a valid URL")
+                errorHandler?(error)
+            return
+        }
+        self.sourceURL = sourceURL
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.acquireImage(from: urlString,
+            self?.acquireImage(from: sourceURL,
                                progressHandler: progressHandler,
                                completion: completion,
                                errorHandler: errorHandler)
         }
     }
     
-    private func acquireImage(from urlString: String,
+    private func acquireImage(from sourceURL: URL,
                               progressHandler: DownloadTaskProgressHandler?,
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
@@ -118,11 +132,6 @@ import UIKit
         DispatchQueue.main.async { [weak self] in
             self?.image = nil
         }
-        
-        guard let sourceURL = URL(string: urlString) else {
-            return
-        }
-        self.sourceURL = sourceURL
         
         downloadTaskRequest = DownloadTaskRequest(sourceURL: sourceURL, delegate: self)
         

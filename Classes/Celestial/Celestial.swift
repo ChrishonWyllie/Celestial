@@ -9,6 +9,10 @@ import UIKit
 
 public final class Celestial: NSObject {
     
+    enum CSError: Error {
+        case invalidURL(String)
+    }
+    
     /// Public shared instance property
     public static let shared = Celestial()
     
@@ -51,7 +55,9 @@ extension Celestial: CelestialVideoCachingProtocol {
     }
 
     public func storeVideoInMemoryCache(videoData: MemoryCachedVideoData?, sourceURLString: String) {
-        guard let sourceURL = URL(string: sourceURLString) else {
+        guard
+            sourceURLString.isValidURL,
+            let sourceURL = URL(string: sourceURLString) else {
             fatalError("\(sourceURLString) is not a valid URL")
         }
         let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
@@ -79,7 +85,9 @@ extension Celestial: CelestialVideoCachingProtocol {
     }
    
     @discardableResult public func removeVideoFromFileCache(sourceURLString: String) -> Bool {
-        guard let sourceURL = URL(string: sourceURLString) else {
+        guard
+            sourceURLString.isValidURL,
+            let sourceURL = URL(string: sourceURLString) else {
             fatalError("\(sourceURLString) is not a valid URL")
         }
         let successfullyDeletedResource = FileStorageManager.shared.deleteCachedVideo(using: sourceURL)
@@ -115,7 +123,9 @@ extension Celestial: CelestialImageCachingProtocol {
     }
     
     public func storeImageInMemoryCache(image: UIImage?, sourceURLString: String) {
-        guard let sourceURL = URL(string: sourceURLString) else {
+        guard
+            sourceURLString.isValidURL,
+            let sourceURL = URL(string: sourceURLString) else {
             fatalError("\(sourceURLString) is not a valid URL")
         }
         let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
@@ -145,7 +155,9 @@ extension Celestial: CelestialImageCachingProtocol {
     
     @discardableResult public func removeImageFromFileCache(sourceURLString: String) -> Bool {
         
-        guard let sourceURL = URL(string: sourceURLString) else {
+        guard
+            sourceURLString.isValidURL,
+            let sourceURL = URL(string: sourceURLString) else {
             fatalError("\(sourceURLString) is not a valid URL")
         }
         let successfullyDeletedResource = FileStorageManager.shared.deleteCachedImage(using: sourceURL)
@@ -237,7 +249,9 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
     private func handleScrollViewPrefetching(forRequestedItems urlStrings: [String], performSomeOpertionUsingURL: @escaping (URL, ResourceExistenceState) -> ()) {
         for sourceURLString in urlStrings {
         
-            guard let sourceURL = URL(string: sourceURLString) else {
+            guard
+                sourceURLString.isValidURL,
+                let sourceURL = URL(string: sourceURLString) else {
                 fatalError("\(sourceURLString) is not a valid URL")
             }
             

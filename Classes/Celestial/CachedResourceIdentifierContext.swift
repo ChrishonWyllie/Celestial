@@ -61,7 +61,9 @@ internal class CachedResourceIdentifierContext {
     
     internal func removeResourceIdentifier(for sourceURLString: String) {
         
-        guard let sourceURL = URL(string: sourceURLString) else {
+        guard
+            sourceURLString.isValidURL,
+            let sourceURL = URL(string: sourceURLString) else {
             fatalError("\(sourceURLString) is not a valid URL")
         }
         concurrentQueue.async(flags: .barrier) { [weak self] in
