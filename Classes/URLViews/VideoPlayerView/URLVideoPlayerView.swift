@@ -160,6 +160,8 @@ import AVFoundation
             
             setupPlayerIfVideoHasBeenCached(from: sourceURL)
             
+            completion?()
+            
         case .currentlyDownloading:
             // Use thumbnail?
             Celestial.shared.mergeExistingDownloadTask(with: downloadTaskRequest)
