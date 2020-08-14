@@ -62,17 +62,23 @@ import AVFoundation
     private var thumbnailGenerationCompletionHandler: ((UIImage?) -> ())?
     private var shouldCacheThumbnailImage: Bool = false
     
+    private var videoLoopObserver: NSObjectProtocol?
+    private var videoLoopCompletionHandler: OptionalCompletionHandler?
+    
     public override var player: AVPlayer? {
         didSet {
-            guard let asset = player?.currentItem?.asset else {
+            guard let currentItem = player?.currentItem else {
                 return
             }
             if thumbnailGenerationCompletionHandler != nil {
-                performThumbnailGenerationWith(asset: asset, shouldCacheInMemory: shouldCacheThumbnailImage) { [weak self] (image) in
+                performThumbnailGenerationWith(asset: currentItem.asset, shouldCacheInMemory: shouldCacheThumbnailImage) { [weak self] (image) in
                     self?.thumbnailGenerationCompletionHandler?(image)
                     self?.thumbnailGenerationCompletionHandler = nil
                     self?.shouldCacheThumbnailImage = false
                 }
+            }
+            if videoLoopCompletionHandler != nil {
+                beginLoopObserver(with: currentItem, videoLoopCompletion: videoLoopCompletionHandler!)
             }
         }
     }
@@ -337,6 +343,30 @@ import AVFoundation
     
     public func pause() {
         super.player?.pause()
+    }
+    
+    public func loop(didReachEnd: OptionalCompletionHandler) {
+        videoLoopCompletionHandler = didReachEnd
+    }
+    
+    private func beginLoopObserver(with currentItem: AVPlayerItem, videoLoopCompletion: OptionalCompletionHandler) {
+        
+        videoLoopObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime,
+                                               object: currentItem,
+                                               queue: OperationQueue.main) { [weak self] (notification) in
+                    
+            videoLoopCompletion?()
+            self?.player?.seek(to: CMTime.zero)
+            self?.play()
+        }
+    }
+    
+    public func stopLooping() {
+        if let videoLoopObserver = videoLoopObserver {
+            NotificationCenter.default.removeObserver(videoLoopObserver)
+            self.videoLoopObserver = nil
+            videoLoopCompletionHandler = nil
+        }
     }
     
     public func reset() {
