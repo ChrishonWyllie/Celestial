@@ -1,3 +1,15 @@
+## [Version 0.8.57](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.57) 
+### New
+* Added looping to URLVideoPlayerView. Can now start looping videos, with completion handler for each loop.
+* Added asynchronous thumbnail generation to URLVideoPlayerView
+
+### Improvements
+* Added extension to String class to validate URL strings before initializing the URL object
+* Refactored private functions for acquiring images and videos by replacing the urlString parameter with  a validated URL
+
+### Bug fixes
+* Fixed issue where using the loadVideo(…) function with completion handler would not call the completion block if the video was already cached
+
 ## [Version 0.8.46](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.46) 
 ### New
 * Added Boolean for determining if `URLVideoPlayerView` is currently playing
