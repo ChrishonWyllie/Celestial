@@ -112,8 +112,16 @@ import AVFoundation
     // MARK: - Functions
     
     public func loadVideoFrom(urlString: String) {
+        
+        guard
+            urlString.isValidURL,
+            let sourceURL = URL(string: urlString) else {
+            return
+        }
+        self.sourceURL = sourceURL
+        
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.acquireVideo(from: urlString, progressHandler: nil, completion: nil, errorHandler: nil)
+            self?.acquireVideo(from: sourceURL, progressHandler: nil, completion: nil, errorHandler: nil)
         }
     }
     
@@ -122,23 +130,27 @@ import AVFoundation
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
             
+        guard
+            urlString.isValidURL,
+            let sourceURL = URL(string: urlString) else {
+                let error = Celestial.CSError.invalidURL("The URL: \(urlString) is not a valid URL")
+                errorHandler?(error)
+            return
+        }
+        self.sourceURL = sourceURL
+        
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.acquireVideo(from: urlString,
+            self?.acquireVideo(from: sourceURL,
                                progressHandler: progressHandler,
                                completion: completion,
                                errorHandler: errorHandler)
         }
     }
     
-    private func acquireVideo(from urlString: String,
+    private func acquireVideo(from sourceURL: URL,
                               progressHandler: DownloadTaskProgressHandler?,
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
-        
-        guard let sourceURL = URL(string: urlString) else {
-            return
-        }
-        self.sourceURL = sourceURL
         
         reset()
         
