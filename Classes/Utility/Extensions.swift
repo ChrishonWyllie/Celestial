@@ -9,6 +9,28 @@ import UIKit
 import MobileCoreServices
 import AVFoundation
 
+// MARK: - AVAsset
+
+extension AVAsset {
+    
+    func generateThumbnailImage(at time: CMTime, completion: @escaping (_ image: UIImage?) -> ()) {
+        let assetGenerator = AVAssetImageGenerator(asset: self)
+        assetGenerator.appliesPreferredTrackTransform = true
+    
+        let timeFrameValue = NSValue(time: time)
+        
+        assetGenerator.generateCGImagesAsynchronously(forTimes: [timeFrameValue]) { (timeOne, cgImage, timeTwo, result, error) in
+            if let error = error {
+                DebugLogger.shared.addDebugMessage("\(String(describing: self)) - Error generating thumbnail image from AVAsset. Error: \(error.localizedDescription)")
+            }
+            
+            if let cgImage = cgImage {
+                completion(UIImage(cgImage: cgImage))
+            }
+        }
+    }
+}
+
 // MARK: - UIImage
 
 internal extension UIImage {

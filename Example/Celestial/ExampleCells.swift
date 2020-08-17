@@ -152,7 +152,6 @@ class VideoCell: ExampleCell {
     override func prepareForReuse() {
         super.prepareForReuse()
         playerView.reset()
-        resetLoopObserver()
     }
     
     override func setupUIElements() {
@@ -191,6 +190,12 @@ class VideoCell: ExampleCell {
         print("------------------\nstarting new video\n------------------")
         let urlString = someCellModel.urlString
         playerView.loadVideoFrom(urlString: urlString)
+        playerView.loop {
+            print("Did reach end. Looping")
+        }
+        playerView.generateThumbnailImage(shouldCacheInMemory: true, completion: { (image) in
+            print("Generated thumbnail image: \(String(describing: image))")
+        })
         
 //        playerView.loadVideoFrom(urlString: someCellModel.urlString, progressHandler: { (progress) in
 //            print("current downlod progress: \(progress)")
@@ -203,36 +208,13 @@ class VideoCell: ExampleCell {
 //            self.updateError()
 //        }
         
-        resetLoopObserver()
-     
-    }
-    
-    private func observeDidPlayToEndTime() {
-        
-        let playerItem = (playerView.player!.currentItem)
-        
-        NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime,
-                                                                  object: playerItem,
-                                                                  queue: .main,
-                                                                  using: { [weak self] (notification) in
-            guard let strongSelf = self else { return }
-            strongSelf.playerView.player!.seek(to: CMTime.zero)
-            strongSelf.playerView.player!.play()
-        })
-    }
-    
-    private func resetLoopObserver() {
-        if playtimeObserver != nil {
-            NotificationCenter.default.removeObserver(playtimeObserver!)
-            playtimeObserver = nil
-        }
     }
 }
 
 extension VideoCell: URLVideoPlayerViewDelegate {
     
     func urlVideoPlayerIsReadyToPlay(_ view: URLVideoPlayerView) {
-        observeDidPlayToEndTime()
+
     }
     
     func urlCachableView(_ view: URLCachableView, didFinishDownloading media: Any) {

@@ -58,6 +58,30 @@ import AVFoundation
         return (super.player as? ObservableAVPlayer)?.isPlaying ?? false
     }
     
+    private var thumbnailImage: UIImage?
+    private var thumbnailGenerationCompletionHandler: ((UIImage?) -> ())?
+    private var shouldCacheThumbnailImage: Bool = false
+    
+    private var videoLoopObserver: NSObjectProtocol?
+    private var videoLoopCompletionHandler: OptionalCompletionHandler?
+    
+    public override var player: AVPlayer? {
+        didSet {
+            guard let currentItem = player?.currentItem else {
+                return
+            }
+            if thumbnailGenerationCompletionHandler != nil {
+                performThumbnailGenerationWith(asset: currentItem.asset, shouldCacheInMemory: shouldCacheThumbnailImage) { [weak self] (image) in
+                    self?.thumbnailGenerationCompletionHandler?(image)
+                    self?.thumbnailGenerationCompletionHandler = nil
+                    self?.shouldCacheThumbnailImage = false
+                }
+            }
+            if videoLoopCompletionHandler != nil {
+                beginLoopObserver(with: currentItem, videoLoopCompletion: videoLoopCompletionHandler!)
+            }
+        }
+    }
     
     
     
@@ -112,7 +136,6 @@ import AVFoundation
     // MARK: - Functions
     
     public func loadVideoFrom(urlString: String) {
-        
         guard
             urlString.isValidURL,
             let sourceURL = URL(string: urlString) else {
@@ -272,10 +295,46 @@ import AVFoundation
         }
     }
     
+    public func generateThumbnailImage(shouldCacheInMemory: Bool, completion: @escaping (UIImage?) -> ()) {
+        
+        // Should be non-nil in all cases
+        guard let sourceURLString = sourceURL?.absoluteString else {
+            completion(nil)
+            return
+        }
+        
+        if shouldCacheInMemory == true {
+            
+            if let cachedThumbnailImage = Celestial.shared.imageFromMemoryCache(sourceURLString: sourceURLString) {
+                thumbnailImage = cachedThumbnailImage
+                completion(cachedThumbnailImage)
+                return
+            }
+        }
+        
+        // Generates when the player is set
+        thumbnailGenerationCompletionHandler = completion
+        shouldCacheThumbnailImage = shouldCacheInMemory
+    }
+    
+    private func performThumbnailGenerationWith(asset: AVAsset, shouldCacheInMemory: Bool, completion: @escaping (UIImage?) -> ()) {
+        guard let sourceURLString = sourceURL?.absoluteString else {
+            completion(nil)
+            return
+        }
+        asset.generateThumbnailImage(at: CMTime.zero) { [weak self] (image) in
+            if shouldCacheInMemory == true {
+                Celestial.shared.storeImageInMemoryCache(image: image, sourceURLString: sourceURLString)
+            }
+            self?.thumbnailImage = image
+            completion(image)
+        }
+    }
+    
     private func setupPlayer(with playerItem: AVPlayerItem) {
         let player = ObservableAVPlayer(playerItem: playerItem, delegate: self)
         player.isMuted = _isMuted
-        super.player = player
+        self.player = player
     }
     
     public func play() {
@@ -290,6 +349,30 @@ import AVFoundation
     
     public func pause() {
         super.player?.pause()
+    }
+    
+    public func loop(didReachEnd: OptionalCompletionHandler) {
+        videoLoopCompletionHandler = didReachEnd
+    }
+    
+    private func beginLoopObserver(with currentItem: AVPlayerItem, videoLoopCompletion: OptionalCompletionHandler) {
+        
+        videoLoopObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime,
+                                               object: currentItem,
+                                               queue: OperationQueue.main) { [weak self] (notification) in
+                    
+            videoLoopCompletion?()
+            self?.player?.seek(to: CMTime.zero)
+            self?.play()
+        }
+    }
+    
+    public func stopLooping() {
+        if let videoLoopObserver = videoLoopObserver {
+            NotificationCenter.default.removeObserver(videoLoopObserver)
+            self.videoLoopObserver = nil
+            videoLoopCompletionHandler = nil
+        }
     }
     
     public func reset() {
