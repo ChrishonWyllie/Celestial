@@ -212,6 +212,21 @@ extension String {
         }
         return self.replacingOccurrences(of: "/", with: "_")
     }
+    
+    var isValidURL: Bool {
+        do {
+            let detector = try NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+            if let match = detector.firstMatch(in: self, options: [], range: NSRange(location: 0, length: self.utf16.count)) {
+                // it is a link, if the match covers the whole string
+                return match.range.length == self.utf16.count
+            } else {
+                return false
+            }
+        } catch let error {
+            DebugLogger.shared.addDebugMessage("\(String(describing: self)) - Error determining if String is a valid URL. Error: \(error.localizedDescription)")
+            return false
+        }
+    }
 }
 
 

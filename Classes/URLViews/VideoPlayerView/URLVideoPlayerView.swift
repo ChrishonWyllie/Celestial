@@ -136,7 +136,9 @@ import AVFoundation
     // MARK: - Functions
     
     public func loadVideoFrom(urlString: String) {
-        guard let sourceURL = URL(string: urlString) else {
+        guard
+            urlString.isValidURL,
+            let sourceURL = URL(string: urlString) else {
             return
         }
         self.sourceURL = sourceURL
@@ -151,7 +153,11 @@ import AVFoundation
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
             
-        guard let sourceURL = URL(string: urlString) else {
+        guard
+            urlString.isValidURL,
+            let sourceURL = URL(string: urlString) else {
+                let error = Celestial.CSError.invalidURL("The URL: \(urlString) is not a valid URL")
+                errorHandler?(error)
             return
         }
         self.sourceURL = sourceURL
