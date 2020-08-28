@@ -78,7 +78,7 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
             
             strongSelf.downloadsSession.getTasksWithCompletionHandler { (dataTasks: [URLSessionDataTask], uploadTasks: [URLSessionUploadTask], downloadTasks:  [URLSessionDownloadTask]) in
                 
-                if downloadTasks.count == 0 {
+                if downloadTasks.isEmpty {
                     return
                 }
                 
