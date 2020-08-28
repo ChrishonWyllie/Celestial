@@ -69,7 +69,7 @@ internal class CachedResourceIdentifierContext {
         concurrentQueue.async(flags: .barrier) { [weak self] in
             guard let strongSelf = self else { return }
             guard
-                strongSelf.cachedResourceIdentifiers.count > 0 else {
+                strongSelf.cachedResourceIdentifiers.isEmpty == false else {
                 return
             }
             
@@ -87,7 +87,7 @@ internal class CachedResourceIdentifierContext {
     internal func clearAllResourceIdentifiers() {
         DispatchQueue.global(qos: .background).async { [weak self] in
             guard let strongSelf = self else { return }
-            guard strongSelf.cachedResourceIdentifiers.count > 0 else {
+            guard strongSelf.cachedResourceIdentifiers.isEmpty == false else {
                 return
             }
             strongSelf.cachedResourceIdentifiers.removeAll(keepingCapacity: false)
@@ -98,7 +98,7 @@ internal class CachedResourceIdentifierContext {
     internal func clearResourceIdentifiers(withResourceType resourceType: ResourceFileType) {
         concurrentQueue.async(flags: .barrier) { [weak self] in
             guard let strongSelf = self else { return }
-            guard strongSelf.cachedResourceIdentifiers.count > 0 else {
+            guard strongSelf.cachedResourceIdentifiers.isEmpty == false else {
                 return
             }
             

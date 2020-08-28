@@ -239,7 +239,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
             return file.hasPrefix(actualFileName)
         }
         
-        if filesMatchingSourceURL.count > 0 {
+        if filesMatchingSourceURL.isEmpty == false {
             for matchingFileName in filesMatchingSourceURL {
                 do {
                     let fileToDelete = directoryURL.appendingPathComponent(matchingFileName)
