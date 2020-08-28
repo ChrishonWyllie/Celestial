@@ -1,3 +1,13 @@
+## [Version 0.8.61](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.61) 
+### New
+* N/A
+
+### Improvements
+* Replaced uses of `count == 0` or `counf > 0` with simply checking if an array `isEmpty`. According to sources, this is a more efficient approach
+
+### Bug fixes
+* N/A
+
 ## [Version 0.8.57](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.57) 
 ### New
 * Added looping to URLVideoPlayerView. Can now start looping videos, with completion handler for each loop.
