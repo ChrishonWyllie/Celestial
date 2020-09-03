@@ -176,8 +176,16 @@ class VideoCell: ExampleCell {
     }
     
     @objc private func togglePlaying() {
-        playerView.isPlaying ? playerView.pause() : playerView.play()
-        let newPlayButtonTitle = playerView.isPlaying ? "Pause" : "Play"
+        let shouldBeginPlaying: Bool = playerView.isPlaying == false
+        shouldBeginPlaying ? playerView.play() : playerView.pause()
+        if shouldBeginPlaying {
+            playerView.loop(didReachEnd: {
+                print("Did reach end, looping")
+            })
+        } else {
+            playerView.stopLooping()
+        }
+        let newPlayButtonTitle = shouldBeginPlaying ? "Play" : "Pause"
         playButton.setTitle(newPlayButtonTitle, for: UIControl.State.normal)
     }
     
@@ -190,9 +198,6 @@ class VideoCell: ExampleCell {
         print("------------------\nstarting new video\n------------------")
         let urlString = someCellModel.urlString
         playerView.loadVideoFrom(urlString: urlString)
-        playerView.loop {
-            print("Did reach end. Looping")
-        }
         playerView.generateThumbnailImage(shouldCacheInMemory: true, completion: { (image) in
             print("Generated thumbnail image: \(String(describing: image))")
         })
