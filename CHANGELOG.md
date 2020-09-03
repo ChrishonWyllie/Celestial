@@ -1,3 +1,13 @@
+## [Version 0.8.66](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.66) 
+### New
+* N/A
+
+### Improvements
+* N/A
+
+### Bug fixes
+* Fixed issue where performing async operations on the `URLVideoPlayerView`'s player before it has been initialized would not work properly in cases where the player has already been initialized. Examples include trying to loop videos or generate thumbnails after the player exists.
+
 ## [Version 0.8.61](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.61) 
 ### New
 * N/A
