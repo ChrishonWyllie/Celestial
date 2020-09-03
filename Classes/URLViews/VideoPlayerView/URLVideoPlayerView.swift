@@ -314,9 +314,16 @@ import AVFoundation
             }
         }
         
-        // Generates when the player is set
-        thumbnailGenerationCompletionHandler = completion
-        shouldCacheThumbnailImage = shouldCacheInMemory
+        if let currentItem = player?.currentItem {
+            performThumbnailGenerationWith(asset: currentItem.asset, shouldCacheInMemory: shouldCacheInMemory) { (image) in
+                completion(image)
+            }
+        } else {
+            // Save reference to the completion block
+            // Wait for player to be initialize
+            thumbnailGenerationCompletionHandler = completion
+            shouldCacheThumbnailImage = shouldCacheInMemory
+        }
     }
     
     private func performThumbnailGenerationWith(asset: AVAsset, shouldCacheInMemory: Bool, completion: @escaping (UIImage?) -> ()) {
@@ -354,7 +361,13 @@ import AVFoundation
     }
     
     public func loop(didReachEnd: OptionalCompletionHandler) {
-        videoLoopCompletionHandler = didReachEnd
+        if let currentItem = player?.currentItem {
+            beginLoopObserver(with: currentItem, videoLoopCompletion: didReachEnd)
+        } else {
+            // Save reference to the completion block
+            // Wait for player to be initialize
+            videoLoopCompletionHandler = didReachEnd
+        }
     }
     
     private func beginLoopObserver(with currentItem: AVPlayerItem, videoLoopCompletion: OptionalCompletionHandler) {
