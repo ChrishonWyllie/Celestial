@@ -320,7 +320,7 @@ import AVFoundation
             }
         } else {
             // Save reference to the completion block
-            // Wait for player to be initialize
+            // Wait for player to be initialized
             thumbnailGenerationCompletionHandler = completion
             shouldCacheThumbnailImage = shouldCacheInMemory
         }
@@ -365,7 +365,7 @@ import AVFoundation
             beginLoopObserver(with: currentItem, videoLoopCompletion: didReachEnd)
         } else {
             // Save reference to the completion block
-            // Wait for player to be initialize
+            // Wait for player to be initialized
             videoLoopCompletionHandler = didReachEnd
         }
     }
