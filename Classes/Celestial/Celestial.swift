@@ -73,16 +73,16 @@ extension Celestial: CelestialVideoCachingProtocol {
         VideoCache.shared.store(videoData, with: sourceURLString.convertURLToUniqueFileName())
     }
    
-    public func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ()) {
-        FileStorageManager.shared.cachedAndResizedVideo(sourceURL: sourceURL, intermediateTemporaryFileURL: temporaryFileURL, completion: { [weak self] (cachedVideoURL) in
+    public func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, videoExportQuality: Celestial.VideoExportQuality, completion: @escaping (URL?, Error?) -> ()) {
+        FileStorageManager.shared.cacheVideo(withSourceURL: sourceURL, intermediateTemporaryFileURL: temporaryFileURL, videoExportQuality: videoExportQuality) { [weak self] (cachedVideoURL, error) in
             
             let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
                                                               resourceType: .video,
                                                               cacheLocation: .fileSystem)
             self?.cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
             
-            completion(cachedVideoURL)
-        })
+            completion(cachedVideoURL, error)
+        }
     }
     
     public func removeVideoFromMemoryCache(sourceURLString: String) {
@@ -357,10 +357,6 @@ extension Celestial: CelestialUtilityProtocol {
     
     internal func getTemporarilyCachedFileURL(for sourceURL: URL) -> URL? {
         return FileStorageManager.shared.getTemporarilyCachedFileURL(for: sourceURL)
-    }
-    
-    internal func decreaseVideoQuality(sourceURL: URL, inputURL: URL, completion: @escaping (_ lowerQualityVideoURL: URL?) -> ()) {
-        FileStorageManager.shared.decreaseVideoQuality(sourceURL: sourceURL, inputURL: inputURL, completion: completion)
     }
 }
 
