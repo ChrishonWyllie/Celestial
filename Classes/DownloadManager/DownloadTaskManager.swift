@@ -73,6 +73,7 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     }
     
     private func performActionOnAllCurrentDownloadTasks(completion: @escaping (URLSessionDownloadTask) -> ()) {
+        #warning("Remember to make this utility, as referenced in new issue")
         DispatchQueue.global(qos: .background).async { [weak self] in
             guard let strongSelf = self else { return }
             

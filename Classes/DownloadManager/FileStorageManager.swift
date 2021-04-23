@@ -260,6 +260,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
     }
     
     internal func clearCache(fileType: ResourceFileType) {
+        #warning("Remember to make this utility, as referenced in new issue")
         DispatchQueue.global(qos: .background).async { [weak self] in
             guard let strongSelf = self else { return }
             switch fileType {
@@ -355,6 +356,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
                 }
                 
                 // Finally delete the local intermediate file
+                #warning("Remember to make this utility, as referenced in new issue")
                 DispatchQueue.global(qos: .background).async {
                     strongSelf.deleteFile(at: intermediateTemporaryFileURL)
                 }

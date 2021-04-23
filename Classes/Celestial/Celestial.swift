@@ -350,6 +350,7 @@ extension Celestial: CelestialUtilityProtocol {
         if let sourceURL = url {
             cachedResourceContext.removeResourceIdentifier(for: sourceURL.absoluteString)
         }
+        #warning("Remember to make this utility, as referenced in new issue")
         DispatchQueue.global(qos: .background).async {
             FileStorageManager.shared.deleteFile(at: location)
         }
