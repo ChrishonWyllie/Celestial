@@ -22,6 +22,12 @@ public final class Celestial: NSObject {
     
     private var backgroundSessionCompletionHandler: (() -> Void)?
     
+    public enum VideoExportQuality {
+        case `default`
+        case low
+        case medium
+    }
+    
     
     
     
