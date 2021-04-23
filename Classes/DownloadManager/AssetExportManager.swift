@@ -107,7 +107,7 @@ internal class AssetExportManager: NSObject {
         }
     }
     
-    internal func buildExportSession(withLocalOutputURL outputURL: URL, usingAsset asset: AVURLAsset, exportQuality: Celestial.VideoExportQuality) -> AVAssetExportSession? {
+    private func buildExportSession(withLocalOutputURL outputURL: URL, usingAsset asset: AVURLAsset, exportQuality: Celestial.VideoExportQuality) -> AVAssetExportSession? {
         guard asset.isExportable else {
             return nil
         }
