@@ -109,6 +109,7 @@ internal protocol CelestialVideoCachingProtocol: class {
     - Parameters:
        - temporaryFileURL: The temporary URL of the image after the `URLSessionDownloadTask` has completed.
        - sourceURL: The original external URL pointing to the media resource on the server, etc.
+       - videoExportQuality: The desired quality of the video that will be cached (e.g. default, low, medium)
        - completion: Executes completion block with a URL pointing to a compressed video
      
     - Usage:
@@ -116,14 +117,13 @@ internal protocol CelestialVideoCachingProtocol: class {
     let downloadVideoURL = <local file URL from URLSessionDownloadTask pointing to your downloaded media>
     let sourceURL = <external URL pointing to your media>
      
-    Celestial.shared.storeDownloadedVideoToFileCache(downloadVideoURL, with: sourceURL) { (cachedVideoFileURL) in
+    Celestial.shared.storeDownloadedVideoToFileCache(downloadVideoURL, withSourceURL: sourceURL, videoExportQuality: .default) { (cachedVideoFileURL) in
         // Unwrap optional file URL...
     }
     ```
      
     */
-    func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ())
-    
+    func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, videoExportQuality: Celestial.VideoExportQuality, completion: @escaping (URL?, Error?) -> ())
     
     
     
