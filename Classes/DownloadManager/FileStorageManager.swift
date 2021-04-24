@@ -260,8 +260,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
     }
     
     internal func clearCache(fileType: ResourceFileType) {
-        #warning("Remember to make this utility, as referenced in new issue")
-        DispatchQueue.global(qos: .background).async { [weak self] in
+        DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let strongSelf = self else { return }
             switch fileType {
             case .video: strongSelf.deleteItemsInDirectory(for: strongSelf.directoryManager.videosDirectoryURL)
@@ -356,8 +355,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
                 }
                 
                 // Finally delete the local intermediate file
-                #warning("Remember to make this utility, as referenced in new issue")
-                DispatchQueue.global(qos: .background).async {
+                DispatchQueue.global(qos: .utility).async {
                     strongSelf.deleteFile(at: intermediateTemporaryFileURL)
                 }
                 completion(cachedVideoURL, error)

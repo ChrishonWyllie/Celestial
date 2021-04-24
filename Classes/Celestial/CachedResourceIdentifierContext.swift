@@ -85,8 +85,7 @@ internal class CachedResourceIdentifierContext {
     }
     
     internal func clearAllResourceIdentifiers() {
-        #warning("Remember to make this utility, as referenced in new issue")
-        DispatchQueue.global(qos: .background).async { [weak self] in
+        DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let strongSelf = self else { return }
             guard strongSelf.cachedResourceIdentifiers.isEmpty == false else {
                 return
