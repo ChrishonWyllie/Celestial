@@ -22,11 +22,18 @@ public final class Celestial: NSObject {
     
     private var backgroundSessionCompletionHandler: (() -> Void)?
     
+    /**
+     Defines the quality at which a downloaded video will be compressed to
+     
+     - The `default` option will not compress, and will cache the video using its original file size / resolution.
+     - The `low` and `medium` options may be used to cache lower quality versions of a video once its download completes
+     */
     public enum VideoExportQuality {
         case `default`
         case low
         case medium
     }
+    
     
     
     
@@ -72,16 +79,16 @@ extension Celestial: CelestialVideoCachingProtocol {
         VideoCache.shared.store(videoData, with: sourceURLString.convertURLToUniqueFileName())
     }
    
-    public func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ()) {
-        FileStorageManager.shared.cachedAndResizedVideo(sourceURL: sourceURL, intermediateTemporaryFileURL: temporaryFileURL, completion: { [weak self] (cachedVideoURL) in
+    public func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, videoExportQuality: Celestial.VideoExportQuality, completion: @escaping (URL?, Error?) -> ()) {
+        FileStorageManager.shared.cacheVideo(withSourceURL: sourceURL, intermediateTemporaryFileURL: temporaryFileURL, videoExportQuality: videoExportQuality) { [weak self] (cachedVideoURL, error) in
             
             let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
                                                               resourceType: .video,
                                                               cacheLocation: .fileSystem)
             self?.cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
             
-            completion(cachedVideoURL)
-        })
+            completion(cachedVideoURL, error)
+        }
     }
     
     public func removeVideoFromMemoryCache(sourceURLString: String) {
@@ -349,17 +356,13 @@ extension Celestial: CelestialUtilityProtocol {
         if let sourceURL = url {
             cachedResourceContext.removeResourceIdentifier(for: sourceURL.absoluteString)
         }
-        DispatchQueue.global(qos: .background).async {
+        DispatchQueue.global(qos: .utility).async {
             FileStorageManager.shared.deleteFile(at: location)
         }
     }
     
     internal func getTemporarilyCachedFileURL(for sourceURL: URL) -> URL? {
         return FileStorageManager.shared.getTemporarilyCachedFileURL(for: sourceURL)
-    }
-    
-    internal func decreaseVideoQuality(sourceURL: URL, inputURL: URL, completion: @escaping (_ lowerQualityVideoURL: URL?) -> ()) {
-        FileStorageManager.shared.decreaseVideoQuality(sourceURL: sourceURL, inputURL: inputURL, completion: completion)
     }
 }
 

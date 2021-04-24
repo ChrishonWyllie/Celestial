@@ -73,7 +73,7 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     }
     
     private func performActionOnAllCurrentDownloadTasks(completion: @escaping (URLSessionDownloadTask) -> ()) {
-        DispatchQueue.global(qos: .background).async { [weak self] in
+        DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let strongSelf = self else { return }
             
             strongSelf.downloadsSession.getTasksWithCompletionHandler { (dataTasks: [URLSessionDataTask], uploadTasks: [URLSessionUploadTask], downloadTasks:  [URLSessionDownloadTask]) in
