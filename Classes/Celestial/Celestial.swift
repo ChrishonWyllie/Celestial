@@ -22,6 +22,12 @@ public final class Celestial: NSObject {
     
     private var backgroundSessionCompletionHandler: (() -> Void)?
     
+    /**
+     Defines the quality at which a downloaded video will be compressed to
+     
+     - The `default` option will not compress, and will cache the video using its original file size / resolution.
+     - The `low` and `medium` options may be used to cache lower quality versions of a video once its download completes
+     */
     public enum VideoExportQuality {
         case `default`
         case low
