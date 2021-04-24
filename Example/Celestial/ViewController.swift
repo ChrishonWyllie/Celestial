@@ -91,8 +91,8 @@ class ViewController: UIViewController {
 
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
-        layout.minimumLineSpacing = 8
-        layout.minimumInteritemSpacing = 8
+        layout.minimumLineSpacing = 0
+        layout.minimumInteritemSpacing = 0
         layout.scrollDirection = .vertical
         
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
@@ -111,6 +111,7 @@ class ViewController: UIViewController {
         return cv
     }()
     
+    var cellSizes: [IndexPath: CGSize] = [:]
 
 
 
@@ -311,11 +312,22 @@ extension ViewController {
     private func setupURLVideoPlayerView() {
         view.addSubview(playerView)
          
-        let playerDimension: CGFloat = 300.0
+//        let playerDimension: CGFloat = 300.0
         playerView.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
         playerView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
-        playerView.heightAnchor.constraint(equalToConstant: playerDimension).isActive = true
-        playerView.widthAnchor.constraint(equalToConstant: playerDimension).isActive = true
+//        playerView.heightAnchor.constraint(equalToConstant: playerDimension).isActive = true
+//        playerView.widthAnchor.constraint(equalToConstant: playerDimension).isActive = true
+        
+//        let constant: CGFloat = 8
+//        playerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: constant).isActive = true
+//        if #available(iOS 11.0, *) {
+//            playerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: constant).isActive = true
+//        } else {
+//            // Fallback on earlier versions
+//            playerView.topAnchor.constraint(equalTo: view.topAnchor, constant: constant).isActive = true
+//        }
+//        playerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -constant).isActive = true
+//        playerView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -constant).isActive = true
     }
     
     private func setupCachableAVPlayerItem() {
@@ -392,7 +404,7 @@ extension ViewController {
 
 // MARK: - UICollectionView delegate and datasource
 
-extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, VideoCellDelegate {
     
     func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 1
@@ -410,6 +422,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
             cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: ImageCell.self), for: indexPath) as? ImageCell
         case .video:
             cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: VideoCell.self), for: indexPath) as? VideoCell
+            (cell as? VideoCell)?.delegate = self
         }
         
         let cellModel = cellModels[indexPath.item]
@@ -419,7 +432,11 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
         return cell!
     }
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: collectionView.frame.size.width, height: 400.0)
+        if let calculatedSize = cellSizes[indexPath] {
+            return calculatedSize
+        } else {
+            return CGSize(width: collectionView.frame.size.width, height: 400.0)
+        }
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
@@ -453,6 +470,21 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
 //        videoCell.playerView.pause()
     }
     
+    func videoCell(_ cell: VideoCell, requestsContainerSizeChanges requiredSize: CGSize) {
+        let calculatedHeight = requiredSize.height + 40 + 10 + 50
+        let calculatedSize = CGSize(width: collectionView.frame.size.width, height: calculatedHeight)
+        guard let indexPath = collectionView.indexPath(for: cell) else {
+            return
+        }
+        cellSizes[indexPath] = calculatedSize
+        
+        collectionView.performBatchUpdates {
+            collectionView.collectionViewLayout.invalidateLayout()
+        } completion: { (_) in
+            
+        }
+
+    }
 }
 
 extension ViewController: UICollectionViewDataSourcePrefetching {

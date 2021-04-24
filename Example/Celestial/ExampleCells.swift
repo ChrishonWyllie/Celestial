@@ -125,7 +125,12 @@ class ExampleCell: UICollectionViewCell {
 
 // MARK: - VideoCell
 
+protocol VideoCellDelegate: class {
+    func videoCell(_ cell: VideoCell, requestsContainerSizeChanges requiredSize: CGSize)
+}
 class VideoCell: ExampleCell {
+    
+    public weak var delegate: VideoCellDelegate?
     
     public lazy var playerView: URLVideoPlayerView = {
         let v = URLVideoPlayerView(delegate: self, cacheLocation: .fileSystem)
@@ -161,7 +166,10 @@ class VideoCell: ExampleCell {
             containerView.addSubview(subview)
         }
         
-        let padding: CGFloat = 12
+        let padding: CGFloat = 8
+        
+        playerView.backgroundColor = [UIColor.red, .orange, .yellow, .green, .blue].randomElement()
+        
         
         // Handle layout...
         playerView.leadingAnchor.constraint(equalTo: super.containerView.leadingAnchor, constant: padding).isActive = true
@@ -219,7 +227,19 @@ class VideoCell: ExampleCell {
 extension VideoCell: URLVideoPlayerViewDelegate {
     
     func urlVideoPlayerIsReadyToPlay(_ view: URLVideoPlayerView) {
-
+        print("\n")
+        print("Self frame: \(self.frame)")
+        print("Self containerView frame: \(self.containerView.frame)")
+        
+        
+        if self.containerView.frame != .zero {
+            let requiredSize = view.requiredSizeFor(containerWidth: self.containerView.frame.size.width)
+            print("Required size: \(requiredSize)")
+            delegate?.videoCell(self, requestsContainerSizeChanges: requiredSize)
+        }
+        
+        print("Video URL: \(String(describing: view.sourceURL))")
+        print("Video resolution: \(String(describing: view.resolution)) and aspect ratio: \(String(describing: view.aspectRatio))")
     }
     
     func urlCachableView(_ view: URLCachableView, didFinishDownloading media: Any) {
