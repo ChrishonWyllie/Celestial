@@ -50,4 +50,28 @@ import AVFoundation
         return desiredVideoRect.size
     }
     
+    public func requiredSizeFor(containerWidth: CGFloat) -> CGSize {
+        guard let resolution = resolution, resolution != .zero else {
+            return .zero
+        }
+        
+        /*
+         Find the missing heightA. widthB and heightB
+         widthA (containerSize)         widthB (resolution.width)
+         ------                 =       ------
+         heightA (unknown)              heightB (resolution.height)
+         */
+        let calculatedHeight: CGFloat = (containerWidth * resolution.height) / resolution.width
+        let calculatedContainerSize: CGSize = CGSize(width: containerWidth, height: calculatedHeight)
+        let containingRect: CGRect = .init(origin: .zero, size: calculatedContainerSize)
+        
+        let desiredVideoRect = AVMakeRect(aspectRatio: resolution, insideRect: containingRect)
+        
+        return desiredVideoRect.size
+        
+    }
+    
+    open override var intrinsicContentSize: CGSize {
+        return self.sizeFittingWithin(containerSize: UIScreen.main.bounds.size)
+    }
 }
