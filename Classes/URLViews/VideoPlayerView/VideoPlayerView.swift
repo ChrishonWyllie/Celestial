@@ -38,4 +38,16 @@ import AVFoundation
     public var aspectRatio: Double? {
         return self.player?.currentItem?.aspectRatio
     }
+    
+    /// Returns a CGSize that takes the video resolution into account and the size of its container
+    public func sizeFittingWithin(containerSize: CGSize) -> CGSize {
+        guard let resolution = resolution, resolution != .zero else {
+            return .zero
+        }
+        let containingRect: CGRect = .init(origin: .zero, size: containerSize)
+        let desiredVideoRect = AVMakeRect(aspectRatio: resolution, insideRect: containingRect)
+        
+        return desiredVideoRect.size
+    }
+    
 }
