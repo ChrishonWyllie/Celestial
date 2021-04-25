@@ -10,6 +10,14 @@ import UIKit
 import Celestial
 import AVFoundation
 
+struct Constants {
+    private init() {}
+    
+    static let progressLabelHeight: CGFloat = 40
+    static let horizontalPadding: CGFloat = 8
+    static let verticalPadding: CGFloat = 12.0
+}
+
 class ExampleCell: UICollectionViewCell {
     
     public var containerView: UIView = {
@@ -38,6 +46,7 @@ class ExampleCell: UICollectionViewCell {
         let lbl = UILabel()
         lbl.translatesAutoresizingMaskIntoConstraints = false
         lbl.numberOfLines = 0
+        lbl.font = UIFont.systemFont(ofSize: 17)
         return lbl
     }()
     
@@ -69,25 +78,23 @@ class ExampleCell: UICollectionViewCell {
         
         // Handle layout...
         
-        let padding: CGFloat = 12.0
+        containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: Constants.horizontalPadding).isActive = true
+        containerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: Constants.verticalPadding).isActive = true
+        containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -Constants.horizontalPadding).isActive = true
+        containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -Constants.verticalPadding).isActive = true
         
-        containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: padding).isActive = true
-        containerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: padding).isActive = true
-        containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -padding).isActive = true
-        containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -padding).isActive = true
+        titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: Constants.horizontalPadding).isActive = true
+        titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -Constants.horizontalPadding).isActive = true
+        titleLabel.bottomAnchor.constraint(equalTo: progressLabel.topAnchor, constant: -Constants.verticalPadding).isActive = true
         
-        titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: padding).isActive = true
-        titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -padding).isActive = true
-        titleLabel.bottomAnchor.constraint(equalTo: progressLabel.topAnchor, constant: -padding).isActive = true
+        progressLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: Constants.horizontalPadding).isActive = true
+        progressLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -Constants.horizontalPadding).isActive = true
+        progressLabel.bottomAnchor.constraint(equalTo: progressView.topAnchor, constant: -Constants.verticalPadding).isActive = true
+        progressLabel.heightAnchor.constraint(equalToConstant: Constants.progressLabelHeight).isActive = true
         
-        progressLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: padding).isActive = true
-        progressLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -padding).isActive = true
-        progressLabel.bottomAnchor.constraint(equalTo: progressView.topAnchor, constant: -padding).isActive = true
-        progressLabel.heightAnchor.constraint(equalToConstant: 40).isActive = true
-        
-        progressView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: padding).isActive = true
-        progressView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -padding).isActive = true
-        progressView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -padding).isActive = true
+        progressView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: Constants.horizontalPadding).isActive = true
+        progressView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -Constants.horizontalPadding).isActive = true
+        progressView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -Constants.verticalPadding).isActive = true
     }
     
     func updateCompletion() {
@@ -125,12 +132,17 @@ class ExampleCell: UICollectionViewCell {
 
 // MARK: - VideoCell
 
+protocol VideoCellDelegate: class {
+    func videoCell(_ cell: VideoCell, requestsContainerSizeChanges requiredSize: CGSize)
+}
 class VideoCell: ExampleCell {
+    
+    public weak var delegate: VideoCellDelegate?
     
     public lazy var playerView: URLVideoPlayerView = {
         let v = URLVideoPlayerView(delegate: self, cacheLocation: .fileSystem)
         v.translatesAutoresizingMaskIntoConstraints = false
-        v.playerLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
+//        v.playerLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
 //        v.isMuted = true
         return v
     }()
@@ -161,16 +173,16 @@ class VideoCell: ExampleCell {
             containerView.addSubview(subview)
         }
         
-        let padding: CGFloat = 12
+        playerView.backgroundColor = [UIColor.red, .orange, .yellow, .green, .blue].randomElement()
         
         // Handle layout...
-        playerView.leadingAnchor.constraint(equalTo: super.containerView.leadingAnchor, constant: padding).isActive = true
-        playerView.topAnchor.constraint(equalTo: super.containerView.topAnchor, constant: padding).isActive = true
-        playerView.trailingAnchor.constraint(equalTo: super.containerView.trailingAnchor, constant: -padding).isActive = true
-        playerView.bottomAnchor.constraint(equalTo: super.titleLabel.topAnchor, constant: -padding).isActive = true
+        playerView.leadingAnchor.constraint(equalTo: super.containerView.leadingAnchor, constant: 0).isActive = true
+        playerView.topAnchor.constraint(equalTo: super.containerView.topAnchor, constant: Constants.verticalPadding).isActive = true
+        playerView.trailingAnchor.constraint(equalTo: super.containerView.trailingAnchor, constant: 0).isActive = true
+        playerView.bottomAnchor.constraint(equalTo: super.titleLabel.topAnchor, constant: -Constants.verticalPadding).isActive = true
         
-        playButton.trailingAnchor.constraint(equalTo: playerView.trailingAnchor, constant: -padding).isActive = true
-        playButton.bottomAnchor.constraint(equalTo: playerView.bottomAnchor, constant: -padding).isActive = true
+        playButton.trailingAnchor.constraint(equalTo: playerView.trailingAnchor, constant: -Constants.horizontalPadding).isActive = true
+        playButton.bottomAnchor.constraint(equalTo: playerView.bottomAnchor, constant: -Constants.verticalPadding).isActive = true
         playButton.widthAnchor.constraint(equalToConstant: 80).isActive = true
         
     }
@@ -214,12 +226,26 @@ class VideoCell: ExampleCell {
 //        }
         
     }
+    
+    public func getTotalVerticalPadding() -> CGFloat {
+        // The total number vertical padding in between the UI elements.
+        // NOTE: This is a hardcoded value for this particular cell.
+        return Constants.verticalPadding * 7
+    }
 }
 
 extension VideoCell: URLVideoPlayerViewDelegate {
     
     func urlVideoPlayerIsReadyToPlay(_ view: URLVideoPlayerView) {
-
+        print("\n")
+        print("Self frame: \(self.frame)")
+        print("Self containerView frame: \(self.containerView.frame)")
+        
+        if self.playerView.frame != .zero {
+            let playerViewWidth: CGFloat = self.playerView.frame.width
+            let requiredSize = view.requiredSizeFor(width: playerViewWidth)
+            delegate?.videoCell(self, requestsContainerSizeChanges: requiredSize)
+        }
     }
     
     func urlCachableView(_ view: URLCachableView, didFinishDownloading media: Any) {

@@ -534,6 +534,8 @@ extension URLVideoPlayerView: ObservableAVPlayerDelegate {
         case .readyToPlay:
             // Player item is ready to play.
             
+            self.invalidateIntrinsicContentSize()
+            
             delegate?.urlVideoPlayerIsReadyToPlay?(self)
             
             if playImmediatelyWhenReady {
