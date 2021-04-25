@@ -39,17 +39,7 @@ import AVFoundation
         return self.player?.currentItem?.aspectRatio
     }
     
-    /// Returns a CGSize that takes the video resolution into account and the size of its container
-    public func sizeFittingWithin(containerSize: CGSize) -> CGSize {
-        guard let resolution = resolution, resolution != .zero else {
-            return .zero
-        }
-        let containingRect: CGRect = .init(origin: .zero, size: containerSize)
-        let desiredVideoRect = AVMakeRect(aspectRatio: resolution, insideRect: containingRect)
-        
-        return desiredVideoRect.size
-    }
-    
+    /// Returns a CGSize that takes the video resolution into account and the width of its container
     public func requiredSizeFor(containerWidth: CGFloat) -> CGSize {
         guard let resolution = resolution, resolution != .zero else {
             return .zero
@@ -72,6 +62,6 @@ import AVFoundation
     }
     
     open override var intrinsicContentSize: CGSize {
-        return self.sizeFittingWithin(containerSize: UIScreen.main.bounds.size)
+        return self.requiredSizeFor(containerWidth: UIScreen.main.bounds.size.width)
     }
 }
