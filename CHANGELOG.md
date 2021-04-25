@@ -1,3 +1,18 @@
+## [Version 0.8.94](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.94) 
+### New
+* Added `resolution` and `aspectRatio` to the VideoPlayerView to help with determining the proper size constraints needed to display the video without cropping.
+* Added a new function `requiredSizeFor(width:)` to the VideoPlayerView which will return a CGSize that would allow the video to fit within a given width without cropping.
+* Defined a default intrinsic content size width for VideoPlayerView which uses the screen's bounds as a starting point. This allows the view to grow with its content. Override as necessary
+* Added the `videoExportQuality` option as an argument for the URLVideoPlayerView. See point #2 in Improvements.
+* Added the `AssetExportManager` to assist with exporting assets at different qualities. This is an internal object.
+
+### Improvements
+* Replaced the `.background` QoS when performing non-UI tasks with `.utility` due to the risk of these operations not running when the battery is low.
+* Removed the default compression for videos. Instead, the URLVideoPlayerView offers another argument in its initializers: `videoExportQuality`. There are 3 options: `.default` which will return the original video after it is downlaoded with no compression, `.medium` and `.low`.
+
+### Bug fixes
+* Changed the layout of the example UICollectionView. Videos in cells are no longer forced into a uniform size. Instead, they will resize depending on their resolution and the width of the cell.
+
 ## [Version 0.8.66](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.66) 
 ### New
 * N/A
