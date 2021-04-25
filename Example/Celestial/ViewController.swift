@@ -32,6 +32,21 @@ fileprivate enum ExpectedMediaType {
     case image, video
 }
 
+extension String {
+    func estimateFrameForText(with font: UIFont, textContainerWidth: CGFloat? = nil) -> CGRect {
+        let someArbitraryWidthValue: CGFloat = 200
+        let size = CGSize(width: textContainerWidth ?? someArbitraryWidthValue, height: 1000)
+        let options = NSStringDrawingOptions
+            .usesFontLeading
+            .union(.usesLineFragmentOrigin)
+        return NSString(string: self)
+            .boundingRect(with: size,
+                          options: options,
+                          attributes: [NSAttributedString.Key.font: font],
+                          context: nil)
+    }
+}
+
 class ViewController: UIViewController {
      
     // MARK: - Variables
@@ -111,7 +126,8 @@ class ViewController: UIViewController {
         return cv
     }()
     
-    var cellSizes: [IndexPath: CGSize] = [:]
+    // For the purpose of creating dynamic cell heights
+    private var cellSizes: [IndexPath: CGSize] = [:]
 
 
 
@@ -432,11 +448,14 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
         return cell!
     }
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        // If there exists a calculated size for this indexPath
+        // i.e., if the video's resolution has been calculated and can return a proper size for the cell
+        // while keeping the aspect ratio of the video
         if let calculatedSize = cellSizes[indexPath] {
             return calculatedSize
-        } else {
-            return CGSize(width: collectionView.frame.size.width, height: 400.0)
         }
+        // Otherwise, use a default size
+        return CGSize(width: collectionView.frame.size.width, height: 400.0)
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
@@ -471,19 +490,45 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
     }
     
     func videoCell(_ cell: VideoCell, requestsContainerSizeChanges requiredSize: CGSize) {
-        let calculatedHeight = requiredSize.height + 40 + 10 + 50
+        let indexPath: IndexPath
+        
+        if let indexPathForCell = collectionView.indexPath(for: cell) {
+            indexPath = indexPathForCell
+        } else {
+            // The UICollectionView cannot reach this cell, as it may not have been dequeued yet (or it has been recycled)
+            let urlString = cell.playerView.sourceURL?.absoluteString
+            guard let arrayElementIndex = cellModels.firstIndex(where: { $0.urlString == urlString }) else {
+                // This is virtually guaranteed since there must exist a cellModel where its urlString
+                // is the same as the one that this VideoCell's playerView is using.
+                return
+            }
+            let index = Int(arrayElementIndex)
+            indexPath = IndexPath(item: index, section: 0)
+        }
+        
+        let cellModel = cellModels[indexPath.item]
+        
+        // NOTE
+        // Without this seeminglyArbitraryValueToFillGap, the estimated text frame has some extra padding
+        // This is NOT a proper solution for dynamic height cells
+        let seeminglyArbitraryValueToFillGap: CGFloat = 40
+        let titleLabelHeight: CGFloat = cellModel.urlString.estimateFrameForText(with: UIFont.systemFont(ofSize: 17)).height - seeminglyArbitraryValueToFillGap
+        let progressLabelHeight: CGFloat = Constants.progressLabelHeight
+        let progressBarHeight: CGFloat = 4
+        let totalVerticalPadding: CGFloat = cell.getTotalVerticalPadding()
+        let calculatedHeight = requiredSize.height + titleLabelHeight + progressLabelHeight + progressBarHeight + totalVerticalPadding
         let calculatedSize = CGSize(width: collectionView.frame.size.width, height: calculatedHeight)
-        guard let indexPath = collectionView.indexPath(for: cell) else {
+        
+        if cellSizes[indexPath] != nil {
             return
         }
+        
         cellSizes[indexPath] = calculatedSize
         
-        collectionView.performBatchUpdates {
+        // Animate the cell size change
+        collectionView.performBatchUpdates({
             collectionView.collectionViewLayout.invalidateLayout()
-        } completion: { (_) in
-            
-        }
-
+        }, completion: nil)
     }
 }
 
