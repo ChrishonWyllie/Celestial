@@ -33,9 +33,9 @@ fileprivate enum ExpectedMediaType {
 }
 
 extension String {
-    func estimateFrameForText(with font: UIFont, textContainerWidth: CGFloat? = nil) -> CGRect {
+    func estimateFrameForText(with font: UIFont, desiredTextWidth: CGFloat? = nil) -> CGRect {
         let someArbitraryWidthValue: CGFloat = 200
-        let size = CGSize(width: textContainerWidth ?? someArbitraryWidthValue, height: 1000)
+        let size = CGSize(width: desiredTextWidth ?? someArbitraryWidthValue, height: 1000)
         let options = NSStringDrawingOptions
             .usesFontLeading
             .union(.usesLineFragmentOrigin)
@@ -455,7 +455,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
             return calculatedSize
         }
         // Otherwise, use a default size
-        return CGSize(width: collectionView.frame.size.width, height: 400.0)
+        return CGSize(width: getNonDynamicCellWidth(), height: 400.0)
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
@@ -506,18 +506,30 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
             indexPath = IndexPath(item: index, section: 0)
         }
         
+        updateSize(forCell: cell, withVideoSize: requiredSize, atIndexPath: indexPath)
+    }
+    
+    private func updateSize(forCell cell: VideoCell, withVideoSize videoSize: CGSize, atIndexPath indexPath: IndexPath) {
         let cellModel = cellModels[indexPath.item]
         
         // NOTE
-        // Without this seeminglyArbitraryValueToFillGap, the estimated text frame has some extra padding
-        // This is NOT a proper solution for dynamic height cells
-        let seeminglyArbitraryValueToFillGap: CGFloat = 40
-        let titleLabelHeight: CGFloat = cellModel.urlString.estimateFrameForText(with: UIFont.systemFont(ofSize: 17)).height - seeminglyArbitraryValueToFillGap
+        
+        let totalWidthOfTitleLabel: CGFloat = getNonDynamicCellWidth() - (Constants.horizontalPadding * 4)
+        let urlStringTextFrame: CGRect = cellModel.urlString.estimateFrameForText(with: UIFont.systemFont(ofSize: 17),
+                                                                                  desiredTextWidth: totalWidthOfTitleLabel)
+        let titleLabelHeight: CGFloat = urlStringTextFrame.height
+        
         let progressLabelHeight: CGFloat = Constants.progressLabelHeight
-        let progressBarHeight: CGFloat = 4
+        let progressBarHeight: CGFloat = 4 // this is the default height for a UIProgressBar
         let totalVerticalPadding: CGFloat = cell.getTotalVerticalPadding()
-        let calculatedHeight = requiredSize.height + titleLabelHeight + progressLabelHeight + progressBarHeight + totalVerticalPadding
-        let calculatedSize = CGSize(width: collectionView.frame.size.width, height: calculatedHeight)
+        
+        let calculatedHeight =  videoSize.height    +
+                                titleLabelHeight    +
+                                progressLabelHeight +
+                                progressBarHeight   +
+                                totalVerticalPadding
+        
+        let calculatedSize = CGSize(width: getNonDynamicCellWidth(), height: calculatedHeight)
         
         if cellSizes[indexPath] != nil {
             return
@@ -529,6 +541,11 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
         collectionView.performBatchUpdates({
             collectionView.collectionViewLayout.invalidateLayout()
         }, completion: nil)
+    }
+    
+    
+    private func getNonDynamicCellWidth() -> CGFloat {
+        return collectionView.frame.size.width
     }
 }
 
