@@ -61,16 +61,22 @@ internal class ObservableAVPlayer: AVPlayer, ObservablePlayerProtocol {
         }
         
         if keyPath == #keyPath(AVPlayerItem.status) {
-            let status: AVPlayerItem.Status
             
             // Get the status change from the change dictionary
-            if let statusNumber = change?[.newKey] as? NSNumber {
-                status = AVPlayerItem.Status(rawValue: statusNumber.intValue) ?? .unknown
-            } else {
-                status = .unknown
+            
+            guard
+                let oldStatusValue = change?[.oldKey] as? NSNumber,
+                let newStatusValue = change?[.newKey] as? NSNumber else {
+                return
             }
             
-            delegate?.observablePlayer(self, didLoadChangePlayerItem: status)
+            if oldStatusValue != newStatusValue {
+                // Status has changed
+                guard let status: AVPlayerItem.Status = AVPlayerItem.Status(rawValue: newStatusValue.intValue) else {
+                    return
+                }
+                delegate?.observablePlayer(self, didLoadChangePlayerItem: status)
+            }
         }
     }
     
