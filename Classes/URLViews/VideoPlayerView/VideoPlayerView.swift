@@ -39,8 +39,9 @@ import AVFoundation
         return self.player?.currentItem?.aspectRatio
     }
     
-    /// Returns a CGSize that takes the video resolution into account and the width of its container
-    public func requiredSizeFor(containerWidth: CGFloat) -> CGSize {
+    /// Returns the size required to fit within the given
+    /// width that would maintain the proper aspect ratio
+    public func requiredSizeFor(width: CGFloat) -> CGSize {
         guard let resolution = resolution, resolution != .zero else {
             return .zero
         }
@@ -51,8 +52,8 @@ import AVFoundation
          ------                 =       ------
          heightA (unknown)              heightB (resolution.height)
          */
-        let calculatedHeight: CGFloat = (containerWidth * resolution.height) / resolution.width
-        let calculatedContainerSize: CGSize = CGSize(width: containerWidth, height: calculatedHeight)
+        let calculatedHeight: CGFloat = (width * resolution.height) / resolution.width
+        let calculatedContainerSize: CGSize = CGSize(width: width, height: calculatedHeight)
         let containingRect: CGRect = .init(origin: .zero, size: calculatedContainerSize)
         
         let desiredVideoRect = AVMakeRect(aspectRatio: resolution, insideRect: containingRect)
@@ -62,6 +63,6 @@ import AVFoundation
     }
     
     open override var intrinsicContentSize: CGSize {
-        return self.requiredSizeFor(containerWidth: UIScreen.main.bounds.size.width)
+        return self.requiredSizeFor(width: UIScreen.main.bounds.size.width)
     }
 }
