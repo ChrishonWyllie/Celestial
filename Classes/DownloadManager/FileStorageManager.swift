@@ -128,7 +128,7 @@ internal protocol FileStorageMangerProtocol {
     func cacheVideo(withSourceURL sourceURL: URL,
                     intermediateTemporaryFileURL: URL,
                     videoExportQuality: Celestial.VideoExportQuality,
-                    completion: @escaping (_ cachedVideoURL: URL?, _ error: Error?) -> ())
+                    completion: @escaping MediaAssetCompletionHandler)
     
     /**
      Resizes the image with a given point size and caches it
@@ -326,7 +326,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
     internal func cacheVideo(withSourceURL sourceURL: URL,
                              intermediateTemporaryFileURL: URL,
                              videoExportQuality: Celestial.VideoExportQuality,
-                             completion: @escaping (_ cachedVideoURL: URL?, _ error: Error?) -> ()) {
+                             completion: @escaping MediaAssetCompletionHandler) {
         
         let outputURL = constructFormattedURL(from: sourceURL,
                                               expectedDirectoryURL: directoryManager.videosDirectoryURL,
@@ -364,7 +364,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
         }
     }
     
-    internal func decreaseVideoQuality(intermediateFileURL: URL, withSourceURL sourceURL: URL, toQuality videoExportQuality: Celestial.VideoExportQuality, completion: @escaping (_ outputURL: URL?, _ error: Error?) -> ()) {
+    internal func decreaseVideoQuality(intermediateFileURL: URL, withSourceURL sourceURL: URL, toQuality videoExportQuality: Celestial.VideoExportQuality, completion: @escaping MediaAssetCompletionHandler) {
         let outputURL = constructFormattedURL(from: sourceURL,
                                               expectedDirectoryURL: directoryManager.videosDirectoryURL,
                                               size: nil)

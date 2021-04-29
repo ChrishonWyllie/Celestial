@@ -204,8 +204,8 @@ enum CLSError: Error {
 
 
 
-
-
+/// Completion block returns an optional URL if the operation has completed successfully, or an error if otherwise
+public typealias MediaAssetCompletionHandler = (URL?, Error?) -> ()
 
 
 
