@@ -10,7 +10,7 @@ import UIKit.UIImage
 // MARK: - CelestialVideoCachingProtocol
 
 /// Forces conformance for implementing functions related to video caching
-internal protocol CelestialVideoCachingProtocol: class {
+internal protocol CelestialVideoCachingProtocol: AnyObject {
     
     /**
      Returns a boolean value of whether a video exists
@@ -194,7 +194,7 @@ internal protocol CelestialVideoCachingProtocol: class {
 // MARK: - CelestialImageCachingProtocol
 
 /// Forces conformance for implementing functions related to image caching
-internal protocol CelestialImageCachingProtocol: class {
+internal protocol CelestialImageCachingProtocol: AnyObject {
     
     /**
      Returns a boolean value of whether an image exists
@@ -402,7 +402,7 @@ internal protocol CelestialImageCachingProtocol: class {
 
 /// Forces conformance for implementing functions related to manually managing the state of resource
 /// prior to the URLCachableView being available. 
-internal protocol CelestialResourcePrefetchingProtocol: class {
+internal protocol CelestialResourcePrefetchingProtocol: AnyObject {
     
     /**
      Provides the current download state of a requested resource
@@ -544,7 +544,7 @@ internal protocol CelestialResourcePrefetchingProtocol: class {
 // MARK: - CelestialMemoryCacheProtocol
 
 /// Forces conformance for implementing functions related to in-memory caching
-internal protocol CelestialMemoryCacheProtocol: class {
+internal protocol CelestialMemoryCacheProtocol: AnyObject {
     
     /**
      Sets the maximum number of items that can be stored in either the video or image cache.
@@ -598,7 +598,7 @@ internal protocol CelestialMemoryCacheProtocol: class {
 
 /// Forces conformance for implementing miscellaneous utility functions that otherwise do not fit in the other protocols,
 /// but are necessary nonetheless
-internal protocol CelestialUtilityProtocol: class {
+internal protocol CelestialUtilityProtocol: AnyObject {
     /**
      Sets an internal Boolean value which determines whether debug statements will be printed to console.
      For example, information regarding when the image or video cache is evicting items for memory space
@@ -642,7 +642,7 @@ internal protocol CelestialUtilityProtocol: class {
 
 /// Specification for the mandatory properties that a cache manager must have.
 /// For example, the Image and Video caches must have two NSCaches, one for encoded and the other for decoded items.
-internal protocol MemoryCacheManagerProtocol: class {
+internal protocol MemoryCacheManagerProtocol: AnyObject {
     
     var encodedItemsCache: NSCache<AnyObject, AnyObject> { get }
     var decodedItemsCache: NSCache<AnyObject, AnyObject> { get }
@@ -675,7 +675,7 @@ internal struct CacheControlConfiguration {
 // MARK: - MemoryCacheProtocol
 
 /// Generic specifications/functions that both Image and Video cache managers must implement.
-internal protocol MemoryCacheProtocol: class {
+internal protocol MemoryCacheProtocol: AnyObject {
     
     associatedtype T
     

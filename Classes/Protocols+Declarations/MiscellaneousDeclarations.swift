@@ -9,7 +9,7 @@ import Foundation
 import UIKit.UIImage
 import AVFoundation
 
-@objc public protocol URLCachableView: class {
+@objc public protocol URLCachableView: AnyObject {
     
     /// The url of the requested resource
     var sourceURL: URL? { get }
@@ -28,7 +28,7 @@ import AVFoundation
 }
 
 /// Delegate for notifying receiver of events related to current download of a requested resource
-@objc public protocol URLCachableViewDelegate: class {
+@objc public protocol URLCachableViewDelegate: AnyObject {
     
     /**
      Notifies receiver that a download has completed
@@ -115,7 +115,7 @@ import AVFoundation
 // MARK: - ObservableAVPlayer
 
 /// Delegate for notifying receiver of status changes for AVPlayerItem
-internal protocol ObservableAVPlayerDelegate: class {
+internal protocol ObservableAVPlayerDelegate: AnyObject {
     
     /**
      Notifies receiver of `AVPlayerItem.Status`
@@ -159,7 +159,7 @@ internal protocol ObservablePlayerProtocol {
 
 // MARK: - MediaResourceLoaderDelegate
 
-internal protocol MediaResourceLoaderDelegate: class {
+internal protocol MediaResourceLoaderDelegate: AnyObject {
     
     /// This is called when the media is fully downloaded.
     /// At this point, the data can be cached.
@@ -461,7 +461,7 @@ internal struct CachedResourceIdentifier: Codable, Equatable, Hashable, CustomSt
 
 /// Delegate for notifying receiver of progress, completion and possible errors
 /// of a resource located at a external URL
-internal protocol CachableDownloadModelDelegate: class {
+internal protocol CachableDownloadModelDelegate: AnyObject {
     
     /**
      Notifies receiver that media has been finished downloading to a temporary file location.
