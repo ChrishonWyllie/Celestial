@@ -459,27 +459,30 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
         
         switch cacheLocation {
         case .inMemory:
-           
-            Celestial.shared.storeDownloadedVideoToFileCache(intermediateTemporaryFileURL, withSourceURL: sourceURL, videoExportQuality: self.videoExportQuality) { [weak self] (cachedVideoURL, error) in
-                guard let cachedVideoURL = cachedVideoURL else {
+            
+            if self.videoExportQuality == .default {
+                guard let videoData = convertVideoURLToData(videoURL: intermediateTemporaryFileURL, sourceURL: sourceURL) else {
                     return
                 }
                 
-                do {
-                    let compressedDownloadedMediaData = try Data(contentsOf: cachedVideoURL)
-                    
-                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Compressed video to \(compressedDownloadedMediaData.sizeInMB) MB")
-                    
-                    let videoData = MemoryCachedVideoData(videoData: compressedDownloadedMediaData,
-                                                          originalURLMimeType: sourceURL.mimeType(),
-                                                          originalURLFileExtension: sourceURL.pathExtension)
+                Celestial.shared.storeVideoInMemoryCache(videoData: videoData, sourceURLString: sourceURL.absoluteString)
+                Celestial.shared.deleteFile(at: intermediateTemporaryFileURL)
+                
+            } else {
+                Celestial.shared.decreaseVideoQuality(intermediateFileURL: intermediateTemporaryFileURL, withSourceURL: sourceURL, toQuality: self.videoExportQuality) { [weak self] (decreasedQualityVideoURL, error) in
+                    if let error = error {
+                        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error exporting the downloaded video file with quality: \(String(describing: self?.videoExportQuality)) -> \(error)")
+                        return
+                    }
+                    guard
+                        let decreasedQualityVideoURL = decreasedQualityVideoURL,
+                        let videoData = self?.convertVideoURLToData(videoURL: decreasedQualityVideoURL, sourceURL: sourceURL)
+                    else {
+                        return
+                    }
                     
                     Celestial.shared.storeVideoInMemoryCache(videoData: videoData, sourceURLString: sourceURL.absoluteString)
-                    
-                    self?.notifyReceiverOfDownloadCompletion(videoFileURL: cachedVideoURL)
-                    
-                } catch let error {
-                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting data from contents of url: \(cachedVideoURL). Error: \(error)")
+                    Celestial.shared.deleteFile(at: intermediateTemporaryFileURL)
                 }
             }
             
@@ -506,9 +509,27 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
         }
     }
     
+    private func convertVideoURLToData(videoURL: URL, sourceURL: URL) -> MemoryCachedVideoData? {
+        do {
+            let mediaData = try Data(contentsOf: videoURL)
+            
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Converted video URL to Data with size \(mediaData.sizeInMB) MB")
+            
+            let videoData = MemoryCachedVideoData(videoData: mediaData,
+                                                  originalURLMimeType: videoURL.mimeType(),
+                                                  originalURLFileExtension: videoURL.pathExtension)
+            
+            return videoData
+            
+        } catch let error {
+            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting data from contents of url: \(videoURL). Error: \(error)")
+            return nil
+        }
+    }
+    
     private func notifyReceiverOfDownloadCompletion(videoFileURL: URL) {
         if downloadTaskHandler != nil {
-            // This is only called if `loadImageFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
+            // This is only called if `loadVideoFrom(urlString:, progressHandler:, completion:, errorHandler:)` was called.
             // In which case, this property will be non-nil
             downloadTaskHandler?.completionHandler?(videoFileURL)
         } else {

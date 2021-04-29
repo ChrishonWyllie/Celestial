@@ -91,6 +91,10 @@ extension Celestial: CelestialVideoCachingProtocol {
         }
     }
     
+    public func decreaseVideoQuality(intermediateFileURL: URL, withSourceURL sourceURL: URL, toQuality videoExportQuality: Celestial.VideoExportQuality, completion: @escaping (_ outputURL: URL?, _ error: Error?) -> ()) {
+        FileStorageManager.shared.decreaseVideoQuality(intermediateFileURL: intermediateFileURL, withSourceURL: sourceURL, toQuality: videoExportQuality, completion: completion)
+    }
+    
     public func removeVideoFromMemoryCache(sourceURLString: String) {
         VideoCache.shared.removeItem(at: sourceURLString.convertURLToUniqueFileName())
         cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
