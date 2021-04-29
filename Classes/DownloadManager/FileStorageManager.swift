@@ -340,6 +340,8 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
                     fatalError("The original temporary file URL from download does not exist. URL: \(intermediateTemporaryFileURL)")
                 }
                 
+                deleteFile(at: outputURL)
+                
                 try FileManager.default.moveItem(at: intermediateTemporaryFileURL, to: outputURL)
                 
                 completion(outputURL, nil)
