@@ -486,7 +486,11 @@ extension URLVideoPlayerView: CachableDownloadModelDelegate {
         case .fileSystem:
            
             Celestial.shared.storeDownloadedVideoToFileCache(intermediateTemporaryFileURL, withSourceURL: sourceURL, videoExportQuality: self.videoExportQuality) { [weak self] (cachedVideoURL, error) in
-                                                                
+                                                             
+                if let error = error {
+                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error storing the downloaded video to the file cache \(error)")
+                    return
+                }
                 guard let cachedVideoURL = cachedVideoURL else {
                     return
                 }
