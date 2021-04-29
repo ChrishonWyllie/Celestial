@@ -1,3 +1,15 @@
+## [Version 0.8.105](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.105) 
+### New
+* N/A
+
+### Improvements
+* Added extra error handling
+* Replaced the singleton architecture of the `AssetExportManager` with simple static functions
+
+### Bug fixes
+* Fixed possible issue where moving downloaded video files can have a collision if an outdated video already exists with the same URL. Therefore, the downloaded video would technically never be cached.
+* Implemented the proper method of caching downloaded video files to memory. Before it had been incorrectly using the file system as a sort of proxy, but not anymore.
+
 ## [Version 0.8.94](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.94) 
 ### New
 * Added `resolution` and `aspectRatio` to the VideoPlayerView to help with determining the proper size constraints needed to display the video without cropping.
