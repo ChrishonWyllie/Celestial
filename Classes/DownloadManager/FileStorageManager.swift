@@ -348,7 +348,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
                 completion(nil, error)
             }
         default:
-            AssetExportManager.shared.exportVideo(fromIntermediateFileURL: intermediateTemporaryFileURL, outputURL: outputURL, videoExportQuality: videoExportQuality) { [weak self] (cachedVideoURL, error) in
+            AssetExportManager.exportVideo(fromIntermediateFileURL: intermediateTemporaryFileURL, outputURL: outputURL, videoExportQuality: videoExportQuality) { [weak self] (cachedVideoURL, error) in
                 
                 guard let strongSelf = self else {
                     completion(nil, error)
@@ -369,7 +369,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
                                               expectedDirectoryURL: directoryManager.videosDirectoryURL,
                                               size: nil)
         
-        AssetExportManager.shared.exportVideo(fromIntermediateFileURL: intermediateFileURL, outputURL: outputURL, videoExportQuality: videoExportQuality, completion: completion)
+        AssetExportManager.exportVideo(fromIntermediateFileURL: intermediateFileURL, outputURL: outputURL, videoExportQuality: videoExportQuality, completion: completion)
     }
     
     internal func cachedAndResizedImage(sourceURL: URL, size: CGSize, intermediateTemporaryFileURL: URL, completion: @escaping (_ resizedImage: UIImage?) -> ()) {

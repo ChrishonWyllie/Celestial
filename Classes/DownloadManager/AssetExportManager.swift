@@ -16,8 +16,6 @@ internal class AssetExportManager: NSObject {
     
     // MARK: - Variables
     
-    internal static let shared = AssetExportManager()
-    
     fileprivate struct VideoExportInstructions {
         let layerInstruction: AVMutableVideoCompositionLayerInstruction
         let videoRenderSize: CGSize
@@ -36,12 +34,6 @@ internal class AssetExportManager: NSObject {
     
     
     
-    // MARK: - Initializers
-    
-    private override init() {
-        super.init()
-    }
-    
     
     
     
@@ -53,16 +45,12 @@ internal class AssetExportManager: NSObject {
     
     // MARK: - Functions
     
-    internal func exportVideo(fromIntermediateFileURL intermediateTemporaryFileURL: URL, outputURL: URL, videoExportQuality: Celestial.VideoExportQuality, completion: @escaping (URL?, Error?) -> ()) {
+    internal static func exportVideo(fromIntermediateFileURL intermediateTemporaryFileURL: URL, outputURL: URL, videoExportQuality: Celestial.VideoExportQuality, completion: @escaping (URL?, Error?) -> ()) {
         let assetKeys: [URLVideoPlayerView.LoadableAssetKeys] = [.tracks, .exportable]
         DispatchQueue.global(qos: .utility).async {
-            AVURLAsset.prepareUsableAsset(withAssetKeys: assetKeys, inputURL: intermediateTemporaryFileURL) { [weak self] (exportableAsset, error) in
-                guard let strongSelf = self else {
-                    completion(nil, error)
-                    return
-                }
+            AVURLAsset.prepareUsableAsset(withAssetKeys: assetKeys, inputURL: intermediateTemporaryFileURL) { (exportableAsset, error) in
                 
-                guard let exportSession = strongSelf.buildExportSession(withLocalOutputURL: outputURL, usingAsset: exportableAsset, exportQuality: videoExportQuality) else {
+                guard let exportSession = buildExportSession(withLocalOutputURL: outputURL, usingAsset: exportableAsset, exportQuality: videoExportQuality) else {
                     let error = NSError.createError(withString: "Could not initialize an AVAssetExportSession",
                                                     description: "Could not initialize an AVAssetExportSession. Check the buildExportSession(withLocalOutputURL:...) function for possible causes",
                                                     comment: nil,
@@ -107,7 +95,7 @@ internal class AssetExportManager: NSObject {
         }
     }
     
-    private func buildExportSession(withLocalOutputURL outputURL: URL, usingAsset asset: AVURLAsset, exportQuality: Celestial.VideoExportQuality) -> AVAssetExportSession? {
+    private static func buildExportSession(withLocalOutputURL outputURL: URL, usingAsset asset: AVURLAsset, exportQuality: Celestial.VideoExportQuality) -> AVAssetExportSession? {
         guard asset.isExportable else {
             return nil
         }
@@ -150,7 +138,7 @@ internal class AssetExportManager: NSObject {
         return exportSession
     }
     
-    private func buildVideoComposition(composition: AVMutableComposition, compositionVideoTrack: AVMutableCompositionTrack, sourceVideoTrack: AVAssetTrack) -> AVMutableVideoComposition {
+    private static func buildVideoComposition(composition: AVMutableComposition, compositionVideoTrack: AVMutableCompositionTrack, sourceVideoTrack: AVAssetTrack) -> AVMutableVideoComposition {
         compositionVideoTrack.preferredTransform = sourceVideoTrack.preferredTransform
         
         let videoExportInstructions: VideoExportInstructions = buildVideoExportInstructions(for: compositionVideoTrack, sourceVideoTrack: sourceVideoTrack)
@@ -168,7 +156,7 @@ internal class AssetExportManager: NSObject {
     }
     
     
-    private func buildVideoExportInstructions(for track: AVMutableCompositionTrack, sourceVideoTrack: AVAssetTrack) -> VideoExportInstructions {
+    private static func buildVideoExportInstructions(for track: AVMutableCompositionTrack, sourceVideoTrack: AVAssetTrack) -> VideoExportInstructions {
       
         var videoOrientation = UIImage.Orientation.up
         var isPortrait = false
@@ -215,7 +203,7 @@ internal class AssetExportManager: NSObject {
                                        videoOrientation: videoOrientation)
     }
     
-    private func buildExportSession(withExportSessionInformation exportSessionInfo: ExportSessionInfo) -> AVAssetExportSession? {
+    private static func buildExportSession(withExportSessionInformation exportSessionInfo: ExportSessionInfo) -> AVAssetExportSession? {
         let compatiblePresets = AVAssetExportSession.exportPresets(compatibleWith: exportSessionInfo.composition)
         var preset: String = AVAssetExportPresetPassthrough
         
