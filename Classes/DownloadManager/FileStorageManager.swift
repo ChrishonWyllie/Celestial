@@ -364,6 +364,14 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
         }
     }
     
+    internal func decreaseVideoQuality(intermediateFileURL: URL, withSourceURL sourceURL: URL, toQuality videoExportQuality: Celestial.VideoExportQuality, completion: @escaping (_ outputURL: URL?, _ error: Error?) -> ()) {
+        let outputURL = constructFormattedURL(from: sourceURL,
+                                              expectedDirectoryURL: directoryManager.videosDirectoryURL,
+                                              size: nil)
+        
+        AssetExportManager.shared.exportVideo(fromIntermediateFileURL: intermediateFileURL, outputURL: outputURL, videoExportQuality: videoExportQuality, completion: completion)
+    }
+    
     internal func cachedAndResizedImage(sourceURL: URL, size: CGSize, intermediateTemporaryFileURL: URL, completion: @escaping (_ resizedImage: UIImage?) -> ()) {
         
         let sizeFormattedURL = constructFormattedURL(from: sourceURL, expectedDirectoryURL: directoryManager.imagesDirectoryURL, size: size)
