@@ -79,7 +79,7 @@ extension Celestial: CelestialVideoCachingProtocol {
         VideoCache.shared.store(videoData, with: sourceURLString.convertURLToUniqueFileName())
     }
    
-    public func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, videoExportQuality: Celestial.VideoExportQuality, completion: @escaping (URL?, Error?) -> ()) {
+    public func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, videoExportQuality: Celestial.VideoExportQuality, completion: @escaping MediaAssetCompletionHandler) {
         FileStorageManager.shared.cacheVideo(withSourceURL: sourceURL, intermediateTemporaryFileURL: temporaryFileURL, videoExportQuality: videoExportQuality) { [weak self] (cachedVideoURL, error) in
             
             let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
@@ -91,7 +91,7 @@ extension Celestial: CelestialVideoCachingProtocol {
         }
     }
     
-    public func decreaseVideoQuality(intermediateFileURL: URL, withSourceURL sourceURL: URL, toQuality videoExportQuality: Celestial.VideoExportQuality, completion: @escaping (_ outputURL: URL?, _ error: Error?) -> ()) {
+    public func decreaseVideoQuality(intermediateFileURL: URL, withSourceURL sourceURL: URL, toQuality videoExportQuality: Celestial.VideoExportQuality, completion: @escaping MediaAssetCompletionHandler) {
         FileStorageManager.shared.decreaseVideoQuality(intermediateFileURL: intermediateFileURL, withSourceURL: sourceURL, toQuality: videoExportQuality, completion: completion)
     }
     

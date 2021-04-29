@@ -45,7 +45,7 @@ internal class AssetExportManager: NSObject {
     
     // MARK: - Functions
     
-    internal static func exportVideo(fromIntermediateFileURL intermediateTemporaryFileURL: URL, outputURL: URL, videoExportQuality: Celestial.VideoExportQuality, completion: @escaping (URL?, Error?) -> ()) {
+    internal static func exportVideo(fromIntermediateFileURL intermediateTemporaryFileURL: URL, outputURL: URL, videoExportQuality: Celestial.VideoExportQuality, completion: @escaping MediaAssetCompletionHandler) {
         let assetKeys: [URLVideoPlayerView.LoadableAssetKeys] = [.tracks, .exportable]
         DispatchQueue.global(qos: .utility).async {
             AVURLAsset.prepareUsableAsset(withAssetKeys: assetKeys, inputURL: intermediateTemporaryFileURL) { (exportableAsset, error) in
