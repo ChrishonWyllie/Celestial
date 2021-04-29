@@ -334,7 +334,6 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
         
         switch videoExportQuality {
         case .default:
-            #warning("Perform on a different thread?")
             do {
                 guard ((try? intermediateTemporaryFileURL.checkResourceIsReachable()) != nil) else {
                     fatalError("The original temporary file URL from download does not exist. URL: \(intermediateTemporaryFileURL)")
