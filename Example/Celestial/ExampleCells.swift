@@ -132,7 +132,7 @@ class ExampleCell: UICollectionViewCell {
 
 // MARK: - VideoCell
 
-protocol VideoCellDelegate: class {
+protocol VideoCellDelegate: AnyObject {
     func videoCell(_ cell: VideoCell, requestsContainerSizeChanges requiredSize: CGSize)
 }
 class VideoCell: ExampleCell {
