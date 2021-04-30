@@ -1,3 +1,13 @@
+## [Version 0.8.109](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.109) 
+### New
+* N/A
+
+### Improvements
+* Replaced all uses of the `class` keyword for protocol inheritance with AnyObject to address warnings
+
+### Bug fixes
+* N/A
+
 ## [Version 0.8.105](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.105) 
 ### New
 * N/A
