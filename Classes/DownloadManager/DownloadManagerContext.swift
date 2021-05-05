@@ -13,7 +13,7 @@ internal class DownloadManagerContext {
     private let userDefaults = UserDefaults.standard
     
     private let concurrentQueue = DispatchQueue(label: "com.chrishonwyllie.Celestial.DownloadTaskManager.downloadTaskQueue",
-    attributes: .concurrent)
+                                                attributes: .concurrent)
     
     
     
