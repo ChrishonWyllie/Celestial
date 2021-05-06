@@ -225,13 +225,13 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let strongSelf = self else { return }
             
-            strongSelf.handleScrollViewPrefetching(forRequestedItems: urlStrings) { (url, resourceExistenceState) in
+            strongSelf.handleScrollViewPrefetching(forRequestedItems: urlStrings) { (sourceURL, resourceExistenceState) in
                 
                 switch resourceExistenceState {
                 case .none:
-                    strongSelf.startDownload(for: url)
+                    strongSelf.startDownload(for: sourceURL)
                 case .downloadPaused:
-                    strongSelf.resumeDownload(for: url)
+                    strongSelf.resumeDownload(for: sourceURL)
                 case .currentlyDownloading, .cached, .uncached:
                     // Nothing more to do
                     break
@@ -245,7 +245,7 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let strongSelf = self else { return }
             
-            strongSelf.handleScrollViewPrefetching(forRequestedItems: urlStrings) { (url, resourceExistenceState) in
+            strongSelf.handleScrollViewPrefetching(forRequestedItems: urlStrings) { (sourceURL, resourceExistenceState) in
                 
                 switch resourceExistenceState {
                 case .none, .downloadPaused, .cached, .uncached:
@@ -253,9 +253,9 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
                     break
                 case .currentlyDownloading:
                     if cancelCompletely {
-                        strongSelf.cancelDownload(for: url)
+                        strongSelf.cancelDownload(for: sourceURL)
                     } else {
-                        strongSelf.pauseDownload(for: url)
+                        strongSelf.pauseDownload(for: sourceURL)
                     }
                 }
             }
@@ -329,10 +329,11 @@ extension Celestial: CelestialUtilityProtocol {
     }
        
     public func reset() {
+        FileStorageManager.shared.clearCache(fileType: ResourceFileType.all)
         DownloadTaskManager.shared.cancelAllDownloads()
         cachedResourceContext.clearAllResourceIdentifiers()
-        clearAllImages()
-        clearAllVideos()
+        VideoCache.shared.clearAllItems()
+        ImageCache.shared.clearAllItems()
     }
     
     public func getCacheInfo() -> [String] {
@@ -404,12 +405,18 @@ extension Celestial {
             {
                 return .cached
             } else {
+                if FileStorageManager.shared.uncachedFileExists(for: sourceURL) {
+                    return .uncached
+                }
                 return .none
             }
         } else if let cacheLocation = cacheLocation, let resourceType = resourceType {
             if cachedResourceAndIdentifierExists(for: sourceURL, resourceType: resourceType, cacheLocation: cacheLocation) {
                 return .cached
             } else {
+                if FileStorageManager.shared.uncachedFileExists(for: sourceURL) {
+                    return .uncached
+                }
                 return .none
             }
         } else if FileStorageManager.shared.uncachedFileExists(for: sourceURL) {

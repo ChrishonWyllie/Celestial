@@ -240,7 +240,14 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
         }
         
         let filesMatchingSourceURL = directoryContents.filter { (file) -> Bool in
-            return file.hasPrefix(actualFileName)
+            /*
+             Example sourceURL: https://www.example.com/videos/my_video.mp4
+             Example actualFileName: my_video.mp4
+             
+             Due to some fileURL formatting, the prefix or the suffix may produce the desired match
+             However, most of the time this should be the suffix
+             */
+            return file.hasPrefix(actualFileName) || file.hasSuffix(actualFileName)
         }
         
         if filesMatchingSourceURL.isEmpty == false {

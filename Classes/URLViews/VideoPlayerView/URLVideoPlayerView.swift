@@ -141,17 +141,20 @@ import AVFoundation
     
     // MARK: - Functions
     
-    public func loadVideoFrom(urlString: String) {
+    @discardableResult public func loadVideoFrom(urlString: String) -> Error? {
         guard
             urlString.isValidURL,
             let sourceURL = URL(string: urlString) else {
-            return
+            let error = Celestial.CSError.invalidURL("The URL: \(urlString) is not a valid URL")
+            return error
         }
         self.sourceURL = sourceURL
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.acquireVideo(from: sourceURL, progressHandler: nil, completion: nil, errorHandler: nil)
         }
+        
+        return nil
     }
     
     public func loadVideoFrom(urlString: String,
@@ -217,25 +220,21 @@ import AVFoundation
             // due to the creation of AVURLAsset blocking main thread
             
             let assetKeys: [LoadableAssetKeys] = [.playable, .duration]
-            DispatchQueue.global(qos: .userInitiated).async {
-                AVURLAsset.prepareUsableAsset(withAssetKeys: assetKeys, inputURL: sourceURL) { [weak self] (playableAsset, error) in
-                    guard let strongSelf = self else { return }
-                    if let error = error {
-                        fatalError("Error loading video from url: \(sourceURL). Error: \(String(describing: error))")
-                    }
-                    let playerItem = AVPlayerItem(asset: playableAsset)
-                    DispatchQueue.main.async {
-                        strongSelf.setupPlayer(with: playerItem)
-                    }
+            AVURLAsset.prepareUsableAsset(withAssetKeys: assetKeys, inputURL: sourceURL) { [weak self] (playableAsset, error) in
+                guard let strongSelf = self else { return }
+                if let error = error {
+                    fatalError("Error loading video from url: \(sourceURL). Error: \(String(describing: error))")
+                }
+                let playerItem = AVPlayerItem(asset: playableAsset)
+                DispatchQueue.main.async {
+                    strongSelf.setupPlayer(with: playerItem)
                 }
             }
                         
             if progressHandler != nil && completion != nil && progressHandler != nil {
                 downloadTaskHandler = DownloadTaskHandler<URL>()
                 downloadTaskHandler?.completionHandler = { (_) in
-                    DispatchQueue.main.async {
-                        completion?()
-                    }
+                    completion?()
                 }
                 downloadTaskHandler?.progressHandler = { (downloadProgress) in
                     progressHandler?(downloadProgress)
@@ -258,19 +257,17 @@ import AVFoundation
         switch cacheLocation {
         case .inMemory:
             
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let memoryCachedVideoData = Celestial.shared.videoFromMemoryCache(sourceURLString: sourceURL.absoluteString) else {
+                return
+            }
+            
+            let playerItem = DataLoadablePlayerItem(data: memoryCachedVideoData.videoData,
+                                                    mimeType: memoryCachedVideoData.originalURLMimeType,
+                                                    fileExtension: memoryCachedVideoData.originalURLFileExtension)
+            
+            DispatchQueue.main.async { [weak self] in
                 guard let strongSelf = self else { return }
-                guard let memoryCachedVideoData = Celestial.shared.videoFromMemoryCache(sourceURLString: sourceURL.absoluteString) else {
-                    return
-                }
-                
-                let playerItem = DataLoadablePlayerItem(data: memoryCachedVideoData.videoData,
-                                                        mimeType: memoryCachedVideoData.originalURLMimeType,
-                                                        fileExtension: memoryCachedVideoData.originalURLFileExtension)
-                
-                DispatchQueue.main.async {
-                    strongSelf.setupPlayer(with: playerItem)
-                }
+                strongSelf.setupPlayer(with: playerItem)
             }
             
         case .fileSystem:
@@ -279,24 +276,22 @@ import AVFoundation
                 return
             }
             
-            DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let cachedVideoData = try Data(contentsOf: cachedVideoURL)
                 
-                do {
-                    let cachedVideoData = try Data(contentsOf: cachedVideoURL)
-                    
-                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Initializing DataLoadablePlayerItem with cached video url: \(cachedVideoURL). Media data size in MB: \(cachedVideoData.sizeInMB)")
-                    
-                    let playerItem = DataLoadablePlayerItem(data: cachedVideoData,
-                                                            mimeType: cachedVideoURL.mimeType(),
-                                                            fileExtension: cachedVideoURL.pathExtension)
-                    
-                    DispatchQueue.main.async { [weak self] in
-                        self?.setupPlayer(with: playerItem)
-                    }
-                    
-                } catch let error {
-                    DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting video data from url: \(sourceURL). Error: \(error)")
+                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Initializing DataLoadablePlayerItem with cached video url: \(cachedVideoURL). Media data size in MB: \(cachedVideoData.sizeInMB)")
+                
+                let playerItem = DataLoadablePlayerItem(data: cachedVideoData,
+                                                        mimeType: cachedVideoURL.mimeType(),
+                                                        fileExtension: cachedVideoURL.pathExtension)
+                
+                DispatchQueue.main.async { [weak self] in
+                    guard let strongSelf = self else { return }
+                    strongSelf.setupPlayer(with: playerItem)
                 }
+                
+            } catch let error {
+                DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error getting video data from url: \(sourceURL). Error: \(error)")
             }
             
         default: break
