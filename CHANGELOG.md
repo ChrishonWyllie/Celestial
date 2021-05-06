@@ -1,3 +1,17 @@
+## [Version 0.8.118](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.118) 
+### New
+* N/A
+
+### Improvements
+* Added additional checks to see if an `.uncached` file exists before falsely returning a `.none` resource existence state
+* Added a discardableResult optional Error to the `loadVideoFrom(urlString:)` function in case the URL initialization fails
+* Removed unnecessary dispatches the same `.userInitiated` thread
+
+### Bug fixes
+* Fixed a bug where a new downloadTask would be created and started for files that had been already been downloaded but had not been cached. Often caused through the prefetching APIs
+* Fixed an issue in the Example VideoCell that prevented button taps
+* Fixed issue with deleting files in directories by checking if the suffix as well as the prefix of every URL in the directory produces a matching result 
+
 ## [Version 0.8.109](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.109) 
 ### New
 * N/A
