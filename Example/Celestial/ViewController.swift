@@ -118,7 +118,8 @@ class ViewController: UIViewController {
             // Fallback on earlier versions
             cv.backgroundColor = .gray
         }
-        cv.allowsMultipleSelection = true
+        cv.allowsSelection = true
+        cv.alwaysBounceVertical = true
         cv.prefetchDataSource = self
         cv.isPrefetchingEnabled = true
         cv.delegate = self
