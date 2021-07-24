@@ -391,6 +391,7 @@ import AVFoundation
     }
     
     public func reset() {
+        playImmediatelyWhenReady = false
         DispatchQueue.main.async { [weak self] in
             guard let strongSelf = self else { return }
             (strongSelf.player as? ObservableAVPlayer)?.reset()
