@@ -11,6 +11,9 @@ public final class Celestial: NSObject {
     
     enum CSError: Error {
         case invalidURL(String)
+        case urlToDataError(String)
+        case invalidSourceURLError(String)
+        case unknownURLPathExtension(String)
     }
     
     /// Public shared instance property

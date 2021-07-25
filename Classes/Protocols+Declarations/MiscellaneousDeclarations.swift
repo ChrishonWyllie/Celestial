@@ -185,14 +185,7 @@ internal protocol MediaResourceLoaderDelegate: AnyObject {
 
 
 
-// MARK: - Errors
 
-/// Errors encountered during internal Celestial operations
-enum CLSError: Error {
-    case urlToDataError(String)
-    case invalidSourceURLError(String)
-    case nonExistentFileAtURLError(String)
-}
 
 
 
