@@ -1,3 +1,13 @@
+## [Version 0.8.130](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.130) 
+### New
+* N/A
+
+### Improvements
+* Added more error handling to address the issue with attempting to load video URLs that have no file extension in `URLVideoPlayerView` by validating the url string. This url validation was extended to `URLImageView`
+
+### Bug fixes
+* N/A
+
 ## [Version 0.8.123](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.123) 
 ### New
 * Added an Issues template outlining how new issues should be opened
