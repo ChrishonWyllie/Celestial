@@ -89,15 +89,23 @@ import UIKit
     // MARK: - Functions
     
     /// Downloads an image from an external URL string
-    public func loadImageFrom(urlString: String) {
-        guard
-            urlString.isValidURL,
-            let sourceURL = URL(string: urlString) else {
-            return
-        }
-        self.sourceURL = sourceURL
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.acquireImage(from: sourceURL, progressHandler: nil, completion: nil, errorHandler: nil)
+    @discardableResult public func loadImageFrom(urlString: String) -> Error? {
+        do {
+            let verifiedSourceURL = try verifiedSource(urlString: urlString)
+            
+            self.sourceURL = verifiedSourceURL
+            
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                self?.acquireImage(from: verifiedSourceURL,
+                                   progressHandler: nil,
+                                   completion: nil,
+                                   errorHandler: nil)
+            }
+            
+            return nil
+            
+        } catch let error {
+            return error
         }
     }
     
@@ -107,21 +115,33 @@ import UIKit
                               progressHandler: DownloadTaskProgressHandler?,
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
+        
+        do {
+            let verifiedSourceURL = try verifiedSource(urlString: urlString)
+            
+            self.sourceURL = verifiedSourceURL
+            
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                self?.acquireImage(from: verifiedSourceURL,
+                                   progressHandler: progressHandler,
+                                   completion: completion,
+                                   errorHandler: errorHandler)
+            }
+            
+        } catch let error {
+            errorHandler?(error)
+        }
+    }
+    
+    private func verifiedSource(urlString: String) throws -> URL {
+        
         guard
             urlString.isValidURL,
             let sourceURL = URL(string: urlString) else {
-                let error = Celestial.CSError.invalidURL("The URL: \(urlString) is not a valid URL")
-                errorHandler?(error)
-            return
+            throw Celestial.CSError.invalidURL("The URL: \(urlString) is not a valid URL")
         }
-        self.sourceURL = sourceURL
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.acquireImage(from: sourceURL,
-                               progressHandler: progressHandler,
-                               completion: completion,
-                               errorHandler: errorHandler)
-        }
+        return sourceURL
     }
     
     private func acquireImage(from sourceURL: URL,
@@ -296,7 +316,7 @@ extension URLImageView: CachableDownloadModelDelegate {
             guard let strongSelf = self else { return }
             
             guard let originalSourceURL = strongSelf.sourceURL else {
-                let error = CLSError.invalidSourceURLError("The sourceURL does not exist")
+                let error = Celestial.CSError.invalidSourceURLError("The sourceURL does not exist")
                 strongSelf.handleDisplayOf(resizedImage: nil, error: error)
                 return
             }
@@ -333,7 +353,7 @@ extension URLImageView: CachableDownloadModelDelegate {
         do {
             let data = try Data(contentsOf: localTemporaryFileURL)
             guard let originallySizedDownloadedImage = UIImage(data: data) else {
-                let error = CLSError.urlToDataError("Could not crete Data from contents of URL: \(localTemporaryFileURL)")
+                let error = Celestial.CSError.urlToDataError("Could not create Data from contents of URL: \(localTemporaryFileURL)")
                 completion(nil, error)
                 return
             }
