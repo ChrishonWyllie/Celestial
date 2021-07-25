@@ -43,7 +43,9 @@ import UIKit
                             sourceURLString: String,
                             cacheLocation: ResourceCacheLocation = .inMemory) {
         self.init(delegate: delegate, cacheLocation: cacheLocation)
-        loadImageFrom(urlString: sourceURLString)
+        if let error = loadImageFrom(urlString: sourceURLString) {
+            delegate?.urlCachableView?(self, downloadFailedWith: error)
+        }
     }
     
     public convenience init(delegate: URLCachableViewDelegate?,
