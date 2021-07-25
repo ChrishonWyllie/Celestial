@@ -1,3 +1,13 @@
+## [Version 0.8.123](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.123) 
+### New
+* Added an Issues template outlining how new issues should be opened
+
+### Improvements
+* Set the `playImmediatelyWhenReady` boolean back to false when resetting the `URLVideoPlayerView`
+
+### Bug fixes
+* N/A
+
 ## [Version 0.8.118](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.118) 
 ### New
 * N/A
