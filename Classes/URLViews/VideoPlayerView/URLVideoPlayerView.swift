@@ -94,7 +94,10 @@ import AVFoundation
                             cacheLocation: ResourceCacheLocation = .fileSystem,
                             videoExportQuality: Celestial.VideoExportQuality = .default) {
         self.init(delegate: delegate, cacheLocation: cacheLocation, videoExportQuality: videoExportQuality)
-        loadVideoFrom(urlString: sourceURLString)
+        
+        if let error = loadVideoFrom(urlString: sourceURLString) {
+            delegate?.urlCachableView?(self, downloadFailedWith: error)
+        }
     }
     
     public convenience init(delegate: URLVideoPlayerViewDelegate?,
@@ -142,41 +145,60 @@ import AVFoundation
     // MARK: - Functions
     
     @discardableResult public func loadVideoFrom(urlString: String) -> Error? {
-        guard
-            urlString.isValidURL,
-            let sourceURL = URL(string: urlString) else {
-            let error = Celestial.CSError.invalidURL("The URL: \(urlString) is not a valid URL")
+        do {
+            let verifiedSourceURL = try verifiedSource(urlString: urlString)
+            
+            self.sourceURL = verifiedSourceURL
+            
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                self?.acquireVideo(from: verifiedSourceURL,
+                                   progressHandler: nil,
+                                   completion: nil,
+                                   errorHandler: nil)
+            }
+            
+            return nil
+            
+        } catch let error {
             return error
         }
-        self.sourceURL = sourceURL
-        
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.acquireVideo(from: sourceURL, progressHandler: nil, completion: nil, errorHandler: nil)
-        }
-        
-        return nil
     }
     
     public func loadVideoFrom(urlString: String,
                               progressHandler: DownloadTaskProgressHandler?,
                               completion: OptionalCompletionHandler,
                               errorHandler: DownloadTaskErrorHandler?) {
+          
+        do {
+            let verifiedSourceURL = try verifiedSource(urlString: urlString)
             
+            self.sourceURL = verifiedSourceURL
+            
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                self?.acquireVideo(from: verifiedSourceURL,
+                                   progressHandler: progressHandler,
+                                   completion: completion,
+                                   errorHandler: errorHandler)
+            }
+            
+        } catch let error {
+            errorHandler?(error)
+        }
+    }
+    
+    private func verifiedSource(urlString: String) throws -> URL {
+        
         guard
             urlString.isValidURL,
             let sourceURL = URL(string: urlString) else {
-                let error = Celestial.CSError.invalidURL("The URL: \(urlString) is not a valid URL")
-                errorHandler?(error)
-            return
+            throw Celestial.CSError.invalidURL("The URL: \(urlString) is not a valid URL")
         }
-        self.sourceURL = sourceURL
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.acquireVideo(from: sourceURL,
-                               progressHandler: progressHandler,
-                               completion: completion,
-                               errorHandler: errorHandler)
+        guard sourceURL.pathExtension.isEmpty == false else {
+            throw Celestial.CSError.unknownURLPathExtension("The URL: \(urlString) does not contain a file extension (e.g., .mp4, .mov, etc.)")
         }
+        
+        return sourceURL
     }
     
     private func acquireVideo(from sourceURL: URL,
