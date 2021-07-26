@@ -1,3 +1,74 @@
+## [Version 0.8.130](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.130) 
+### New
+* N/A
+
+### Improvements
+* Added more error handling to address the issue with attempting to load video URLs that have no file extension in `URLVideoPlayerView` by validating the url string. This url validation was extended to `URLImageView`
+
+### Bug fixes
+* N/A
+
+## [Version 0.8.123](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.123) 
+### New
+* Added an Issues template outlining how new issues should be opened
+
+### Improvements
+* Set the `playImmediatelyWhenReady` boolean back to false when resetting the `URLVideoPlayerView`
+
+### Bug fixes
+* N/A
+
+## [Version 0.8.118](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.118) 
+### New
+* N/A
+
+### Improvements
+* Added additional checks to see if an `.uncached` file exists before falsely returning a `.none` resource existence state
+* Added a discardableResult optional Error to the `loadVideoFrom(urlString:)` function in case the URL initialization fails
+* Removed unnecessary dispatches the same `.userInitiated` thread
+
+### Bug fixes
+* Fixed a bug where a new downloadTask would be created and started for files that had been already been downloaded but had not been cached. Often caused through the prefetching APIs
+* Fixed an issue in the Example VideoCell that prevented button taps
+* Fixed issue with deleting files in directories by checking if the suffix as well as the prefix of every URL in the directory produces a matching result 
+
+## [Version 0.8.109](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.109) 
+### New
+* N/A
+
+### Improvements
+* Replaced all uses of the `class` keyword for protocol inheritance with AnyObject to address warnings
+
+### Bug fixes
+* N/A
+
+## [Version 0.8.105](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.105) 
+### New
+* N/A
+
+### Improvements
+* Added extra error handling
+* Replaced the singleton architecture of the `AssetExportManager` with simple static functions
+
+### Bug fixes
+* Fixed possible issue where moving downloaded video files can have a collision if an outdated video already exists with the same URL. Therefore, the downloaded video would technically never be cached.
+* Implemented the proper method of caching downloaded video files to memory. Before it had been incorrectly using the file system as a sort of proxy, but not anymore.
+
+## [Version 0.8.94](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.94) 
+### New
+* Added `resolution` and `aspectRatio` to the VideoPlayerView to help with determining the proper size constraints needed to display the video without cropping.
+* Added a new function `requiredSizeFor(width:)` to the VideoPlayerView which will return a CGSize that would allow the video to fit within a given width without cropping.
+* Defined a default intrinsic content size width for VideoPlayerView which uses the screen's bounds as a starting point. This allows the view to grow with its content. Override as necessary
+* Added the `videoExportQuality` option as an argument for the URLVideoPlayerView. See point #2 in Improvements.
+* Added the `AssetExportManager` to assist with exporting assets at different qualities. This is an internal object.
+
+### Improvements
+* Replaced the `.background` QoS when performing non-UI tasks with `.utility` due to the risk of these operations not running when the battery is low.
+* Removed the default compression for videos. Instead, the URLVideoPlayerView offers another argument in its initializers: `videoExportQuality`. There are 3 options: `.default` which will return the original video after it is downlaoded with no compression, `.medium` and `.low`.
+
+### Bug fixes
+* Changed the layout of the example UICollectionView. Videos in cells are no longer forced into a uniform size. Instead, they will resize depending on their resolution and the width of the cell.
+
 ## [Version 0.8.66](https://github.com/ChrishonWyllie/Celestial/releases/tag/0.8.66) 
 ### New
 * N/A

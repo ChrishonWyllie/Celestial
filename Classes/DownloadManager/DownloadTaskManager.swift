@@ -73,7 +73,7 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
     }
     
     private func performActionOnAllCurrentDownloadTasks(completion: @escaping (URLSessionDownloadTask) -> ()) {
-        DispatchQueue.global(qos: .background).async { [weak self] in
+        DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let strongSelf = self else { return }
             
             strongSelf.downloadsSession.getTasksWithCompletionHandler { (dataTasks: [URLSessionDataTask], uploadTasks: [URLSessionUploadTask], downloadTasks:  [URLSessionDownloadTask]) in
@@ -147,10 +147,10 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
             downloadTaskRequest.prepareForDownload(task: newDownloadTask)
         }
              
-        downloadTaskRequest.task?.resume()
         downloadTaskRequest.update(downloadState: .downloading)
-        
         activeDownloadsContext.save(downloadTaskRequest: downloadTaskRequest)
+        
+        downloadTaskRequest.task?.resume()
     }
     internal func resumeDownload(downloadTaskRequest: DownloadTaskRequest) {
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - using new download: \(String(describing: downloadTaskRequest.delegate))")
@@ -182,9 +182,10 @@ class DownloadTaskManager: NSObject, DownloadTaskManagerProtocol {
         
         let newDownloadTask = downloadsSession.downloadTask(with: downloadTaskRequest.sourceURL)
         downloadTaskRequest.prepareForDownload(task: newDownloadTask)
-        downloadTaskRequest.task?.resume()
         downloadTaskRequest.update(downloadState: .downloading)
         activeDownloadsContext.save(downloadTaskRequest: downloadTaskRequest)
+        
+        downloadTaskRequest.task?.resume()
     }
 }
 
@@ -277,32 +278,35 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
             return
         }
         
-        guard let downloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: sourceURL) else {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - No download exists for url: \(sourceURL)")
-            return
-        }
-        
+        // If no DownloadTaskRequest exists, this file likely has been previously downloaded
+        // and the URLSessionDownloadTask is simply returning the file from its own private cache.
+        // This cache is not accessible however.
+        // In either case, move this downloaded/privately-cached file to an intermediate location that IS accessible.
+        let downloadTaskRequest: DownloadTaskRequest? = activeDownloadsContext.downloadTaskRequest(forSourceURL: sourceURL)
+
         DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - finished download for url: \(sourceURL) - local file name: \(sourceURL.localUniqueFileName()). DownloadTask: \(downloadTask). Temporary file location: \(location)")
-        
+
         activeDownloadsContext.removeDownloadTaskRequest(forSourceURL: sourceURL)
-        
-        moveToIntermediateTemporaryFile(originalTemporaryURL: location, downloadTaskRequest: downloadTaskRequest)
+
+        moveToIntermediateTemporaryFile(originalTemporaryURL: location, sourceURL: sourceURL, downloadTaskRequest: downloadTaskRequest)
     }
     
-    private func moveToIntermediateTemporaryFile(originalTemporaryURL: URL, downloadTaskRequest: DownloadTaskRequest) {
+    private func moveToIntermediateTemporaryFile(originalTemporaryURL: URL, sourceURL: URL, downloadTaskRequest: DownloadTaskRequest?) {
         do {
-            let intermediateTemporaryFileURL = try FileStorageManager.shared.moveToIntermediateTemporaryURL(originalTemporaryURL: originalTemporaryURL, sourceURL: downloadTaskRequest.sourceURL)
+            let intermediateTemporaryFileURL = try FileStorageManager.shared.moveToIntermediateTemporaryURL(originalTemporaryURL: originalTemporaryURL, sourceURL: sourceURL)
             
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Moved to intermediate temporary file url: \(intermediateTemporaryFileURL)")
             
-            downloadTaskRequest.update(downloadState: .finished)
-            
-            // Notify delegate
-            downloadTaskRequest.delegate?.cachable(downloadTaskRequest, didFinishDownloadingTo: intermediateTemporaryFileURL)
+            if let downloadTaskRequest = downloadTaskRequest {
+                downloadTaskRequest.update(downloadState: .finished)
+                downloadTaskRequest.delegate?.cachable(downloadTaskRequest, didFinishDownloadingTo: intermediateTemporaryFileURL)
+            }
             
         } catch let error {
             DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Error moving downloaded file to temporary file url: \(error)")
-            downloadTaskRequest.delegate?.cachable(downloadTaskRequest, downloadFailedWith: error)
+            if let downloadTaskRequest = downloadTaskRequest {
+                downloadTaskRequest.delegate?.cachable(downloadTaskRequest, downloadFailedWith: error)
+            }
         }
     }
     
@@ -324,40 +328,36 @@ extension DownloadTaskManager: URLSessionDownloadDelegate {
         
         // Notify delegate
         if downloadTaskRequest.delegate == nil {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - delegate nil for download object: \(String(describing: downloadTaskRequest.delegate))")
+//            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - delegate nil for download object: \(String(describing: downloadTaskRequest.delegate))")
         }
         downloadTaskRequest.delegate?.cachable(downloadTaskRequest, downloadProgress: downloadProgress, humanReadableProgress: humanReadableDownloadProgress)
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
 
-        guard let error = error else {
-            if let sourceURL = task.originalRequest?.url {
-                activeDownloadsContext.removeDownloadTaskRequest(forSourceURL: sourceURL)
-            }
-            return
-        }
+        if let error = error {
         
-        let userInfo = (error as NSError).userInfo
-        
-        if let resumeData = userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+            let userInfo = (error as NSError).userInfo
             
-            // If cannot retrieve download for this sourceURL,
-            // perhaps store the resume data in documents directory
-            // until a new download is created with this sourceURL?
-            guard let sourceURL = task.originalRequest?.url else {
-                return
+            if let resumeData = userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+                
+                // If cannot retrieve download for this sourceURL,
+                // perhaps store the resume data in documents directory
+                // until a new download is created with this sourceURL?
+                guard let sourceURL = task.originalRequest?.url else {
+                    return
+                }
+                
+                guard let downloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: sourceURL) else {
+                    return
+                }
+                
+                downloadTaskRequest.storeResumableData(resumeData)
+                //
+                downloadTaskRequest.update(downloadState: .paused)
+                
+                activeDownloadsContext.save(downloadTaskRequest: downloadTaskRequest)
             }
-            
-            guard let downloadTaskRequest = activeDownloadsContext.downloadTaskRequest(forSourceURL: sourceURL) else {
-                return
-            }
-            
-            downloadTaskRequest.storeResumableData(resumeData)
-            //
-            downloadTaskRequest.update(downloadState: .paused)
-            
-            activeDownloadsContext.save(downloadTaskRequest: downloadTaskRequest)
         }
     }
     

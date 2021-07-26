@@ -32,6 +32,7 @@ open class CachableAVPlayerItem: AVPlayerItem {
         "hasProtectedContent"
     ]
     
+    private(set) var videoExportQuality: Celestial.VideoExportQuality = .default
     
     
     
@@ -47,7 +48,8 @@ open class CachableAVPlayerItem: AVPlayerItem {
     /// - Parameter cacheLocation: `ResourceCacheLocation` for determining where the video should be cached upon completion of its download, if at all.
     convenience public init(url: URL,
                             delegate: CachableAVPlayerItemDelegate?,
-                            cacheLocation: ResourceCacheLocation = .inMemory) {
+                            cacheLocation: ResourceCacheLocation = .inMemory,
+                            videoExportQuality: Celestial.VideoExportQuality = .default) {
         self.init(url: url, customFileExtension: nil, delegate: delegate, cacheLocation: cacheLocation)
     }
     
@@ -56,11 +58,13 @@ open class CachableAVPlayerItem: AVPlayerItem {
     public init(url: URL,
                 customFileExtension: String?,
                 delegate: CachableAVPlayerItemDelegate?,
-                cacheLocation: ResourceCacheLocation = .inMemory) {
+                cacheLocation: ResourceCacheLocation = .inMemory,
+                videoExportQuality: Celestial.VideoExportQuality = .default) {
         
         self.url = url
         self.delegate = delegate
         self.cacheLocation = cacheLocation
+        self.videoExportQuality = videoExportQuality
         
         var asset: AVURLAsset
         
@@ -244,7 +248,7 @@ extension CachableAVPlayerItem: MediaResourceLoaderDelegate {
                 let temporaryFileURL = FileStorageManager.shared.createTemporaryFileURL(from: sourceURL)
                 try mediaData.write(to: temporaryFileURL)
                 
-                Celestial.shared.storeDownloadedVideoToFileCache(temporaryFileURL, withSourceURL: sourceURL) { (cachedVideoURL) in
+                Celestial.shared.storeDownloadedVideoToFileCache(temporaryFileURL, withSourceURL: sourceURL, videoExportQuality: self.videoExportQuality) { (cachedVideoURL, error) in
                     // ...
                 }
             } catch let error {

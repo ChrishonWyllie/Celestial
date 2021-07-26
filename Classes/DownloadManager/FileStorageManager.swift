@@ -121,10 +121,14 @@ internal protocol FileStorageMangerProtocol {
     - Parameters:
        - sourceURL: The url of the resource that has been requested
        - intermediateTemporaryFileURL: The intermediate file url that the downloaded resource has been moved to after the `URLSessionDownloadTask` has completed
-       - completion: Executes completion block with a URL pointing to a compressed video
+       - videoExportQuality: The desired quality of the video that will be cached (e.g. default, low, medium)
+       - completion: Executes completion block with a URL pointing to a cached video or an Error if one has occured
     
     */
-    func cachedAndResizedVideo(sourceURL: URL, intermediateTemporaryFileURL: URL, completion: @escaping (_ compressedVideoURL: URL?) -> ())
+    func cacheVideo(withSourceURL sourceURL: URL,
+                    intermediateTemporaryFileURL: URL,
+                    videoExportQuality: Celestial.VideoExportQuality,
+                    completion: @escaping MediaAssetCompletionHandler)
     
     /**
      Resizes the image with a given point size and caches it
@@ -236,7 +240,14 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
         }
         
         let filesMatchingSourceURL = directoryContents.filter { (file) -> Bool in
-            return file.hasPrefix(actualFileName)
+            /*
+             Example sourceURL: https://www.example.com/videos/my_video.mp4
+             Example actualFileName: my_video.mp4
+             
+             Due to some fileURL formatting, the prefix or the suffix may produce the desired match
+             However, most of the time this should be the suffix
+             */
+            return file.hasPrefix(actualFileName) || file.hasSuffix(actualFileName)
         }
         
         if filesMatchingSourceURL.isEmpty == false {
@@ -256,7 +267,7 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
     }
     
     internal func clearCache(fileType: ResourceFileType) {
-        DispatchQueue.global(qos: .background).async { [weak self] in
+        DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let strongSelf = self else { return }
             switch fileType {
             case .video: strongSelf.deleteItemsInDirectory(for: strongSelf.directoryManager.videosDirectoryURL)
@@ -319,125 +330,53 @@ internal class FileStorageManager: NSObject, FileStorageMangerProtocol {
         return intermediateTemporaryFileURL
     }
     
-    internal func cachedAndResizedVideo(sourceURL: URL,
-                                        intermediateTemporaryFileURL: URL,
-                                        completion: @escaping (_ compressedVideoURL: URL?) -> ()) {
-
-        decreaseVideoQuality(sourceURL: sourceURL, inputURL: intermediateTemporaryFileURL) { [weak self] (sizeFormattedCompressedURL) in
-            guard let strongSelf = self else { return }
-            // Finally delete the local intermediate file
-            DispatchQueue.global(qos: .background).async {
-                strongSelf.deleteFile(at: intermediateTemporaryFileURL)
+    internal func cacheVideo(withSourceURL sourceURL: URL,
+                             intermediateTemporaryFileURL: URL,
+                             videoExportQuality: Celestial.VideoExportQuality,
+                             completion: @escaping MediaAssetCompletionHandler) {
+        
+        let outputURL = constructFormattedURL(from: sourceURL,
+                                              expectedDirectoryURL: directoryManager.videosDirectoryURL,
+                                              size: nil)
+        
+        switch videoExportQuality {
+        case .default:
+            do {
+                guard ((try? intermediateTemporaryFileURL.checkResourceIsReachable()) != nil) else {
+                    fatalError("The original temporary file URL from download does not exist. URL: \(intermediateTemporaryFileURL)")
+                }
+                
+                deleteFile(at: outputURL)
+                
+                try FileManager.default.moveItem(at: intermediateTemporaryFileURL, to: outputURL)
+                
+                completion(outputURL, nil)
+            } catch let error {
+                completion(nil, error)
             }
-            completion(sizeFormattedCompressedURL)
-        }
-    }
-    
-    internal func decreaseVideoQuality(sourceURL: URL, inputURL: URL, completion: @escaping (URL?) -> ()) {
-        
-        if let uncompressedVideoData = try? Data(contentsOf: inputURL) {
-            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - File size before compression: \(uncompressedVideoData.sizeInMB)")
-        }
-        
-        let assetKeys: [URLVideoPlayerView.LoadableAssetKeys] = [.tracks, .exportable]
-        DispatchQueue.global(qos: .background).async {
-            AVURLAsset.prepareUsableAsset(withAssetKeys: assetKeys, inputURL: inputURL) { [weak self] (exportableAsset, error) in
-                guard let strongSelf = self else { return }
-                if let error = error {
-                    fatalError("Error loading video from url: \(sourceURL). Error: \(String(describing: error))")
+        default:
+            AssetExportManager.exportVideo(fromIntermediateFileURL: intermediateTemporaryFileURL, outputURL: outputURL, videoExportQuality: videoExportQuality) { [weak self] (cachedVideoURL, error) in
+                
+                guard let strongSelf = self else {
+                    completion(nil, error)
+                    return
                 }
                 
-                let outputURL = strongSelf.constructFormattedURL(from: sourceURL,
-                                                                 expectedDirectoryURL: strongSelf.directoryManager.videosDirectoryURL,
-                                                                 size: nil)
-                
-                strongSelf.exportLowerQualityVideo(fromAsset: exportableAsset, to: outputURL) { (exportSession) in
-                    guard let exportSession = exportSession else {
-                        return
-                    }
-                    
-                    switch exportSession.status {
-                    case .exporting:
-                        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Exporting video for url: \(outputURL). Progress: \(exportSession.progress)")
-                        
-                    case .completed:
-                        if let compressedVideoData = try? Data(contentsOf: outputURL) {
-                            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - File size after compression: \(compressedVideoData.sizeInMB)")
-                        } else {
-                            let fileExists = strongSelf.videoExists(for: sourceURL)
-                            DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - Finished compressing, but no such file exists at output url: \(outputURL). File exists: \(fileExists)")
-                        }
-                        
-                        completion(outputURL)
-                    case .failed:
-                        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - failed to export url: \(outputURL). Error: \(String(describing: exportSession.error))")
-                        completion(nil)
-                        
-                    case .cancelled:
-                        DebugLogger.shared.addDebugMessage("\(String(describing: type(of: self))) - export for url: \(outputURL) cancelled")
-                        completion(nil)
-                        
-                    case .unknown: break
-                    case .waiting: break
-                    @unknown default:
-                        fatalError()
-                    }
+                // Finally delete the local intermediate file
+                DispatchQueue.global(qos: .utility).async {
+                    strongSelf.deleteFile(at: intermediateTemporaryFileURL)
                 }
+                completion(cachedVideoURL, error)
             }
         }
     }
     
-    private func exportLowerQualityVideo(fromAsset asset: AVURLAsset,
-                                         to outputURL: URL,
-                                         completion: @escaping (AVAssetExportSession?) -> ()) {
+    internal func decreaseVideoQuality(intermediateFileURL: URL, withSourceURL sourceURL: URL, toQuality videoExportQuality: Celestial.VideoExportQuality, completion: @escaping MediaAssetCompletionHandler) {
+        let outputURL = constructFormattedURL(from: sourceURL,
+                                              expectedDirectoryURL: directoryManager.videosDirectoryURL,
+                                              size: nil)
         
-        guard asset.isExportable else {
-            completion(nil)
-            return
-        }
-        
-        try? FileManager.default.removeItem(at: outputURL)
-
-        let composition = AVMutableComposition()
-        let compositionVideoTrack = composition.addMutableTrack(withMediaType: AVMediaType.video, preferredTrackID: CMPersistentTrackID(kCMPersistentTrackID_Invalid))
-        let compositionAudioTrack = composition.addMutableTrack(withMediaType: AVMediaType.audio, preferredTrackID: CMPersistentTrackID(kCMPersistentTrackID_Invalid))
-
-        guard
-            let sourceVideoTrack = asset.tracks(withMediaType: AVMediaType.video).first,
-            let sourceAudioTrack = asset.tracks(withMediaType: AVMediaType.audio).first
-            else {
-                completion(nil)
-                return
-        }
-        
-        do {
-            try compositionVideoTrack?.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: asset.duration), of: sourceVideoTrack, at: CMTime.zero)
-            try compositionAudioTrack?.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: asset.duration), of: sourceAudioTrack, at: CMTime.zero)
-        } catch(_) {
-            completion(nil)
-            return
-        }
-
-        let compatiblePresets = AVAssetExportSession.exportPresets(compatibleWith: composition)
-        var preset: String = AVAssetExportPresetPassthrough
-        if compatiblePresets.contains(AVAssetExportPresetMediumQuality) { preset = AVAssetExportPresetMediumQuality }
-        
-        guard
-            let exportSession = AVAssetExportSession(asset: composition, presetName: preset),
-            exportSession.supportedFileTypes.contains(AVFileType.mp4) else {
-            completion(nil)
-            return
-        }
-
-        exportSession.outputURL = outputURL
-        exportSession.outputFileType = AVFileType.mp4
-        let startTime = CMTimeMake(value: 0, timescale: 1)
-        let timeRange = CMTimeRangeMake(start: startTime, duration: asset.duration)
-        exportSession.timeRange = timeRange
-        exportSession.shouldOptimizeForNetworkUse = true
-        exportSession.exportAsynchronously {
-            completion(exportSession)
-        }
+        AssetExportManager.exportVideo(fromIntermediateFileURL: intermediateFileURL, outputURL: outputURL, videoExportQuality: videoExportQuality, completion: completion)
     }
     
     internal func cachedAndResizedImage(sourceURL: URL, size: CGSize, intermediateTemporaryFileURL: URL, completion: @escaping (_ resizedImage: UIImage?) -> ()) {

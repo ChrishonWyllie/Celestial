@@ -32,6 +32,21 @@ fileprivate enum ExpectedMediaType {
     case image, video
 }
 
+extension String {
+    func estimateFrameForText(with font: UIFont, desiredTextWidth: CGFloat? = nil) -> CGRect {
+        let someArbitraryWidthValue: CGFloat = 200
+        let size = CGSize(width: desiredTextWidth ?? someArbitraryWidthValue, height: 1000)
+        let options = NSStringDrawingOptions
+            .usesFontLeading
+            .union(.usesLineFragmentOrigin)
+        return NSString(string: self)
+            .boundingRect(with: size,
+                          options: options,
+                          attributes: [NSAttributedString.Key.font: font],
+                          context: nil)
+    }
+}
+
 class ViewController: UIViewController {
      
     // MARK: - Variables
@@ -91,8 +106,8 @@ class ViewController: UIViewController {
 
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
-        layout.minimumLineSpacing = 8
-        layout.minimumInteritemSpacing = 8
+        layout.minimumLineSpacing = 0
+        layout.minimumInteritemSpacing = 0
         layout.scrollDirection = .vertical
         
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
@@ -103,7 +118,8 @@ class ViewController: UIViewController {
             // Fallback on earlier versions
             cv.backgroundColor = .gray
         }
-        cv.allowsMultipleSelection = true
+        cv.allowsSelection = true
+        cv.alwaysBounceVertical = true
         cv.prefetchDataSource = self
         cv.isPrefetchingEnabled = true
         cv.delegate = self
@@ -111,6 +127,8 @@ class ViewController: UIViewController {
         return cv
     }()
     
+    // For the purpose of creating dynamic cell heights
+    private var cellSizes: [IndexPath: CGSize] = [:]
 
 
 
@@ -311,11 +329,22 @@ extension ViewController {
     private func setupURLVideoPlayerView() {
         view.addSubview(playerView)
          
-        let playerDimension: CGFloat = 300.0
+//        let playerDimension: CGFloat = 300.0
         playerView.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
         playerView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
-        playerView.heightAnchor.constraint(equalToConstant: playerDimension).isActive = true
-        playerView.widthAnchor.constraint(equalToConstant: playerDimension).isActive = true
+//        playerView.heightAnchor.constraint(equalToConstant: playerDimension).isActive = true
+//        playerView.widthAnchor.constraint(equalToConstant: playerDimension).isActive = true
+        
+//        let constant: CGFloat = 8
+//        playerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: constant).isActive = true
+//        if #available(iOS 11.0, *) {
+//            playerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: constant).isActive = true
+//        } else {
+//            // Fallback on earlier versions
+//            playerView.topAnchor.constraint(equalTo: view.topAnchor, constant: constant).isActive = true
+//        }
+//        playerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -constant).isActive = true
+//        playerView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -constant).isActive = true
     }
     
     private func setupCachableAVPlayerItem() {
@@ -392,7 +421,7 @@ extension ViewController {
 
 // MARK: - UICollectionView delegate and datasource
 
-extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, VideoCellDelegate {
     
     func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 1
@@ -410,6 +439,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
             cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: ImageCell.self), for: indexPath) as? ImageCell
         case .video:
             cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: VideoCell.self), for: indexPath) as? VideoCell
+            (cell as? VideoCell)?.delegate = self
         }
         
         let cellModel = cellModels[indexPath.item]
@@ -419,7 +449,14 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
         return cell!
     }
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: collectionView.frame.size.width, height: 400.0)
+        // If there exists a calculated size for this indexPath
+        // i.e., if the video's resolution has been calculated and can return a proper size for the cell
+        // while keeping the aspect ratio of the video
+        if let calculatedSize = cellSizes[indexPath] {
+            return calculatedSize
+        }
+        // Otherwise, use a default size
+        return CGSize(width: getNonDynamicCellWidth(), height: 400.0)
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
@@ -453,6 +490,64 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, 
 //        videoCell.playerView.pause()
     }
     
+    func videoCell(_ cell: VideoCell, requestsContainerSizeChanges requiredSize: CGSize) {
+        let indexPath: IndexPath
+        
+        if let indexPathForCell = collectionView.indexPath(for: cell) {
+            indexPath = indexPathForCell
+        } else {
+            // The UICollectionView cannot reach this cell, as it may not have been dequeued yet (or it has been recycled)
+            let urlString = cell.playerView.sourceURL?.absoluteString
+            guard let arrayElementIndex = cellModels.firstIndex(where: { $0.urlString == urlString }) else {
+                // This is virtually guaranteed since there must exist a cellModel where its urlString
+                // is the same as the one that this VideoCell's playerView is using.
+                return
+            }
+            let index = Int(arrayElementIndex)
+            indexPath = IndexPath(item: index, section: 0)
+        }
+        
+        updateSize(forCell: cell, withVideoSize: requiredSize, atIndexPath: indexPath)
+    }
+    
+    private func updateSize(forCell cell: VideoCell, withVideoSize videoSize: CGSize, atIndexPath indexPath: IndexPath) {
+        let cellModel = cellModels[indexPath.item]
+        
+        // NOTE
+        
+        let totalWidthOfTitleLabel: CGFloat = getNonDynamicCellWidth() - (Constants.horizontalPadding * 4)
+        let urlStringTextFrame: CGRect = cellModel.urlString.estimateFrameForText(with: UIFont.systemFont(ofSize: 17),
+                                                                                  desiredTextWidth: totalWidthOfTitleLabel)
+        let titleLabelHeight: CGFloat = urlStringTextFrame.height
+        
+        let progressLabelHeight: CGFloat = Constants.progressLabelHeight
+        let progressBarHeight: CGFloat = 4 // this is the default height for a UIProgressBar
+        let totalVerticalPadding: CGFloat = cell.getTotalVerticalPadding()
+        
+        let calculatedHeight =  videoSize.height    +
+                                titleLabelHeight    +
+                                progressLabelHeight +
+                                progressBarHeight   +
+                                totalVerticalPadding
+        
+        let calculatedSize = CGSize(width: getNonDynamicCellWidth(), height: calculatedHeight)
+        
+        if cellSizes[indexPath] != nil {
+            return
+        }
+        
+        cellSizes[indexPath] = calculatedSize
+        
+        // Animate the cell size change
+        collectionView.performBatchUpdates({
+            collectionView.collectionViewLayout.invalidateLayout()
+        }, completion: nil)
+    }
+    
+    
+    private func getNonDynamicCellWidth() -> CGFloat {
+        return collectionView.frame.size.width
+    }
 }
 
 extension ViewController: UICollectionViewDataSourcePrefetching {

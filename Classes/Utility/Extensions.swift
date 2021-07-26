@@ -344,3 +344,23 @@ extension FileManager {
         return humanReadableFolderSize
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+// MARK: - NSError
+
+extension NSError {
+    static func createError(withString localizedString: String, description: String, comment: String?, domain: String, code: Int?) -> NSError {
+        let userInfo: [String : Any] = [NSLocalizedDescriptionKey: NSLocalizedString(localizedString, value: description, comment: comment ?? "")]
+        return NSError(domain: domain, code: code ?? 1, userInfo: userInfo)
+    }
+    
+}

@@ -11,6 +11,9 @@ public final class Celestial: NSObject {
     
     enum CSError: Error {
         case invalidURL(String)
+        case urlToDataError(String)
+        case invalidSourceURLError(String)
+        case unknownURLPathExtension(String)
     }
     
     /// Public shared instance property
@@ -21,6 +24,18 @@ public final class Celestial: NSObject {
     internal let cachedResourceContext = CachedResourceIdentifierContext()
     
     private var backgroundSessionCompletionHandler: (() -> Void)?
+    
+    /**
+     Defines the quality at which a downloaded video will be compressed to
+     
+     - The `default` option will not compress, and will cache the video using its original file size / resolution.
+     - The `low` and `medium` options may be used to cache lower quality versions of a video once its download completes
+     */
+    public enum VideoExportQuality {
+        case `default`
+        case low
+        case medium
+    }
     
     
     
@@ -67,16 +82,20 @@ extension Celestial: CelestialVideoCachingProtocol {
         VideoCache.shared.store(videoData, with: sourceURLString.convertURLToUniqueFileName())
     }
    
-    public func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, completion: @escaping (URL?) -> ()) {
-        FileStorageManager.shared.cachedAndResizedVideo(sourceURL: sourceURL, intermediateTemporaryFileURL: temporaryFileURL, completion: { [weak self] (cachedVideoURL) in
+    public func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, videoExportQuality: Celestial.VideoExportQuality, completion: @escaping MediaAssetCompletionHandler) {
+        FileStorageManager.shared.cacheVideo(withSourceURL: sourceURL, intermediateTemporaryFileURL: temporaryFileURL, videoExportQuality: videoExportQuality) { [weak self] (cachedVideoURL, error) in
             
             let resourceIdentifier = CachedResourceIdentifier(sourceURL: sourceURL,
                                                               resourceType: .video,
                                                               cacheLocation: .fileSystem)
             self?.cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
             
-            completion(cachedVideoURL)
-        })
+            completion(cachedVideoURL, error)
+        }
+    }
+    
+    public func decreaseVideoQuality(intermediateFileURL: URL, withSourceURL sourceURL: URL, toQuality videoExportQuality: Celestial.VideoExportQuality, completion: @escaping MediaAssetCompletionHandler) {
+        FileStorageManager.shared.decreaseVideoQuality(intermediateFileURL: intermediateFileURL, withSourceURL: sourceURL, toQuality: videoExportQuality, completion: completion)
     }
     
     public func removeVideoFromMemoryCache(sourceURLString: String) {
@@ -209,13 +228,13 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let strongSelf = self else { return }
             
-            strongSelf.handleScrollViewPrefetching(forRequestedItems: urlStrings) { (url, resourceExistenceState) in
+            strongSelf.handleScrollViewPrefetching(forRequestedItems: urlStrings) { (sourceURL, resourceExistenceState) in
                 
                 switch resourceExistenceState {
                 case .none:
-                    strongSelf.startDownload(for: url)
+                    strongSelf.startDownload(for: sourceURL)
                 case .downloadPaused:
-                    strongSelf.resumeDownload(for: url)
+                    strongSelf.resumeDownload(for: sourceURL)
                 case .currentlyDownloading, .cached, .uncached:
                     // Nothing more to do
                     break
@@ -229,7 +248,7 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let strongSelf = self else { return }
             
-            strongSelf.handleScrollViewPrefetching(forRequestedItems: urlStrings) { (url, resourceExistenceState) in
+            strongSelf.handleScrollViewPrefetching(forRequestedItems: urlStrings) { (sourceURL, resourceExistenceState) in
                 
                 switch resourceExistenceState {
                 case .none, .downloadPaused, .cached, .uncached:
@@ -237,9 +256,9 @@ extension Celestial: CelestialResourcePrefetchingProtocol {
                     break
                 case .currentlyDownloading:
                     if cancelCompletely {
-                        strongSelf.cancelDownload(for: url)
+                        strongSelf.cancelDownload(for: sourceURL)
                     } else {
-                        strongSelf.pauseDownload(for: url)
+                        strongSelf.pauseDownload(for: sourceURL)
                     }
                 }
             }
@@ -313,10 +332,11 @@ extension Celestial: CelestialUtilityProtocol {
     }
        
     public func reset() {
+        FileStorageManager.shared.clearCache(fileType: ResourceFileType.all)
         DownloadTaskManager.shared.cancelAllDownloads()
         cachedResourceContext.clearAllResourceIdentifiers()
-        clearAllImages()
-        clearAllVideos()
+        VideoCache.shared.clearAllItems()
+        ImageCache.shared.clearAllItems()
     }
     
     public func getCacheInfo() -> [String] {
@@ -344,17 +364,13 @@ extension Celestial: CelestialUtilityProtocol {
         if let sourceURL = url {
             cachedResourceContext.removeResourceIdentifier(for: sourceURL.absoluteString)
         }
-        DispatchQueue.global(qos: .background).async {
+        DispatchQueue.global(qos: .utility).async {
             FileStorageManager.shared.deleteFile(at: location)
         }
     }
     
     internal func getTemporarilyCachedFileURL(for sourceURL: URL) -> URL? {
         return FileStorageManager.shared.getTemporarilyCachedFileURL(for: sourceURL)
-    }
-    
-    internal func decreaseVideoQuality(sourceURL: URL, inputURL: URL, completion: @escaping (_ lowerQualityVideoURL: URL?) -> ()) {
-        FileStorageManager.shared.decreaseVideoQuality(sourceURL: sourceURL, inputURL: inputURL, completion: completion)
     }
 }
 
@@ -392,12 +408,18 @@ extension Celestial {
             {
                 return .cached
             } else {
+                if FileStorageManager.shared.uncachedFileExists(for: sourceURL) {
+                    return .uncached
+                }
                 return .none
             }
         } else if let cacheLocation = cacheLocation, let resourceType = resourceType {
             if cachedResourceAndIdentifierExists(for: sourceURL, resourceType: resourceType, cacheLocation: cacheLocation) {
                 return .cached
             } else {
+                if FileStorageManager.shared.uncachedFileExists(for: sourceURL) {
+                    return .uncached
+                }
                 return .none
             }
         } else if FileStorageManager.shared.uncachedFileExists(for: sourceURL) {
