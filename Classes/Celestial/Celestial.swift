@@ -62,7 +62,10 @@ extension Celestial: CelestialVideoCachingProtocol {
     }
    
     public func videoFromMemoryCache(sourceURLString: String) -> MemoryCachedVideoData? {
-        return VideoCache.shared.item(for: sourceURLString.convertURLToUniqueFileName())
+        if let sourceURL = URL(string: sourceURLString){
+            return VideoCache.shared.item(for: sourceURL.lastPathComponent.convertURLToUniqueFileName())
+        }
+        return nil
     }
    
     public func videoURLFromFileCache(sourceURL: URL) -> URL? {
@@ -79,7 +82,7 @@ extension Celestial: CelestialVideoCachingProtocol {
                                                           resourceType: .video,
                                                           cacheLocation: .inMemory)
         cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
-        VideoCache.shared.store(videoData, with: sourceURLString.convertURLToUniqueFileName())
+        VideoCache.shared.store(videoData, with: sourceURL.lastPathComponent.convertURLToUniqueFileName())
     }
    
     public func storeDownloadedVideoToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, videoExportQuality: Celestial.VideoExportQuality, completion: @escaping MediaAssetCompletionHandler) {
@@ -99,8 +102,10 @@ extension Celestial: CelestialVideoCachingProtocol {
     }
     
     public func removeVideoFromMemoryCache(sourceURLString: String) {
-        VideoCache.shared.removeItem(at: sourceURLString.convertURLToUniqueFileName())
-        cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
+        if let sourceURL = URL(string: sourceURLString){
+            VideoCache.shared.removeItem(at: sourceURL.lastPathComponent.convertURLToUniqueFileName())
+            cachedResourceContext.removeResourceIdentifier(for: sourceURLString)
+        }
     }
    
     @discardableResult public func removeVideoFromFileCache(sourceURLString: String) -> Bool {
@@ -134,7 +139,10 @@ extension Celestial: CelestialImageCachingProtocol {
     }
     
     public func imageFromMemoryCache(sourceURLString: String) -> UIImage? {
-       return ImageCache.shared.item(for: sourceURLString.convertURLToUniqueFileName())
+        if let sourceURL = URL(string: sourceURLString){
+            return ImageCache.shared.item(for: sourceURL.lastPathComponent.convertURLToUniqueFileName())
+        }
+        return nil
     }
     
     public func imageURLFromFileCache(sourceURL: URL, pointSize: CGSize) -> URL? {
@@ -151,7 +159,7 @@ extension Celestial: CelestialImageCachingProtocol {
                                                           resourceType: .image,
                                                           cacheLocation: .inMemory)
         cachedResourceContext.storeReferenceTo(cachedResource: resourceIdentifier)
-        ImageCache.shared.store(image, with: sourceURLString.convertURLToUniqueFileName())
+        ImageCache.shared.store(image, with: sourceURL.lastPathComponent.convertURLToUniqueFileName())
     }
     
     public func storeDownloadedImageToFileCache(_ temporaryFileURL: URL, withSourceURL sourceURL: URL, pointSize: CGSize, completion: @escaping (UIImage?) -> ()) {

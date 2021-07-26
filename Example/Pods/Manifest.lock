@@ -1,5 +1,5 @@
 PODS:
-  - Celestial (0.1.11)
+  - Celestial (0.8.130)
 
 DEPENDENCIES:
   - Celestial (from `../`)
@@ -9,8 +9,8 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  Celestial: bf72f1edc6b5a0d4248cf0868feacb2192cfaa6e
+  Celestial: 630885a29c5ea3ee2b12c4ae4157b9f44347c9a0
 
-PODFILE CHECKSUM: 2a577d4b23247b03ed8b4969fd7fd65bded2fdd0
+PODFILE CHECKSUM: ffb367ee6e897d26afddec9da54f4fcd47e80c7f
 
-COCOAPODS: 1.8.4
+COCOAPODS: 1.10.1
